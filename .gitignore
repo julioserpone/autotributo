@@ -1,0 +1,44 @@
+# Dependencias
+/vendor
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/bootstrap/cache/*.php
+
+# Entorno
+.env
+.env.*
+!.env.example
+!.env.testing.example
+*.pem
+*.key
+!resources/**/*.key
+
+# Logs y temporales
+*.log
+.DS_Store
+.phpunit.result.cache
+.phpunit.cache
+coverage/
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+
+# Docker / datos locales
+docker/data/
+.docker/
+
+# Playwright
+/test-results
+/playwright-report
+/blob-report
+
+# Herramientas
+.php-cs-fixer.cache
+rector.php.bak
+*.cache

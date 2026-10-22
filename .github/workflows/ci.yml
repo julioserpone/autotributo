@@ -1,0 +1,156 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PHP_VERSION: "8.5"
+  NODE_VERSION: "24"
+
+jobs:
+  # Los jobs se activan cuando existe el esqueleto Laravel (Fase 1).
+  # Mientras el repositorio solo contenga documentación, se omiten limpiamente.
+  backend:
+    name: Backend (Pint, PHPStan, Pest)
+    if: ${{ hashFiles('composer.json') != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: autotributo_test
+          POSTGRES_USER: autotributo
+          POSTGRES_PASSWORD: secret
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U autotributo -d autotributo_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      valkey:
+        image: valkey/valkey:8-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: pdo_pgsql, pgsql, redis, intl, bcmath, zip, gd, pcntl, pcov
+          coverage: pcov
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Preparar entorno de test
+        run: |
+          cp .env.testing.example .env
+          composer install --no-interaction --prefer-dist --no-progress
+          php artisan key:generate
+
+      - name: Estilo (Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Análisis estático (PHPStan/Larastan)
+        run: ./vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
+      - name: Tests + cobertura
+        run: ./vendor/bin/pest --parallel --coverage --min=80
+
+      - name: Auditoría de dependencias
+        run: composer audit --no-interaction
+
+  frontend:
+    name: Frontend (tipos, lint, Vitest, build)
+    if: ${{ hashFiles('package.json') != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:unit -- --run
+      - run: npm run build
+      - run: npm audit --audit-level=high
+
+  e2e:
+    name: E2E (Playwright)
+    if: ${{ hashFiles('composer.json') != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Levantar stack
+        run: |
+          echo "UID=$(id -u)" >> "$GITHUB_ENV"
+          echo "GID=$(id -g)" >> "$GITHUB_ENV"
+          cp .env.example .env
+          docker compose build app
+          docker compose up -d db valkey minio minio-init mailpit app web
+          docker compose exec -T app composer install --no-interaction --prefer-dist
+          docker compose exec -T app php artisan key:generate
+          docker compose exec -T app php artisan migrate --seed --force
+          docker compose run --rm vite npm ci
+          docker compose run --rm vite npm run build
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          APP_URL: http://localhost:8000
+
+      - name: Logs en caso de fallo
+        if: failure()
+        run: docker compose logs --tail=200
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  security:
+    name: Secretos y dependencias
+    if: ${{ hashFiles('composer.json') != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
