@@ -1,8 +1,10 @@
 # ADR-0001: Multitenancy con base de datos única y `tenant_id`
 
-- **Estado:** aceptado (sujeto a validación en F0-03)
+- **Estado:** aceptado (sujeto a validación en F0-03); **revisado por ADR-0006** (arranque single-tenant)
 - **Fecha:** 2026-10-22
 - **Decisores:** responsable técnico, backend, contador asesor
+
+> **Revisión 2026-10-22 (ADR-0006):** la decisión de **una sola base de datos con `tenant_id`** se mantiene. El MVP arranca en modo `single` (un estudio por despliegue) y el modo multi se activa después sin migrar datos. No se usará `CREATE DATABASE` ni `CREATE SCHEMA` en runtime.
 
 ## Contexto
 
@@ -18,7 +20,7 @@ El plan original proponía `stancl/tenancy:dev-master` con la posibilidad de BD 
 ## Decisión
 
 1. **Una sola base de datos, esquema compartido**, con `tenant_id` obligatorio en toda tabla de negocio.
-2. Resolución del tenant por **subdominio** (`acme.autotributo.com`); cabecera `X-Tenant` solo para clientes API autenticados con token.
+2. Resolución del tenant por **subdominio** (`acme.autotributo.com`); cabecera `X-Tenant` solo para clientes API autenticados con token. **En el MVP single-tenant se usa el tenant por defecto y el subdominio queda reservado (ADR-0006).**
 3. `stancl/tenancy` se usa para modelo de tenant/dominios, ciclo de vida y contexto en jobs, caché y almacenamiento. Se **desactiva** el bootstrapper de base de datos.
 4. Implementación propia del scoping: trait `BelongsToTenant` + `TenantScope` global + `tenant_id` forzado al crear.
 5. **Versión fijada `stancl/tenancy:^3.10`**, no `dev-master`.

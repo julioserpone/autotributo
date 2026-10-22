@@ -23,7 +23,6 @@ RUN apk add --no-cache \
         bcmath \
         gd \
         intl \
-        opcache \
         pcntl \
         pdo_pgsql \
         pgsql \

@@ -10,7 +10,7 @@
 | Duración MVP | **16–18 semanas** con 2 personas; **20–23 semanas** con 1 persona |
 | Modalidad | Sprints de 2 semanas, trunk-based, PRs pequeños |
 | Entorno | Docker local; Laravel Cloud staging + production desde Fase 1 |
-| Volumen objetivo | 100 tenants, 1.000 usuarios, 1 M comprobantes/año |
+| Volumen objetivo | MVP: 1 estudio con N contribuyentes; diseño preparado para 100 tenants, 1.000 usuarios y 1 M comprobantes/año |
 | Dependencia externa crítica | Acceso al repo/despliegue de `julioserpone/sri-txt-robot` y a una cuenta AWS |
 | Zona horaria | Persistencia UTC, presentación `America/Guayaquil` |
 | Moneda | USD (Ecuador dollarizado); se guarda `currency` por si cambia el alcance |
@@ -20,7 +20,7 @@
 | Fase | Semanas | Hito | Demostrable |
 |---|---|---|---|
 | F0 Descubrimiento | 1 | **M0** Decisiones y contrato | ADRs + spike Lambda + baseline IA + catálogo fiscal v0 |
-| F1 Núcleo multitenant | 2 | **M1** Login y empresas | Crear estudio → invitar contador → registrar empresa → 2FA |
+| F1 Núcleo tenant-ready | 2 | **M1** Login y empresas | Login → invitación → registrar empresa → 2FA (tenant por defecto) |
 | F2 Ingesta SRI | 3 | **M2** Descarga real | Sincronizar un mes y ver comprobantes con detalle |
 | F3 Motor fiscal + IA | 3 | **M3** Clasificación y riesgos | Ítems clasificados, alertas y revisión humana |
 | F4 Frontend | 3 | **M4** Producto usable | Flujo completo desde la UI, en tiempo real |
@@ -36,8 +36,8 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | ID | Tarea | Est. | Detalle |
 |---|---|---|---|
 | F0-01 | Bootstrap del repositorio | 0,5 d | `git init`, `.gitignore`, `.editorconfig`, Docker Compose, Makefile, CI base, PR template |
-| F0-02 | ADRs 0001–0005 | 0,5 d | Tenancy, dinero/redondeo, colas, empaquetado SPA, catálogos fiscales. Revisión y firma |
-| F0-03 | Spike de tenancy en staging Cloud | 1 d | Crear app + Postgres serverless + Valkey + queue; validar si el rol permite `CREATE SCHEMA`/`CREATE DATABASE`; medir arranque en frío; decidir single-DB |
+| F0-02 | ADRs 0001–0006 | 0,5 d | Tenancy single-tenant/tenant-ready, dinero/redondeo, colas, empaquetado SPA, catálogos fiscales. Revisión y firma |
+| F0-03 | Spike de plataforma en staging Cloud | 1 d | Crear app + Postgres serverless + Valkey + queue + S3; medir arranque en frío y pooling; validar el flujo de storage con un bucket de staging. **No** se prueba `CREATE DATABASE`/`CREATE SCHEMA`: se descartó en ADR-0006 |
 | F0-04 | Spike del robot SRI | 1,5 d | Invocar la Lambda con un run real (o sandbox) usando destino S3; medir duración, tamaño de paquete, formato de TXT/XML y errores; documentar contrato definitivo |
 | F0-05 | Baseline de clasificación IA | 1 d | 300 descripciones reales anonimizadas; medir accuracy por categoría, coste y latencia con 2 modelos; congelar prompt v1 y umbral de confianza |
 | F0-06 | Catálogo fiscal v0 | 1 d | Tarifas IVA con vigencia (0 %, 5 %, 12 % histórico, 15 %), casilleros 104/103, tasas de retención, topes de gastos personales. **Validado por contador** |
@@ -53,17 +53,17 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 **Criterio de salida (M0)**
 - ADRs firmados y aprobados por el responsable técnico.
 - Contrato Lambda ↔ Laravel congelado (request/response/manifest/callback) y probado end-to-end una vez.
-- Decisión de tenancy validada en staging (no solo en teoría).
+- Decisión de tenancy cerrada: **single-tenant con esquema tenant-ready** (ADR-0006) y una sola base de datos por entorno; no se aprovisionan bases por cliente.
 - Catálogo fiscal v0 aprobado por el contador asesor.
 
-## 3. Fase 1 — Núcleo multitenant, identidad y empresas (2 semanas)
+## 3. Fase 1 — Núcleo tenant-ready, identidad y empresas (2 semanas)
 
-**Objetivo:** un usuario puede registrarse, crear su estudio, invitar colegas, registrar contribuyentes y quedar aislado del resto.
+**Objetivo:** un estudio provisionado por comando puede iniciar sesión, invitar colegas, registrar contribuyentes y operar con el tenant por defecto, con el aislamiento ya cableado para el futuro modo multi.
 
 | ID | Tarea | Est. | Detalle |
 |---|---|---|---|
 | F1-01 | Esqueleto Laravel 13 + SPA | 1 d | `laravel new`, API + Vue/TS strict, Pint, PHPStan nivel 8, Pest, `.env.example`, `README` de arranque |
-| F1-02 | Multitenancy | 2 d | `Tenant`, `Domain`, `ResolveTenant`, `TenantScope`, `BelongsToTenant`, `TenantAware` para jobs, prefijos de caché/storage |
+| F1-02 | Tenancy-ready | 1,5 d | `stancl/tenancy` sin `DatabaseTenancyBootstrapper`; `Tenant`, `TenantContext`, `TenantScope`, `BelongsToTenant`, `TenantAware` para jobs, prefijos de caché/storage, `TENANCY_MODE=single` con tenant por defecto. `Domain`/`ResolveTenant` se dejan reservados para multi (ADR-0006) |
 | F1-03 | Identidad | 2 d | `users` global + `memberships` por tenant, invitaciones, reset, verificación de email, 2FA TOTP, Argon2id, sesiones revocables |
 | F1-04 | Autorización | 1 d | Roles `owner/accountant/assistant/viewer` (spatie teams), policies por recurso, scoping por empresa |
 | F1-05 | Empresas | 1,5 d | CRUD, validador de RUC, perfil tributario (régimen, obligado a contabilidad, agente de retención), actividad económica, dirección |
@@ -71,19 +71,20 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | F1-07 | Auditoría base | 0,5 d | `audit_logs` + `owen-it/laravel-auditing` en modelos sensibles |
 | F1-08 | Reverb | 0,5 d | Config, canales privados por tenant/empresa, autorización de canales, estado de conexión |
 | F1-09 | Convenciones de API | 1 d | `problem+json`, paginación, filtros, resources, generación OpenAPI (Scramble) |
-| F1-10 | Onboarding | 1 d | Registro de estudio, seed de catálogos, creación de primera empresa, email de bienvenida |
+| F1-10 | Provisión inicial | 0,5 d | Comando idempotente `app:provision` (tenant por defecto, catálogos, owner e invitación). La primera empresa se crea desde la UI (US-06). Sin registro público en el MVP |
 | F1-11 | Deploy a staging | 0,5 d | Recursos Cloud, variables, build/deploy commands, migraciones, dominio, scheduler |
 
 **Pruebas obligatorias**
-- **Aislamiento:** suite `Isolation` con dos tenants; todo endpoint `show/update/delete` devuelve 404 para recursos ajenos.
+- **Aislamiento:** suite `Isolation` con dos tenants (aunque la UI solo cree uno); todo endpoint `show/update/delete` devuelve 404 para recursos ajenos.
+- **Tenant-ready:** `TenantContext` liga el tenant por defecto en modo single, falla sin contexto y no permite mezclar datos al cambiar de tenant en tests.
 - **Unitarias:** `Ruc` (válidos/inválidos por tipo), `ClaveAcceso` (módulo 11), normalización de identificaciones, reglas de régimen.
-- **Feature:** registro, invitación (token de un solo uso), login, 2FA (habilitar/validar/recovery codes), reset, expiración de sesión, cambio de contraseña.
+- **Feature:** provisión inicial, invitación (token de un solo uso), login, 2FA (habilitar/validar/recovery codes), reset, expiración de sesión, cambio de contraseña.
 - **Policies:** matriz rol × acción en test de tabla.
 - **Cifrado:** la credencial no aparece en `json_encode`, logs ni auditoría; rotación de clave no rompe lecturas.
 - **Arquitectura (Pest arch):** `Domain` no depende de `Http`; ningún controlador supera 15 líneas de lógica.
 
 **Criterio de salida (M1)**
-- Demo en staging: crear estudio, invitar usuario, activar 2FA, registrar empresa con RUC válido, ver auditoría.
+- Demo en staging: provisionar el estudio por comando, invitar usuario, activar 2FA, registrar empresa con RUC válido, ver auditoría.
 - 0 warnings de PHPStan, cobertura ≥ 80 %, suite de aislamiento en verde.
 
 ## 4. Fase 2 — Ingesta SRI (3 semanas)
@@ -156,7 +157,7 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 |---|---|---|---|
 | F4-01 | Fundaciones | 1 d | Vue 3 + TS strict, Vite, Tailwind 4, shadcn-vue, router, Pinia, TanStack Query, cliente HTTP con CSRF/errores, i18n |
 | F4-02 | Design system | 2 d | Tokens (`#09090b`, `#18181b`, `#27272a`, borde `#262626`, acentos violeta/rojo/verde), tipografía, dark mode, Button/Input/Select/Combobox/DateRange/Table/Badge/Modal/Toast/Drawer |
-| F4-03 | Auth y onboarding | 1,5 d | Login, 2FA, invitación, recuperación, creación de estudio, primer contribuyente |
+| F4-03 | Auth y primer acceso | 1,5 d | Login, 2FA, invitación, recuperación, primer contribuyente (el estudio ya está provisionado) |
 | F4-04 | Layout | 1 d | Sidebar colapsable, selector empresa/RUC, header con estado Reverb, breadcrumbs, atajos |
 | F4-05 | Bandeja de comprobantes | 3 d | DataTable server-side, filtros (fecha, estado, proveedor, categoría, tipo), columnas configurables, drawer de detalle, acciones masivas |
 | F4-06 | Monitor de sincronización | 2 d | Iniciar sync, progreso en vivo, historial, errores por archivo, reintentar, cancelar, polling de respaldo |
@@ -212,7 +213,7 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | F6-02 | Rendimiento | 2 d | EXPLAIN de consultas top, índices, N+1, k6 con 100 usuarios concurrentes, ajuste de workers y pooling |
 | F6-03 | Observabilidad | 1 d | Sentry, Pulse, alertas, dashboards, log drain, presupuesto de alertas |
 | F6-04 | Backups y DR | 1 d | Verificar PITR, dump lógico a object storage, **restauración real** cronometrada, RPO/RTO medidos |
-| F6-05 | Runbooks | 1 d | Incidentes, rollback, caída del SRI, Lambda caída, fuga de credencial, offboarding de tenant, rotación de claves |
+| F6-05 | Runbooks | 1 d | Incidentes, rollback, caída del SRI, Lambda caída, fuga de credencial, baja/exportación del estudio, rotación de claves |
 | F6-06 | Legal y soporte | 1 d | Términos, privacidad, DPA, retención, proceso de soporte y SLA |
 | F6-07 | Beta | 3 d | 3–5 estudios reales, UAT guiada, triage de feedback, corrección de bloqueantes |
 | F6-08 | Go/No-Go | 0,5 d | Checklist de lanzamiento firmado |
@@ -225,6 +226,7 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 - [ ] Runbooks revisados por alguien que no los escribió.
 - [ ] Aviso de privacidad y consentimiento de credenciales publicados.
 - [ ] Límite de gasto configurado en Laravel Cloud y en el proveedor de IA.
+- [ ] Buckets S3 por entorno con IAM mínimo, SSE, versionado y lifecycle verificados (ver `docs/aws-s3-setup.md`).
 - [ ] Plan de soporte y canal para clientes beta.
 
 ## 9. Calendario de sprints
@@ -232,8 +234,8 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | Sprint | Semanas | Foco | Demo |
 |---|---|---|---|
 | S0 | 1 | F0 | Decisiones, spike Lambda, catálogo v0 |
-| S1 | 2 | F1 (a) | Tenancy + auth + empresas |
-| S2 | 3–4 | F1 (b) + deploy | Staging con onboarding |
+| S1 | 2 | F1 (a) | Tenant-ready + auth + empresas |
+| S2 | 3–4 | F1 (b) + deploy | Staging con login y empresa |
 | S3 | 5–6 | F2 (a) | Invocación + callback + parser factura |
 | S4 | 7–8 | F2 (b) + inicio F3 | Sync completo idempotente |
 | S5 | 9–10 | F3 | Clasificación + riesgos + revisión |
@@ -250,7 +252,7 @@ Con 2 personas, F4 corre en paralelo desde S4 y el total baja a **≈16 semanas*
 | Fase | Unitarias | Feature | Contrato | E2E | No funcionales |
 |---|---|---|---|---|---|
 | F0 | — | — | spike script | — | latencia Lambda, coste IA |
-| F1 | RUC, clave, regímenes | auth, 2FA, policies, **aislamiento** | OpenAPI | login/onboarding | — |
+| F1 | RUC, clave, regímenes | auth, 2FA, policies, **aislamiento** | OpenAPI | login y empresa | — |
 | F2 | parsers, DTOs, totales | sync, callback, idempotencia | AWS/Lambda fake | sync desde UI | 5k docs < 10 min |
 | F3 | calculadoras, reglas, proporcionalidad | clasificación, revisión, riesgos | LLM fake/grabado | revisión de ítems | accuracy, coste |
 | F4 | composables, formatos | — | tipos OpenAPI | 5 flujos | Lighthouse, axe |
@@ -281,7 +283,8 @@ Con 2 personas, F4 corre en paralelo desde S4 y el total baja a **≈16 semanas*
 | R1 | El portal del SRI cambia y rompe el robot | Alta | Alto | Robot aislado en Lambda, contrato versionado, monitoreo de fallos, plan de contingencia con carga manual de XML | Tasa de fallos > 10 % |
 | R2 | Bloqueo de la cuenta del contribuyente por exceso de intentos | Media | Alto | Concurrencia 1 por RUC, rate limit, backoff, no reintentar credenciales inválidas | Errores 401/429 del robot |
 | R3 | Credenciales SRI filtradas | Baja | Crítico | Cifrado dedicado, sealed box, accesos auditados, rotación, secretos fuera del repo | Alertas de acceso anómalo |
-| R4 | Multitenancy mal implementado (fuga de datos) | Media | Crítico | Scope global, suite de aislamiento, revisión de PR, RLS en F6, pentest | Test de aislamiento rojo |
+| R4 | Fuga de datos al activar multitenancy | Media | Crítico | Esquema tenant-ready desde el MVP, scope global, suite de aislamiento con dos tenants, revisión de PR, RLS en F6, pentest | Test de aislamiento rojo |
+| R11 | Deuda al activar el modo multi (UI/onboarding) | Media | Medio | Checklist de ADR-0006 revisado en cada fase; `TENANCY_MODE` y `TenantContext` ya presentes | Activación multi con más de 5 días de trabajo |
 | R5 | Error en cálculos fiscales | Media | Crítico | Catálogos versionados, golden files, firma del contador, reconciliación bloqueante | Diferencias en reconciliación |
 | R6 | Coste de IA descontrolado | Media | Medio | Presupuesto por tenant, caché, modelo pequeño, evaluación de coste | Alerta 80 % presupuesto |
 | R7 | Límites de Laravel Cloud (90 s Flex, 1 MiB) | Media | Medio | Jobs pequeños, IDs en payload, colas Pro para reportes | Jobs que expiran |
@@ -321,6 +324,7 @@ Conciliación bancaria · emisión de comprobantes · integración con Contífic
 |---|---|---|
 | `stancl/tenancy:dev-master` | `stancl/tenancy:^3.10` | `dev-master` produce builds no reproducibles; 3.10.1 soporta Laravel 13.24 |
 | Multitenancy multi-base de datos | Base única + `tenant_id` (ADR-0001) | Laravel Cloud adjunta una BD por entorno; crear/migrar BD en runtime añade riesgo y coste |
+| Multitenancy desde el MVP | **Single-tenant** con esquema tenant-ready (ADR-0006) | El MVP atiende un estudio por despliegue; `tenant_id`/scope se implementan desde el día 1 para activar multi sin migrar datos |
 | Laravel 11 / PHP 8.3 | Laravel 13.24+ / PHP 8.5 | Versión soportada actualmente; las colas administradas de Cloud requieren ≥ 13.19 |
 | JWT o Sanctum sin definir | Sanctum (cookie + tokens) | Revocación inmediata, cookies `HttpOnly`, sin refresh tokens |
 | Frontend "API only" separado | SPA Vue en `resources/js` (ADR-0004) | Un solo deploy, sin CORS ni doble pipeline; la API sigue versionada para móvil/integraciones |

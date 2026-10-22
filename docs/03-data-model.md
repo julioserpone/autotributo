@@ -16,6 +16,8 @@
 | Nombres | Tablas en plural snake_case; FKs `<singular>_id`; booleanos `is_*`/`has_*` |
 | Migraciones | Una migración por cambio lógico; nunca editar una migración ya desplegada |
 
+> **Modo de tenancy (ADR-0006):** el MVP es **single-tenant**: `tenants` tendrá una sola fila (el estudio), provisionada por comando. `tenant_id` se conserva en todas las tablas de negocio para que el modo multi se active sin migrar datos. La tabla `domains` y el slug de subdominio quedan reservados para ese modo; en el MVP el acceso es por un dominio único.
+
 ## 2. Vista general
 
 ```
@@ -50,7 +52,7 @@ form_lines, expense_categories, personal_expense_caps, ghost_companies
 | id | bigint PK | |
 | public_id | char(26) unique | ULID |
 | name | varchar(160) | Estudio contable |
-| slug | varchar(63) unique | Subdominio; regex `^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$`; reservadas: `www`, `api`, `app`, `admin`, `soporte` |
+| slug | varchar(63) unique | Identificador estable del estudio; en modo multi será el subdominio. Regex `^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$`; reservadas: `www`, `api`, `app`, `admin`, `soporte` |
 | status | varchar(20) | `trial`, `active`, `suspended`, `cancelled` |
 | plan | varchar(32) | `starter`, `pro`, `enterprise` |
 | settings | jsonb | Límites, branding, flags |
@@ -62,10 +64,12 @@ form_lines, expense_categories, personal_expense_caps, ghost_companies
 ### `domains`
 `id`, `tenant_id` (nullable para dominios centrales), `domain` unique, `is_primary`, timestamps.
 
+> **Reservada para el modo multi.** En el MVP single-tenant no se usa: la aplicación se sirve en un único dominio (`APP_URL`).
+
 ### `users` (identidad global)
 `id`, `public_id`, `name`, `email` unique, `password` (Argon2id), `email_verified_at`, `two_factor_secret` (cifrado), `two_factor_recovery_codes` (cifrado), `two_factor_confirmed_at`, `last_login_at`, `status`, `locale`, timestamps, `deleted_at`.
 
-> Un usuario puede pertenecer a varios estudios (consultores). Los datos de negocio **no** cuelgan del usuario, sino del tenant.
+> El modelo admite que un usuario pertenezca a varios estudios (consultores). En el MVP single-tenant cada usuario tiene una única membresía activa; los datos de negocio **no** cuelgan del usuario, sino del tenant.
 
 ### `memberships`
 `id`, `tenant_id`, `user_id`, `role` (`owner/accountant/assistant/viewer`), `status` (`invited/active/suspended`), `invited_by`, `accepted_at`, timestamps. `unique(tenant_id, user_id)`.

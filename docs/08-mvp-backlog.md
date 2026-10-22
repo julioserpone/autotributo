@@ -1,32 +1,37 @@
 # 08 — Backlog MVP (historias y criterios de aceptación)
 
 > Formato: `US-xx`. Las historias marcadas **Must** son requisito de lanzamiento. Cada una incluye fase, tamaño (`S` ≤ 1 d, `M` 2–3 d, `L` 4–5 d) y pruebas obligatorias.
+>
+> **Alcance de tenancy:** el MVP es **single-tenant** (un estudio por despliegue, ADR-0006). El estudio se provisiona por comando; no hay registro público ni subdominios. Los términos "tenant" y "estudio" se usan como sinónimos internos.
 
 ## Épica 1 — Identidad y acceso
 
-### US-01 · Registro de estudio y onboarding · Must · F1 · M
-**Como** contador independiente **quiero** crear mi estudio y mi primera empresa **para** empezar a operar el mismo día.
+### US-01 · Provisión inicial del estudio · Must · F1 · M
+**Como** responsable del estudio **quiero** que el espacio de trabajo quede creado con los catálogos y mi usuario owner **para** empezar a operar el mismo día.
 
 ```gherkin
-Escenario: Registro exitoso
-  Dado que no existe una cuenta con "ana@estudio.ec"
-  Cuando me registro con nombre, email y contraseña válida
-  Entonces se crea un tenant en estado "trial" con subdominio único
-  Y recibo un email de verificación
+Escenario: Provisión exitosa
+  Dado un despliegue sin datos de negocio
+  Cuando ejecuto "php artisan app:provision --name='Estudio Ana' --slug=estudio-ana --owner-email=ana@estudio.ec"
+  Entonces se crea un único tenant activo con ese slug
+  Y se crea el owner y se envía su invitación
   Y se cargan los catálogos fiscales vigentes
+  Y el tenant por defecto queda disponible para las peticiones
 
-Escenario: Subdominio ocupado
-  Dado que existe el tenant "estudio-ana"
-  Cuando intento registrarme con el mismo slug
-  Entonces la API responde 422 con el campo "slug"
-  Y el tenant no se crea
+Escenario: Ejecución repetida
+  Dado que el estudio ya fue provisionado
+  Cuando ejecuto el comando de nuevo con los mismos datos
+  Entonces no se duplican el tenant, el owner ni los catálogos
+  Y el comando termina con código 0 e informa "sin cambios"
 
-Escenario: Contraseña débil
-  Cuando me registro con una contraseña de menos de 12 caracteres
-  Entonces la API responde 422 y no se crea ningún registro
+Escenario: Modo single-tenant
+  Dado que TENANCY_MODE=single
+  Cuando un visitante intenta registrarse públicamente
+  Entonces la ruta no existe (404)
+  Y no se crea ningún tenant
 ```
 
-**Pruebas:** feature (registro, duplicados, validación, email), unit (slug, política de contraseña), E2E (onboarding).
+**Pruebas:** feature (comando idempotente, tenant por defecto, invitación, carga de catálogos), unit (slug y validación), E2E (primer acceso del owner).
 
 ---
 
@@ -60,11 +65,11 @@ Escenario: Código inválido
 
 ---
 
-### US-04 · Cambiar de empresa y de estudio · Must · F1 · S
-- Selector de empresa visible en el header; la selección persiste por usuario/tenant.
+### US-04 · Cambiar de empresa · Must · F1 · S
+- Selector de empresa visible en el header; la selección persiste por usuario.
 - Cambiar de empresa **no** cambia el tenant; el backend valida pertenencia.
-- Si el usuario pertenece a más de un estudio, puede cambiar de tenant y se refresca la sesión.
 - Acceso a empresa ajena → 404.
+- El selector de estudio queda **fuera del MVP**; se añadirá al activar el modo multi (ADR-0006).
 
 **Pruebas:** feature (scoping, persistencia, 404), E2E (cambio y recarga).
 
@@ -99,7 +104,7 @@ Escenario: RUC inválido
   Entonces la API responde 422 y no se crea la empresa
 ```
 
-**Pruebas:** unit (`Ruc` con tabla de casos), feature (creación, duplicado en el mismo tenant, aislamiento), E2E (formulario).
+**Pruebas:** unit (`Ruc` con tabla de casos), feature (creación, duplicado en el mismo tenant, aislamiento), E2E (formulario). El escenario de "RUC de otro tenant" se cubre en la suite de aislamiento con dos tenants; en el MVP single-tenant no es accesible desde la UI.
 
 ---
 
@@ -386,10 +391,10 @@ Escenario: Diferencias
 
 ---
 
-### US-29 · Exportación y offboarding del tenant · Must · F6 · M
+### US-29 · Exportación y baja del estudio · Must · F6 · M
 - Exportación completa (JSON/CSV + XML) solicitada por `owner`, generada en cola y entregada por URL firmada.
 - Eliminación con confirmación en dos pasos, período de gracia de 30 días y anonimización.
-- Revocación de credenciales y borrado de objetos S3; constancia de borrado.
+- Revocación de credenciales y borrado de objetos de almacenamiento (S3 en Cloud; disco en local); constancia de borrado.
 - Cumple derechos de acceso y supresión (LOPDP).
 
 **Pruebas:** feature (export completo, borrado, período de gracia, constancia), seguridad (no accesible por otro tenant).
@@ -409,7 +414,7 @@ Escenario: Diferencias
 
 | Fase | Historias | Suites |
 |---|---|---|
-| F1 | US-01…US-09 | Unit (RUC, auth), Feature (isolation, policies), E2E (onboarding) |
+| F1 | US-01…US-09 | Unit (RUC, auth), Feature (isolation, policies), E2E (login y empresa) |
 | F2 | US-10…US-15 | Unit (parser), Feature (sync), Contract (Lambda/S3), E2E (monitor) |
 | F3 | US-16…US-21 | Unit (reglas, cálculo), Contract (LLM), Feature (revisión, riesgos), eval IA |
 | F4 | Todas (UI) | Vitest, Playwright, axe, Lighthouse |

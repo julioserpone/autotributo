@@ -18,7 +18,7 @@ Cada entorno tiene su propia base de datos, bucket, colas y credenciales. **Nunc
 | Managed queue | 3 colas: `sri` (Flex 512 MB), `ai` (Flex 512 MB), `reports` (Pro 1 GB) |
 | Base de datos | Serverless Postgres (Neon), misma región, PITR 7–30 días |
 | Caché | Valkey (sesiones, caché, locks) |
-| Object Storage | Bucket por entorno (`autotributo-prod`, `autotributo-staging`) |
+| Object Storage | **AWS S3 en cuenta propia**, bucket por entorno: `autotributo-prod-app` + `autotributo-prod-sri`; `autotributo-staging-app` + `autotributo-staging-sri` |
 | WebSockets | Cluster Reverb administrado, aplicación `main` |
 | Email | Resend |
 | Log drain | Sentry / proveedor de logs |
@@ -55,16 +55,22 @@ Notas:
 | `APP_ENV` / `APP_DEBUG` | `production` / `false` | — | `APP_DEBUG=true` jamás en producción |
 | `APP_KEY` | `base64:...` | ✅ | Generada una vez; rotarla invalida sesiones |
 | `APP_URL` | `https://app.autotributo.com` | — | |
-| `APP_ROOT_DOMAIN` | `autotributo.com` | — | Base para subdominios de tenant |
+| `TENANCY_MODE` | `single` | — | `single` en el MVP; `multi` solo al activar ADR-0006 |
+| `TENANCY_DEFAULT_SLUG` | `estudio` | — | Slug del estudio provisionado |
+| `APP_ROOT_DOMAIN` | `autotributo.com` | — | Reservado para el modo multi; no se usa en single |
 | `DB_*` | inyectadas por Cloud | ✅ | No sobrescribir |
 | `CACHE_STORE` | `redis` | — | Valkey |
 | `SESSION_DRIVER` | `redis` | — | |
 | `QUEUE_CONNECTION` | `cloud` | — | Lo define Cloud al crear la cola administrada |
-| `FILESYSTEM_DISK` | `s3` | — | Lo define Cloud al adjuntar el bucket |
-| `AWS_*` | inyectadas | ✅ | Credenciales del bucket y del invocador de Lambda |
+| `FILESYSTEM_DISK` | `s3` | — | En Cloud siempre S3; en local es `local` por defecto |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | usuario IAM del entorno | ✅ | Credenciales de **tu cuenta AWS**, nunca de root; un usuario por entorno |
+| `AWS_DEFAULT_REGION` | `us-east-1` | — | La misma región del bucket |
+| `AWS_BUCKET` | `autotributo-prod-app` | — | Bucket de la app; **nunca** el de staging |
+| `AWS_ENDPOINT` | *(vacío)* | — | Vacío para AWS real; no usar endpoint local en Cloud |
+| `AWS_USE_PATH_STYLE_ENDPOINT` | `false` | — | AWS S3 usa virtual-hosted style |
 | `SRI_ROBOT_DRIVER` | `lambda` | — | |
 | `SRI_ROBOT_FUNCTION` | `sri-txt-robot-prod` | — | |
-| `SRI_ROBOT_OUTPUT_BUCKET` | `autotributo-sri-prod` | — | Bucket del robot, separado del de la app |
+| `SRI_ROBOT_OUTPUT_BUCKET` | `autotributo-prod-sri` | — | Bucket del robot, separado del de la app |
 | `SRI_ROBOT_CALLBACK_SECRET` | aleatorio 32+ bytes | ✅ | HMAC del webhook |
 | `SRI_ROBOT_PUBLIC_KEY` | base64 | — | Clave pública para sellar credenciales |
 | `SRI_CREDENTIALS_KEY` | base64 32 bytes | ✅ | Cifra credenciales SRI; guardar copia en el gestor de secretos de la organización |
@@ -135,12 +141,25 @@ Schedule::command('exports:purge-expired')->dailyAt('04:00')->onOneServer();
 ## 7. Base de datos y backups
 
 - Postgres serverless (Neon): PITR configurado con retención de 7–30 días según criticidad.
-- **Backup lógico diario** a Object Storage (`pg_dump` comprimido y cifrado) con retención de 30 días + copia mensual de 12 meses. Motivo: PITR protege del error humano reciente; el dump protege de corrupción prolongada y permite exportar/restaurar por tenant.
+- **Backup lógico diario** a S3 (`pg_dump` comprimido y cifrado) con retención de 30 días + copia mensual de 12 meses. Motivo: PITR protege del error humano reciente; el dump protege de corrupción prolongada y permite exportar/restaurar por tenant.
 - Restauración ensayada **trimestralmente** y antes del go-live, midiendo RTO real.
 - Conexiones: usar el endpoint *pooled* para la app; migraciones y dumps por conexión directa. Configurar `DB_POOL`/timeouts del driver.
 - Migraciones: expand/contract (ver `03-data-model.md`). Una migración destructiva nunca viaja en el mismo release que el código que deja de usar la columna.
 
-## 8. Object Storage
+## 8. Object Storage (AWS S3)
+
+Se usa **tu cuenta de AWS**, con un bucket por entorno y por función. La guía operativa (creación, IAM, lifecycle, verificación) está en [`aws-s3-setup.md`](aws-s3-setup.md).
+
+| Ambiente | Bucket de la app | Bucket del robot |
+|---|---|---|
+| Local (opcional) | `autotributo-local-app` | `autotributo-local-sri` |
+| Test / integración | `autotributo-test-app` | `autotributo-test-sri` |
+| Staging | `autotributo-staging-app` | `autotributo-staging-sri` |
+| Producción | `autotributo-prod-app` | `autotributo-prod-sri` |
+
+En local, por defecto se usa **disco** (`FILESYSTEM_DISK=local`); los tests usan disco o `Storage::fake()`. AWS S3 real en local es opcional y solo con el bucket `autotributo-local-*`.
+
+**Preview environments:** si necesitan storage persistente, usan `autotributo-test-app` con el prefijo `preview/pr-{n}/`; nunca el bucket de staging o producción. La guarda de ambiente permite el mapeo `preview → test`.
 
 Prefijos:
 
@@ -148,14 +167,17 @@ Prefijos:
 tenants/{tenant_id}/companies/{company_id}/invoices/{yyyy}/{mm}/{access_key}.xml.gz
 tenants/{tenant_id}/declarations/{declaration_id}/v{n}.pdf|xlsx
 tenants/{tenant_id}/exports/{export_id}/...
-runs/{run_id}/...                # salida del robot (bucket aparte)
+runs/{run_id}/...                # salida del robot (bucket -sri aparte)
 backups/{env}/{yyyy-mm-dd}.dump.gz
 ```
 
-- SSE habilitado; URLs firmadas con expiración corta (5–15 min).
-- Lifecycle: XML → clase fría a los 12 meses, retención ≥ 7 años; exports temporales → borrar a los 7 días.
+- **SSE** habilitado (SSE-S3 por defecto; SSE-KMS si el cliente lo exige); URLs firmadas con expiración corta (5–15 min).
+- **Versionado** activado y *Block Public Access*; política que niega tráfico sin TLS.
+- **Lifecycle:** XML → `STANDARD_IA` a los 90 días y `GLACIER_IR` a los 12 meses. Los exports temporales se limpian con un comando programado a los 7 días (no con una regla de prefijo, para no borrar XML por error). La retención fiscal (≥ 7 años) se revisa con el contador antes de configurar expiración automática.
+- **IAM mínimo:** un usuario/rol por entorno, limitado a su bucket (`tenants/*` y `backups/*`); el robot solo escribe en `runs/*` del bucket `-sri`.
 - Nada se sirve públicamente: descargas vía controlador autorizado con URL firmada.
 - Verificar `sha256` al importar; un archivo alterado se rechaza y se audita.
+- **Guarda de ambiente:** la aplicación valida que `AWS_BUCKET` corresponda al entorno (`APP_ENV`) al arrancar. Mapeo permitido: `local → autotributo-local-*`, `testing → autotributo-test-*`, `preview → autotributo-test-*`, `staging → autotributo-staging-*`, `production → autotributo-prod-*`. Un bucket de producción con `APP_ENV=local` es un error fatal.
 
 ## 9. WebSockets
 
@@ -245,7 +267,7 @@ El robot **no** tiene acceso a la base de datos ni a la API interna; solo escrib
 3. Recalcular, comparar con el cálculo del contador, aprobar nueva versión.
 4. Añadir test de regresión con el caso.
 
-### R7 — Offboarding de tenant
+### R7 — Offboarding del estudio
 1. Exportar datos (JSON/CSV + XML) y entregar por canal seguro.
 2. Revocar credenciales SRI y borrar secretos.
 3. Borrar objetos S3 y datos personales según política; conservar lo exigido por ley con acceso restringido.
@@ -257,7 +279,8 @@ El robot **no** tiene acceso a la base de datos ni a la API interna; solo escrib
 - [ ] Backups activos y **restauración probada** (RTO medido).
 - [ ] Alertas probadas (error 500, cola, Lambda, presupuesto IA).
 - [ ] Límite de gasto configurado en Cloud y en el proveedor de IA.
-- [ ] Dominio, TLS y subdominios de tenant verificados.
+- [ ] Dominio y TLS verificados (modo single; los subdominios de tenant quedan reservados para multi).
+- [ ] Bucket S3 del entorno correcto, IAM mínimo, SSE, versionado y lifecycle verificados.
 - [ ] Webhooks con secreto de producción y tolerancia de reloj validada.
 - [ ] Rotación de secretos documentada y copia de `SRI_CREDENTIALS_KEY` en el gestor de la organización.
 - [ ] Runbooks revisados por una segunda persona.

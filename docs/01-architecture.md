@@ -5,7 +5,7 @@
 ## 1. Alcance
 
 **En alcance (MVP):**
-- Multitenancy para estudios contables, cada uno con N contribuyentes (RUC).
+- **MVP single-tenant**: un estudio contable por despliegue, con N contribuyentes (RUC). El esquema y el scoping quedan preparados para activar multitenancy sin migrar datos (ADR-0006).
 - Ingesta automática de comprobantes electrónicos recibidos desde el portal del SRI (facturas, notas de crédito/débito, liquidaciones de compra y comprobantes de retención).
 - Clasificación de ítems (reglas + IA) con revisión humana.
 - Auditoría fiscal preventiva (duplicados, totales inconsistentes, proveedores en listas del SRI, topes de gastos personales).
@@ -74,13 +74,19 @@ Actores externos: portal del SRI, proveedor de LLM, AWS (Lambda, S3, CloudWatch)
 | Tests | Pest 4, PHPStan/Larastan 8, Pint, Vitest, Playwright, MSW | Ver `04-testing-strategy.md` |
 | Observabilidad | Sentry + Laravel Pulse + log drain | Errores, métricas y trazas por tenant |
 
-## 4. Multitenancy (ADR-0001)
+## 4. Tenancy: MVP single-tenant, esquema tenant-ready (ADR-0001 y ADR-0006)
 
 ### 4.1 Decisión
 
-**Una sola base de datos, esquema compartido, con `tenant_id` obligatorio en toda tabla de negocio** y resolución de tenant por subdominio (`acme.autotributo.com`).
+El MVP corre en modo **single-tenant**: un despliegue atiende a **un estudio contable**. No hay registro público de estudios, subdominios por tenant ni selector de estudio. Sin embargo, **toda** tabla de negocio lleva `tenant_id` y el scoping se implementa desde la primera migración, para que activar el modo multi sea un cambio de configuración, middleware y UI, no una migración de datos.
 
-`stancl/tenancy` se usa para: modelo de tenant/dominios, ciclo de vida (creación, suspensión, borrado), contexto de tenant en jobs, y prefijos de caché/almacenamiento. **Se desactiva el `DatabaseTenancyBootstrapper`** (no hay BD por tenant).
+- `TENANCY_MODE=single` resuelve el tenant por defecto (`TENANCY_DEFAULT_SLUG`) y lo expone en `TenantContext`.
+- `stancl/tenancy` se mantiene para ciclo de vida y contexto; **se desactiva el `DatabaseTenancyBootstrapper`** (no hay BD por tenant).
+- Una sola base de datos por entorno (ADR-0001). El coste de crear/migrar una BD por cliente queda descartado.
+- La tabla `domains`, el middleware `ResolveTenant` y el onboarding público quedan **reservados** para el modo multi.
+- El modo multi se activa con `TENANCY_MODE=multi`; el tenant inicial ya existe y los datos ya están separados por `tenant_id`.
+
+Checklist de activación y criterios de revisión: ADR-0006.
 
 ### 4.2 Por qué no BD por tenant (en Laravel Cloud)
 
@@ -94,7 +100,7 @@ Actores externos: portal del SRI, proveedor de LLM, AWS (Lambda, S3, CloudWatch)
 | Restauración puntual por tenant | Sencilla | Compleja | Requiere export lógico |
 | Consultas entre tenants (soporte, métricas) | Complejas | Complejas | Triviales |
 
-**Conclusión:** el coste operativo y el riesgo de plataforma de las alternativas superan el beneficio para el MVP. Se revisará si un cliente enterprise exige aislamiento físico (ruta de migración documentada en ADR-0001).
+**Conclusión:** el coste operativo y el riesgo de plataforma de las alternativas superan el beneficio. En el MVP ni siquiera se aprovisiona un tenant por cliente: un despliegue equivale a un estudio. La base única con `tenant_id` es la decisión que permite crecer a multi-tenant sin reescribir el modelo. Se revisará si un cliente enterprise exige aislamiento físico (ruta de migración en ADR-0001).
 
 ### 4.3 Implementación
 
@@ -107,25 +113,28 @@ trait BelongsToTenant
         static::addGlobalScope(new TenantScope);           // filtra por tenant_id
 
         static::creating(function (Model $model) {
-            $model->tenant_id ??= tenant()->getTenantKey();
+            $model->tenant_id ??= app(TenantContext::class)->id();
         });
     }
 }
 ```
 
 Reglas:
-1. **Toda** tabla de negocio tiene `tenant_id` (FK `tenants.id`, `cascadeOnDelete`) e índice compuesto que empiece por `tenant_id`.
+1. **Toda** tabla de negocio tiene `tenant_id` (FK `tenants.id`, `cascadeOnDelete`) e índice compuesto que empiece por `tenant_id`, incluso en modo single.
 2. El scope global es obligatorio; para consultas de soporte se usa `withoutTenantScope()` con autorización explícita y log de auditoría.
 3. Los modelos centrales (`Tenant`, `Domain`, `User`) **no** usan el trait.
-4. Todo job, evento, notificación y comando debe pasar por `TenantAware` (`tenancy()->initialize()` + `finally { tenancy()->end(); }`). Un test verifica que un job sin contexto falla ruidosamente.
-5. El tenant se resuelve **antes** de autenticar y **antes** de cualquier consulta. Middleware: `ResolveTenant` → `EnsureTenantIsActive` → `auth`.
-6. Los archivos se guardan bajo `tenants/{tenant_id}/...`; las claves de caché llevan prefijo del tenant.
+4. Todo job, evento, notificación y comando debe pasar por `TenantAware` (`tenancy()->initialize()` + `finally { tenancy()->end(); }`). Un job sin contexto falla de forma ruidosa; hay un test que lo verifica.
+5. En modo `single`, `TenantContext` se inicializa al arrancar la petición con el tenant por defecto; no hay resolución por subdominio. En modo `multi`, el middleware `ResolveTenant` (reservado) resuelve **antes** de autenticar y de cualquier consulta. En ambos casos el orden es: contexto de tenant → `EnsureTenantIsActive` → `auth`.
+6. Los archivos se guardan bajo `tenants/{tenant_id}/...` también con un solo estudio; las claves de caché llevan prefijo del tenant.
 7. Prohibido `DB::table()` sin `where tenant_id` (regla de PHPStan personalizada o test de arquitectura).
+8. `TENANCY_MODE` solo admite `single` o `multi`; un valor inválido detiene el arranque.
 
 ### 4.4 Aislamiento como requisito de release
 
 - Suite `tests/Feature/Isolation/*`: para **cada** endpoint con `{id}`, un test intenta acceder a un recurso de otro tenant y espera `404`.
 - `TenantLeakTest`: crea dos tenants con datos homónimos y verifica que listados, búsquedas, exports y reportes solo devuelven lo propio.
+- **Aunque el MVP sea single-tenant, la suite se mantiene:** es la prueba de que la preparación multi-tenant no tiene fugas y evita una regresión el día que se active el modo multi.
+- `TenantContextTest`: en modo single se liga el tenant por defecto; sin contexto, cualquier consulta de negocio falla con una excepción explícita.
 - Revisión obligatoria en el PR (checklist).
 - Defensa en profundidad (Fase 6): RLS de PostgreSQL con `FORCE ROW LEVEL SECURITY` y `SET LOCAL app.tenant_id` dentro de transacción. **Antes de activarlo** hay que validar el modo de pooling de Neon (transaction pooling) y el rol usado por migraciones; ver ADR-0001.
 
@@ -183,7 +192,7 @@ docs/  docker/  database/{migrations,factories,seeders}
 ### Flujo de una petición
 
 ```
-Request → ResolveTenant → EnsureTenantActive → auth:sanctum → Policy
+Request → TenantContext [single: tenant por defecto | multi: ResolveTenant por subdominio] → EnsureTenantActive → auth:sanctum → Policy
         → FormRequest (validación) → Controller → Action → Domain
         → API Resource → JSON
 ```
@@ -205,8 +214,8 @@ POST lambda:Invoke (Event)
   "date_from": "2026-08-01",
   "date_to": "2026-08-31",
   "document_types": ["01", "03", "04", "05", "07"],
-  "output": { "bucket": "autotributo-sri", "prefix": "runs/01J.../" },
-  "callback_url": "https://api.autotributo.com/api/v1/webhooks/sri-robot"
+  "output": { "bucket": "autotributo-prod-sri", "prefix": "runs/01J.../" },
+  "callback_url": "https://app.autotributo.com/api/v1/webhooks/sri-robot"
 }
 ```
 
@@ -285,7 +294,7 @@ InvoiceItem.description
 
 - Base: `/api/v1`. Recursos: `companies`, `invoices`, `invoice-items`, `classification`, `sync-runs`, `declarations`, `reports`, `catalogos`.
 - Autenticación: cookie de sesión Sanctum (SPA mismo origen) + `X-XSRF-TOKEN`; tokens Bearer para integraciones.
-- Tenant: subdominio; `X-Tenant` opcional solo para clientes API con token (nunca para sesiones de navegador).
+- Tenant: en el MVP single-tenant se usa el tenant por defecto (dominio único); en modo multi, subdominio. `X-Tenant` queda reservado para clientes API con token (nunca para sesiones de navegador).
 - Paginación: cursor para `invoices` (`?cursor=`), offset para catálogos.
 - Filtros declarativos: `filter[date_from]`, `filter[status]`, `filter[provider_ruc]`, `filter[category]`.
 - Acciones largas: `POST` devuelve `202 { data: { run_id } }` + `Location`.
@@ -312,7 +321,8 @@ En local se usa `redis`; en Cloud `cloud` (SQS). **Ningún job debe asumir orden
 ## 11. Seguridad y privacidad
 
 - **Credenciales SRI**: cifradas con `SRI_CREDENTIALS_KEY` (clave dedicada, no `APP_KEY`), nunca logueadas, descifradas solo en memoria durante la invocación, rotación disponible, borrado al eliminar la empresa. Acceso auditado (`sri_credential_accesses`).
-- **Cifrado**: TLS 1.2+ en tránsito; Postgres cifrado en reposo (Neon); S3 con SSE; backups cifrados.
+- **Cifrado**: TLS 1.2+ en tránsito; Postgres cifrado en reposo (Neon); S3 con SSE-S3/SSE-KMS y TLS obligatorio; backups cifrados.
+- **Buckets por ambiente**: `autotributo-local-*`, `autotributo-test-*`, `autotributo-staging-*` y `autotributo-prod-*`. Nunca se comparten credenciales ni buckets entre entornos (ver `docs/aws-s3-setup.md`).
 - **Auth**: contraseñas con Argon2id, 2FA TOTP opcional (obligatorio para `owner`), bloqueo por intentos, sesiones revocables, expiración.
   Se usa **Sanctum** (cookie de sesión para la SPA y tokens para integraciones) en lugar de JWT: permite revocación inmediata, cookies `HttpOnly` y no requiere gestionar refresh tokens. Ver ADR-0004.
 - **Autorización**: Policies por recurso + roles (`owner`, `accountant`, `assistant`, `viewer`); scoping por empresa (`company_user`).
@@ -335,7 +345,7 @@ En local se usa `redis`; en Cloud `cloud` (SQS). **Ningún job debe asumir orden
 | Área | Requisito | Verificación |
 |---|---|---|
 | Rendimiento | p95 < 300 ms en listados de 50 filas; p99 < 800 ms | k6 + Sentry |
-| Escala | 100 tenants, 1.000 usuarios, 1 M comprobantes/año con 2× holgura | pruebas de carga y EXPLAIN |
+| Escala | MVP: 1 estudio; diseño preparado para 100 tenants, 1.000 usuarios y 1 M comprobantes/año con 2× holgura | pruebas de carga y EXPLAIN |
 | Ingesta | 5.000 comprobantes en < 10 min con 3 workers | benchmark en staging |
 | Precisión fiscal | 100 % de reconciliación en fixtures; 0 diferencias no explicadas | tests de invariantes |
 | IA | ≥ 92 % accuracy de categoría; ≥ 95 % precisión en "deducible" | evaluación semanal |

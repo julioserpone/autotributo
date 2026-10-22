@@ -3,7 +3,7 @@
 # Equivalencia con Laravel Cloud:
 #   Postgres 16  -> Serverless Postgres (Neon)
 #   Valkey 8     -> Laravel Valkey
-#   S3Mock       -> Object Storage (S3)
+#   Disco local  -> Object Storage S3 (solo desarrollo; en Cloud, AWS S3)
 #   Reverb       -> WebSocket cluster administrado
 #   queue:work   -> Managed queue (SQS) / Worker cluster
 #   schedule:work-> Scheduler toggle
@@ -31,8 +31,6 @@ x-app: &app
     db:
       condition: service_healthy
     valkey:
-      condition: service_healthy
-    s3:
       condition: service_healthy
     mailpit:
       condition: service_started
@@ -147,31 +145,6 @@ services:
       - autotributo
     restart: unless-stopped
 
-  s3:
-    # S3Mock: S3 compatible para desarrollo. MinIO ya no publica imágenes en
-    # Docker Hub y LocalStack exige token desde marzo de 2026.
-    # Fijar versión/digest en F1 para builds reproducibles.
-    image: adobe/s3mock:latest
-    container_name: autotributo-s3
-    environment:
-      COM_ADOBE_TESTING_S3MOCK_STORE_ROOT: /s3mockroot
-      COM_ADOBE_TESTING_S3MOCK_STORE_REGION: us-east-1
-      COM_ADOBE_TESTING_S3MOCK_STORE_RETAIN_FILES_ON_EXIT: "true"
-      # Los buckets se crean al arrancar; no hace falta un contenedor init.
-      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: autotributo-local,autotributo-sri-robot-local
-    ports:
-      - "9090:9090"
-    volumes:
-      - s3mockdata:/s3mockroot
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/favicon.ico"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-    networks:
-      - autotributo
-    restart: unless-stopped
-
   mailpit:
     image: axllent/mailpit:latest
     container_name: autotributo-mailpit
@@ -190,7 +163,6 @@ services:
 volumes:
   pgdata:
   valkeydata:
-  s3mockdata:
 
 networks:
   autotributo:

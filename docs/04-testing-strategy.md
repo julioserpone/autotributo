@@ -3,7 +3,7 @@
 ## 1. Principios
 
 1. **Se prueba comportamiento, no implementación.** Los tests describen reglas de negocio ("una NC resta la base imponible del período"), no métodos privados.
-2. **El test correcto para cada riesgo.** Lógica fiscal → unitario con tabla de casos; aislamiento → feature con dos tenants; integraciones → contrato con dobles; flujo crítico → E2E.
+2. **El test correcto para cada riesgo.** Lógica fiscal → unitario con tabla de casos; aislamiento → feature con dos tenants (aunque el MVP sea single-tenant); integraciones → contrato con dobles; flujo crítico → E2E.
 3. **Determinismo total.** Sin red, sin `sleep()`, sin `now()` implícito, sin dependencia de orden entre tests.
 4. **Un test que no puede fallar no sirve.** Se verifica que falle antes de implementar (red → green), y se evita el exceso de mocks que hace pasar tests rotos.
 5. **Las pruebas son documentación ejecutable.** Un contador debe poder leer el caso y entender la regla.
@@ -113,6 +113,8 @@ it('no permite ver facturas de otro tenant', function () {
 **Suite de aislamiento obligatoria** (una por recurso expuesto): `invoices`, `invoice_items`, `companies`, `sync-runs`, `declarations`, `exports`, `classification_rules`, `audit_logs`.
 Incluye también: listados con `filter[company_id]` ajeno, `POST` con `company_id` ajeno, descarga de PDF/XLSX ajeno, y canales de broadcasting ajenos.
 
+> **Por qué se mantiene en el MVP single-tenant:** la app solo provisiona un estudio, pero el esquema ya es tenant-ready. Estos tests demuestran que el `TenantScope` funciona y que activar el modo multi (ADR-0006) no introducirá fugas. Además se prueba `TenantContext` en modo single: liga el tenant por defecto, falla sin contexto y no permite mezclar datos al cambiarlo.
+
 ### 4.3 Contrato
 
 - El adaptador real nunca se ejecuta en tests: se prueba el **payload** que construye y la **interpretación** de la respuesta.
@@ -130,7 +132,7 @@ it('sella las credenciales y no las envía en claro', function () {
         $payload = $request->data();
 
         expect($payload['sealed_credentials'])->not->toContain('clave-real');
-        expect($payload['output']['bucket'])->toBe('autotributo-sri');
+        expect($payload['output']['bucket'])->toBe('autotributo-test-sri');
         expect($payload)->not->toHaveKey('password');
 
         return true;
@@ -202,7 +204,7 @@ En tests normales, `FakeClassifier` es determinista y no consume red.
 - Builders de escenarios fiscales (`FiscalScenario::mixedSalesAndPurchases()`) para no repetir 40 líneas de setup.
 - Seeds solo para demo local; los tests crean sus propios datos.
 - Reloj congelado: `Carbon::setTestNow('2026-08-31 23:59:59')` cuando la lógica dependa de fechas.
-- `Http::preventStrayRequests()` y `Storage::fake('s3')` en el `TestCase` base.
+- `Http::preventStrayRequests()` y `Storage::fake('local')` en el `TestCase` base. Los tests **nunca** usan AWS real: el disco local es el default y `Storage::fake()` aísla los archivos. Si se prueba el adaptador S3, se hace con un fake o con fixtures, no con credenciales.
 
 ## 8. Cobertura y calidad
 

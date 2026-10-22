@@ -13,7 +13,7 @@ export GID := $(shell id -g)
         install key migrate fresh seed tinker art composer npm \
         test test-unit test-feature test-contract coverage \
         lint lint-fix analyse check security e2e \
-        psql redis s3-url mailpit-url reverb-logs queue-logs \
+        psql redis storage-url mailpit-url reverb-logs queue-logs \
         reset
 
 help: ## Muestra esta ayuda
@@ -22,9 +22,9 @@ help: ## Muestra esta ayuda
 ## --- Contenedores ---------------------------------------------------------
 up: ## Levanta todo el stack en segundo plano
 	$(DC) up -d
-	@echo "App:      http://localhost:8000  (tenant demo: http://demo.localhost:8000)"
+	@echo "App:      http://localhost:8000  (modo single-tenant)"
 	@echo "Vite:     http://localhost:5173"
-	@echo "S3:       http://localhost:9090  (buckets: autotributo-local, autotributo-sri-robot-local)"
+	@echo "Storage:  local (storage/app/private) · opcional AWS S3"
 	@echo "Mailpit:  http://localhost:8026  (SMTP host: 1026)"
 	@echo "Reverb:   ws://localhost:8080"
 
@@ -127,9 +127,9 @@ psql: ## Consola psql
 redis: ## Consola valkey-cli
 	$(DC) exec valkey valkey-cli
 
-s3-url: ## Info del S3 local (S3Mock)
-	@echo "Endpoint: http://localhost:9090  (path-style; credenciales test/test)"
-	@echo "Buckets:  autotributo-local, autotributo-sri-robot-local"
+storage-url: ## Info del almacenamiento local
+	@echo "Disco local: storage/app/private  (FILESYSTEM_DISK=local)"
+	@echo "AWS S3:      configurar bucket por ambiente en .env (ver docs/aws-s3-setup.md)"
 
 mailpit-url: ## Info de Mailpit
 	@echo "UI: http://localhost:8026  SMTP (host): localhost:1026"

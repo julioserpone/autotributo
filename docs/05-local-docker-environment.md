@@ -24,10 +24,9 @@ No es necesario instalar PHP, Composer ni Postgres en el host: todo corre en con
 | `vite` | `node:24-alpine` | `5173` | HMR / build |
 | `db` | `postgres:16-alpine` | `5433` | Base de datos |
 | `valkey` | `valkey/valkey:8-alpine` | `6380` | Caché, sesiones, colas |
-| `s3` | `adobe/s3mock` | `9090` | S3 local (crea los buckets al arrancar) |
 | `mailpit` | `axllent/mailpit` | `8026`, `1026` | Correo de desarrollo (UI 8026; SMTP del host 1026 → `mailpit:1025` dentro de Docker) |
 
-> **Por qué S3Mock y no MinIO:** MinIO dejó de publicar sus imágenes en Docker Hub y LocalStack exige `LOCALSTACK_AUTH_TOKEN` desde el 23/03/2026, incluso en CI. S3Mock no requiere cuenta, arranca en segundos y cubre las operaciones que usa la aplicación (Put/Get/List/Copy/Multipart y URLs prefirmadas). Limitaciones: solo **path-style**, no valida la firma de URLs prefirmadas y no implementa lifecycle/notificaciones; por eso el flujo real se valida en staging contra el Object Storage de Laravel Cloud.
+> No hay contenedor S3: en local se usa el **disco** (`storage/app/private`) por defecto. Si necesitas probar el flujo real de object storage, apunta a **AWS S3** con un bucket de ambiente (`autotributo-local-app`) o usa `Storage::fake()` en tests. Ver `docs/aws-s3-setup.md`.
 
 ## 3. Primer arranque
 
@@ -56,17 +55,28 @@ open http://localhost:8000
 
 | Recurso | URL |
 |---|---|
-| Aplicación | http://localhost:8000 |
-| Tenant demo | http://demo.localhost:8000 |
+| Aplicación (tenant único) | http://localhost:8000 |
 | Vite (HMR) | http://localhost:5173 |
 | Reverb | ws://localhost:8080 |
-| S3 local (S3Mock) | http://localhost:9090 · buckets `autotributo-local` y `autotributo-sri-robot-local` |
+| Storage local | `storage/app/private` (bind mount del repositorio) |
 | Mailpit (UI) | http://localhost:8026 |
 | Mailpit (SMTP desde el host) | `localhost:1026` (la app usa `mailpit:1025`) |
 | PostgreSQL | `localhost:5433` (`autotributo` / `secret`) |
 | Valkey | `localhost:6380` |
 
-**Resolución de tenant:** el dominio raíz es `localhost`, por lo que `demo.localhost` funciona en navegadores modernos sin editar `/etc/hosts`. Si tu navegador no resuelve `*.localhost`, agrega:
+### 4.1 Almacenamiento por ambiente
+
+| Escenario | `FILESYSTEM_DISK` | Ubicación / bucket | Notas |
+|---|---|---|---|
+| App local diaria | `local` | `storage/app/private` | Por defecto; sin contenedores ni credenciales |
+| Tests Pest | `local` | `storage/framework/testing/disks` | Rápido y determinista; nunca AWS real |
+| Prueba manual de S3 | `s3` | `autotributo-local-app` (+ `-sri`) | Opcional; valida IAM, SSE y lifecycle |
+| Staging | `s3` | `autotributo-staging-app` (+ `-sri`) | Credenciales y bucket distintos de producción |
+| Producción | `s3` | `autotributo-prod-app` (+ `-sri`) | IAM mínimo, SSE, versionado y lifecycle |
+
+Para usar AWS S3 en local, en `.env`: `FILESYSTEM_DISK=s3`, descomenta `AWS_*`, deja `AWS_ENDPOINT` vacío, `AWS_USE_PATH_STYLE_ENDPOINT=false` y usa un usuario IAM del ambiente local. **Nunca** uses credenciales de producción en tu máquina. Detalle en `docs/aws-s3-setup.md`.
+
+**Tenant en local:** el MVP es single-tenant, así que se entra por `http://localhost:8000`; no hay subdominios. `TENANCY_MODE=single` liga el tenant `demo` (seed) en cada petición. El modo multi (futuro) usará `demo.localhost`; si tu navegador no resuelve `*.localhost`, agrega:
 
 ```
 127.0.0.1 demo.localhost acme.localhost
@@ -92,7 +102,7 @@ make test-unit
 make check             # Pint + PHPStan + tests (equivalente a CI)
 make psql
 make redis
-make s3-url
+make storage-url
 make mailpit-url
 make queue-logs
 make reverb-logs
@@ -137,13 +147,13 @@ server: {
 | Vite no compila tras `npm install` | `make restart` y revisa `make logs`; a veces el contenedor arrancó antes del mount |
 | Reverb se desconecta | Verifica `REVERB_HOST/PORT` y que `8080` esté libre; en local el host es `localhost`, no `reverb` |
 | Tests lentos | `pest --parallel`; en Docker, 4 procesos por defecto. Ajusta con `--processes=4` |
-| `NoSuchBucket` o 403 al subir a S3 | `AWS_USE_PATH_STYLE_ENDPOINT=true`, endpoint `http://s3:9090` y credenciales ficticias (`test`/`test`). Los buckets se crean al arrancar; si faltan, `make down && make up` |
-| S3Mock no arranca | Puerto `9090` ocupado: `lsof -i :9090`; o el volumen `s3mockdata` quedó con permisos incorrectos (`make reset`, destructivo) |
+| `NoSuchBucket` o 403 con AWS S3 | Verifica `AWS_BUCKET` del ambiente, `AWS_DEFAULT_REGION`, credenciales IAM y que el bucket exista. En local no reutilices credenciales de producción |
+| No aparecen los archivos en local | `FILESYSTEM_DISK=local`; están en `storage/app/private` (`make shell` para inspeccionar) |
 
 ## 8. Datos de demo
 
 El seeder `DemoTenantSeeder` crea:
-- Tenant `demo` (`demo.localhost`), plan `pro`.
+- Tenant `demo` (slug `demo`, acceso por `http://localhost:8000` en modo single), plan `pro`.
 - Usuarios `owner@demo.test` / `contador@demo.test` con contraseña `password` (solo local).
 - Dos empresas con RUC ficticios válidos.
 - 50 comprobantes de fixture (facturas, NC, retenciones) en el período actual.
@@ -163,11 +173,11 @@ if (app()->environment('local', 'testing')) {
 | Aspecto | Local | Cloud |
 |---|---|---|
 | PHP | 8.5 (Docker) | 8.5 (runtime gestionado) |
-| Extensiones | `pdo_pgsql`, `redis`, `intl`, `bcmath`, `gd`, `zip`, `pcntl`, `opcache` | Deben validarse en F1; se solicita soporte si falta alguna |
+| Extensiones | `pdo_pgsql`, `redis`, `intl`, `bcmath`, `gd`, `zip`, `pcntl`; OPcache incluido en la imagen | Deben validarse en F1; se solicita soporte si falta alguna |
 | Base de datos | Postgres 16 | Serverless Postgres 16/17/18 |
 | Colas | Redis + `queue:work` | SQS administrado (`QUEUE_CONNECTION=cloud`) |
 | WebSockets | Reverb en contenedor | Cluster Reverb administrado |
-| Storage | S3Mock (API S3) | Object Storage S3 |
+| Storage | Disco local por defecto; AWS S3 opcional (`autotributo-local-app`) | AWS S3 (bucket por ambiente) |
 | Correo | Mailpit | Resend |
 | Servidor web | Nginx + PHP-FPM | Runtime gestionado (Octane/FPM según entorno) |
 | Archivos | Bind mount persistente | Filesystem efímero |
