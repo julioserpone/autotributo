@@ -24,9 +24,10 @@ No es necesario instalar PHP, Composer ni Postgres en el host: todo corre en con
 | `vite` | `node:24-alpine` | `5173` | HMR / build |
 | `db` | `postgres:16-alpine` | `5433` | Base de datos |
 | `valkey` | `valkey/valkey:8-alpine` | `6380` | Caché, sesiones, colas |
-| `minio` | `minio/minio` | `9000`, `9001` | S3 local |
-| `minio-init` | `minio/mc` | — | Crea buckets al arrancar |
-| `mailpit` | `axllent/mailpit` | `8025`, `1025` | Correo de desarrollo |
+| `s3` | `adobe/s3mock` | `9090` | S3 local (crea los buckets al arrancar) |
+| `mailpit` | `axllent/mailpit` | `8026`, `1026` | Correo de desarrollo (UI 8026; SMTP del host 1026 → `mailpit:1025` dentro de Docker) |
+
+> **Por qué S3Mock y no MinIO:** MinIO dejó de publicar sus imágenes en Docker Hub y LocalStack exige `LOCALSTACK_AUTH_TOKEN` desde el 23/03/2026, incluso en CI. S3Mock no requiere cuenta, arranca en segundos y cubre las operaciones que usa la aplicación (Put/Get/List/Copy/Multipart y URLs prefirmadas). Limitaciones: solo **path-style**, no valida la firma de URLs prefirmadas y no implementa lifecycle/notificaciones; por eso el flujo real se valida en staging contra el Object Storage de Laravel Cloud.
 
 ## 3. Primer arranque
 
@@ -59,8 +60,9 @@ open http://localhost:8000
 | Tenant demo | http://demo.localhost:8000 |
 | Vite (HMR) | http://localhost:5173 |
 | Reverb | ws://localhost:8080 |
-| MinIO API / Consola | http://localhost:9000 · http://localhost:9001 |
-| Mailpit | http://localhost:8025 |
+| S3 local (S3Mock) | http://localhost:9090 · buckets `autotributo-local` y `autotributo-sri-robot-local` |
+| Mailpit (UI) | http://localhost:8026 |
+| Mailpit (SMTP desde el host) | `localhost:1026` (la app usa `mailpit:1025`) |
 | PostgreSQL | `localhost:5433` (`autotributo` / `secret`) |
 | Valkey | `localhost:6380` |
 
@@ -90,6 +92,8 @@ make test-unit
 make check             # Pint + PHPStan + tests (equivalente a CI)
 make psql
 make redis
+make s3-url
+make mailpit-url
 make queue-logs
 make reverb-logs
 make reset             # DESTRUCTIVO: borra contenedores y volúmenes
@@ -133,7 +137,8 @@ server: {
 | Vite no compila tras `npm install` | `make restart` y revisa `make logs`; a veces el contenedor arrancó antes del mount |
 | Reverb se desconecta | Verifica `REVERB_HOST/PORT` y que `8080` esté libre; en local el host es `localhost`, no `reverb` |
 | Tests lentos | `pest --parallel`; en Docker, 4 procesos por defecto. Ajusta con `--processes=4` |
-| MinIO 403 al subir | `AWS_USE_PATH_STYLE_ENDPOINT=true` y endpoint `http://minio:9000` (desde el contenedor) |
+| `NoSuchBucket` o 403 al subir a S3 | `AWS_USE_PATH_STYLE_ENDPOINT=true`, endpoint `http://s3:9090` y credenciales ficticias (`test`/`test`). Los buckets se crean al arrancar; si faltan, `make down && make up` |
+| S3Mock no arranca | Puerto `9090` ocupado: `lsof -i :9090`; o el volumen `s3mockdata` quedó con permisos incorrectos (`make reset`, destructivo) |
 
 ## 8. Datos de demo
 
@@ -162,7 +167,7 @@ if (app()->environment('local', 'testing')) {
 | Base de datos | Postgres 16 | Serverless Postgres 16/17/18 |
 | Colas | Redis + `queue:work` | SQS administrado (`QUEUE_CONNECTION=cloud`) |
 | WebSockets | Reverb en contenedor | Cluster Reverb administrado |
-| Storage | MinIO | Object Storage S3 |
+| Storage | S3Mock (API S3) | Object Storage S3 |
 | Correo | Mailpit | Resend |
 | Servidor web | Nginx + PHP-FPM | Runtime gestionado (Octane/FPM según entorno) |
 | Archivos | Bind mount persistente | Filesystem efímero |

@@ -19,7 +19,7 @@ RUN apk add --no-cache \
         linux-headers \
         $PHPIZE_DEPS \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j"$(nproc)" \
+    && docker-php-ext-install \
         bcmath \
         gd \
         intl \

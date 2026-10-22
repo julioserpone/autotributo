@@ -3,7 +3,7 @@
 # Equivalencia con Laravel Cloud:
 #   Postgres 16  -> Serverless Postgres (Neon)
 #   Valkey 8     -> Laravel Valkey
-#   MinIO        -> Object Storage (S3)
+#   S3Mock       -> Object Storage (S3)
 #   Reverb       -> WebSocket cluster administrado
 #   queue:work   -> Managed queue (SQS) / Worker cluster
 #   schedule:work-> Scheduler toggle
@@ -32,8 +32,8 @@ x-app: &app
       condition: service_healthy
     valkey:
       condition: service_healthy
-    minio:
-      condition: service_started
+    s3:
+      condition: service_healthy
     mailpit:
       condition: service_started
   networks:
@@ -147,53 +147,39 @@ services:
       - autotributo
     restart: unless-stopped
 
-  minio:
+  s3:
+    # S3Mock: S3 compatible para desarrollo. MinIO ya no publica imágenes en
+    # Docker Hub y LocalStack exige token desde marzo de 2026.
     # Fijar versión/digest en F1 para builds reproducibles.
-    image: minio/minio:latest
-    container_name: autotributo-minio
-    command: server /data --console-address ":9001"
+    image: adobe/s3mock:latest
+    container_name: autotributo-s3
     environment:
-      MINIO_ROOT_USER: autotributo
-      MINIO_ROOT_PASSWORD: autotributo-secret
+      COM_ADOBE_TESTING_S3MOCK_STORE_ROOT: /s3mockroot
+      COM_ADOBE_TESTING_S3MOCK_STORE_REGION: us-east-1
+      COM_ADOBE_TESTING_S3MOCK_STORE_RETAIN_FILES_ON_EXIT: "true"
+      # Los buckets se crean al arrancar; no hace falta un contenedor init.
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: autotributo-local,autotributo-sri-robot-local
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9090:9090"
     volumes:
-      - miniodata:/data
+      - s3mockdata:/s3mockroot
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/favicon.ico"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     networks:
       - autotributo
     restart: unless-stopped
-
-  minio-init:
-    image: minio/mc:latest
-    container_name: autotributo-minio-init
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set local http://minio:9000 autotributo autotributo-secret; do
-        echo 'esperando MinIO...'; sleep 2;
-      done &&
-      mc mb --ignore-existing local/autotributo-local &&
-      mc mb --ignore-existing local/autotributo-sri-robot-local &&
-      echo 'MinIO buckets listos'
-      "
-    networks:
-      - autotributo
-    restart: "no"
 
   mailpit:
     image: axllent/mailpit:latest
     container_name: autotributo-mailpit
     ports:
-      - "8025:8025"
-      - "1025:1025"
+      # 8025/1025 suelen estar ocupados por otros stacks de correo locales.
+      # Dentro de la red Docker el servicio sigue siendo mailpit:8025 y mailpit:1025.
+      - "8026:8025"
+      - "1026:1025"
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
@@ -204,7 +190,7 @@ services:
 volumes:
   pgdata:
   valkeydata:
-  miniodata:
+  s3mockdata:
 
 networks:
   autotributo:

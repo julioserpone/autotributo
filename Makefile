@@ -13,7 +13,7 @@ export GID := $(shell id -g)
         install key migrate fresh seed tinker art composer npm \
         test test-unit test-feature test-contract coverage \
         lint lint-fix analyse check security e2e \
-        psql redis minio-url mailpit-url reverb-logs queue-logs \
+        psql redis s3-url mailpit-url reverb-logs queue-logs \
         reset
 
 help: ## Muestra esta ayuda
@@ -24,8 +24,8 @@ up: ## Levanta todo el stack en segundo plano
 	$(DC) up -d
 	@echo "App:      http://localhost:8000  (tenant demo: http://demo.localhost:8000)"
 	@echo "Vite:     http://localhost:5173"
-	@echo "MinIO:    http://localhost:9001  (autotributo / autotributo-secret)"
-	@echo "Mailpit:  http://localhost:8025"
+	@echo "S3:       http://localhost:9090  (buckets: autotributo-local, autotributo-sri-robot-local)"
+	@echo "Mailpit:  http://localhost:8026  (SMTP host: 1026)"
 	@echo "Reverb:   ws://localhost:8080"
 
 down: ## Detiene el stack (conserva volúmenes)
@@ -127,11 +127,12 @@ psql: ## Consola psql
 redis: ## Consola valkey-cli
 	$(DC) exec valkey valkey-cli
 
-minio-url: ## Info de MinIO
-	@echo "API: http://localhost:9000  Consola: http://localhost:9001"
+s3-url: ## Info del S3 local (S3Mock)
+	@echo "Endpoint: http://localhost:9090  (path-style; credenciales test/test)"
+	@echo "Buckets:  autotributo-local, autotributo-sri-robot-local"
 
 mailpit-url: ## Info de Mailpit
-	@echo "http://localhost:8025"
+	@echo "UI: http://localhost:8026  SMTP (host): localhost:1026"
 
 reverb-logs: ## Logs de Reverb
 	$(DC) logs -f reverb

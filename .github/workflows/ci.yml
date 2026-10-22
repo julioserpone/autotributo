@@ -112,7 +112,7 @@ jobs:
           echo "GID=$(id -g)" >> "$GITHUB_ENV"
           cp .env.example .env
           docker compose build app
-          docker compose up -d db valkey minio minio-init mailpit app web
+          docker compose up -d db valkey s3 mailpit app web
           docker compose exec -T app composer install --no-interaction --prefer-dist
           docker compose exec -T app php artisan key:generate
           docker compose exec -T app php artisan migrate --seed --force

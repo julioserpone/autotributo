@@ -41,12 +41,12 @@ SaaS multitenant orientado a estudios contables y contadores independientes.
 
 ```bash
 cp .env.example .env
-make up            # levanta app, nginx, Postgres, Valkey, MinIO, Reverb, Vite
+make up            # levanta app, nginx, Postgres, Valkey, S3Mock, Reverb, Vite
 make install       # composer install + npm ci + key:generate + migrate --seed
 open http://demo.localhost:8000
 ```
 
-Servicios locales: app `http://localhost:8000`, Vite `http://localhost:5173`, MinIO `http://localhost:9001`, Mailpit `http://localhost:8025`, Reverb `ws://localhost:8080`.
+Servicios locales: app `http://localhost:8000`, Vite `http://localhost:5173`, S3 local `http://localhost:9090`, Mailpit `http://localhost:8026`, Reverb `ws://localhost:8080`.
 
 ## Principios del proyecto
 
