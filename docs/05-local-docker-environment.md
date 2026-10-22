@@ -21,7 +21,7 @@ No es necesario instalar PHP, Composer ni Postgres en el host: todo corre en con
 | `queue` | misma imagen | — | Worker de colas (`sri,ai,reports,default`) |
 | `scheduler` | misma imagen | — | `schedule:work` |
 | `reverb` | misma imagen | `8080` | WebSockets |
-| `vite` | `node:24-alpine` | `5173` | HMR / build |
+| `vite` | `node:24-alpine` | `5173` | HMR / build (configurable con `VITE_PORT`) |
 | `db` | `postgres:16-alpine` | `5433` | Base de datos |
 | `valkey` | `valkey/valkey:8-alpine` | `6380` | Caché, sesiones, colas |
 | `mailpit` | `axllent/mailpit` | `8026`, `1026` | Correo de desarrollo (UI 8026; SMTP del host 1026 → `mailpit:1025` dentro de Docker) |
@@ -37,26 +37,21 @@ cp .env.example .env
 # 1) Levantar infraestructura
 make up
 
-# 2) Crear el esqueleto Laravel (solo la primera vez, Fase 1)
-#    El repositorio llega sin aplicación hasta F1-01.
-docker compose exec app composer create-project laravel/laravel . --prefer-dist
-#    (si el directorio no está vacío, crear en temporal y mover)
-
-# 3) Dependencias y base de datos
+# 2) Dependencias, clave y base de datos
 make install
 
-# 4) Abrir la app
+# 3) Abrir la app
 open http://localhost:8000
 ```
 
-> Mientras no exista `composer.json`, Nginx devolverá **502**: es esperado. El plan contempla crear el esqueleto en la tarea `F1-01`.
+> El repositorio ya incluye el esqueleto de F1-01 (Laravel 13 + SPA Vue/TS). Si el puerto `5173` está ocupado por otro proyecto, agrega `VITE_PORT=5174` al `.env` antes de `make up`; Compose y Vite usarán ese puerto.
 
 ## 4. URLs y tenants en local
 
 | Recurso | URL |
 |---|---|
 | Aplicación (tenant único) | http://localhost:8000 |
-| Vite (HMR) | http://localhost:5173 |
+| Vite (HMR) | http://localhost:5173 (o `VITE_PORT`) |
 | Reverb | ws://localhost:8080 |
 | Storage local | `storage/app/private` (bind mount del repositorio) |
 | Mailpit (UI) | http://localhost:8026 |
@@ -122,14 +117,16 @@ XDEBUG_CONFIG="client_host=host.docker.internal"
 
 Configura el IDE en el puerto `9003` con path mapping `/var/www/html` → ruta del repo.
 
-**Vite/HMR en Docker:** el contenedor publica `5173`; si el HMR no conecta, revisa que `vite.config.ts` use:
+**Vite/HMR en Docker:** el contenedor publica `${VITE_PORT:-5173}`. `vite.config.ts` lee `VITE_PORT` para el servidor y el HMR; si el HMR no conecta, revisa que el `.env` tenga el mismo valor y que el puerto esté libre.
 
 ```ts
+const vitePort = Number(process.env.VITE_PORT ?? 5173);
+
 server: {
   host: '0.0.0.0',
-  port: 5173,
+  port: vitePort,
   strictPort: true,
-  hmr: { host: 'localhost', protocol: 'ws', port: 5173 },
+  hmr: { host: 'localhost', protocol: 'ws', port: vitePort },
 }
 ```
 
@@ -139,12 +136,13 @@ server: {
 
 | Síntoma | Causa / solución |
 |---|---|
-| Nginx 502 | `composer.json` aún no existe o `php-fpm` no arrancó: `make ps`, `make logs` |
+| Nginx 502 | `php-fpm` no arrancó o la app lanzó un error: `make ps`, `make logs`, revisa `storage/logs/laravel.log` |
 | `Permission denied` en `storage/` | El compose ejecuta los contenedores con tu `UID/GID`. Verifica `id -u` y `id -g`, y reconstruye con `make build` |
 | `could not translate host name "db"` | Estás ejecutando `php artisan` en el host: usa `make art` |
 | Puerto 8000 ocupado | Cambia el mapeo en `docker-compose.yml` (`"8001:80"`) o detén el proceso |
+| Puerto 5173 ocupado | Agrega `VITE_PORT=5174` al `.env` y ejecuta `make up`; Vite y Compose usan ese puerto |
 | Postgres en `localhost:5432` ya existe | Usamos `5433` justamente para evitarlo |
-| Vite no compila tras `npm install` | `make restart` y revisa `make logs`; a veces el contenedor arrancó antes del mount |
+| Vite no compila tras `npm install` | `make restart` y revisa `make logs`; el contenedor limpia `node_modules/.vite` al arrancar |
 | Reverb se desconecta | Verifica `REVERB_HOST/PORT` y que `8080` esté libre; en local el host es `localhost`, no `reverb` |
 | Tests lentos | `pest --parallel`; en Docker, 4 procesos por defecto. Ajusta con `--processes=4` |
 | `NoSuchBucket` o 403 con AWS S3 | Verifica `AWS_BUCKET` del ambiente, `AWS_DEFAULT_REGION`, credenciales IAM y que el bucket exista. En local no reutilices credenciales de producción |

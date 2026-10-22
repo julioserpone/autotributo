@@ -4,7 +4,7 @@ Sistema de automatización contable para Ecuador (**SRI**): ingesta de comproban
 
 Orientado a estudios contables y contadores independientes. El MVP es **single-tenant** (un estudio por despliegue) con el esquema preparado para activar multitenancy sin migrar datos (ADR-0006).
 
-> **Estado:** planificación. Este repositorio contiene el plan de implementación, las decisiones de arquitectura y el entorno local Docker. El código de la aplicación se construye siguiendo `docs/02-implementation-plan.md` (Fase 1 en adelante).
+> **Estado:** F1-01 completado. El repositorio ya contiene Laravel 13.11, la SPA Vue 3 + TypeScript estricto y los gates de calidad (Pint, PHPStan/Larastan nivel 8, Pest, Vitest, Playwright y ESLint). Siguiente tarea: **F1-02 (tenancy-ready)**.
 
 ---
 
@@ -38,7 +38,7 @@ Orientado a estudios contables y contadores independientes. El MVP es **single-t
 | [`docs/fiscal-signoff.md`](docs/fiscal-signoff.md) | Registro de validación fiscal firmado por el contador |
 | [`docs/adr/`](docs/adr/) | Registros de decisión de arquitectura |
 
-## Inicio rápido (cuando exista el esqueleto de la Fase 1)
+## Inicio rápido
 
 ```bash
 cp .env.example .env
@@ -47,7 +47,17 @@ make install       # composer install + npm ci + key:generate + migrate --seed
 open http://localhost:8000
 ```
 
-Servicios locales: app `http://localhost:8000`, Vite `http://localhost:5173`, Mailpit `http://localhost:8026`, Reverb `ws://localhost:8080`. El almacenamiento local usa el disco (`storage/app/private`); AWS S3 es opcional, con un bucket por ambiente.
+Servicios locales: app `http://localhost:8000`, Vite `http://localhost:5173` (configurable con `VITE_PORT` si el puerto está ocupado), Mailpit `http://localhost:8026`, Reverb `ws://localhost:8080`. El almacenamiento local usa el disco (`storage/app/private`); AWS S3 es opcional, con un bucket por ambiente.
+
+### Verificación local
+
+```bash
+make check                                        # Pint + PHPStan + Pest
+npm run typecheck && npm run lint                 # TypeScript estricto + ESLint
+npm run test:unit -- --run                        # Vitest
+npm run build                                     # build de producción
+npx playwright install chromium && make e2e       # E2E contra http://localhost:8000
+```
 
 ## Principios del proyecto
 

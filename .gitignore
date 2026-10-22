@@ -22,12 +22,19 @@
 .DS_Store
 .phpunit.result.cache
 .phpunit.cache
+.pest.cache
 coverage/
 .idea
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
 *.swp
+
+# Bases de datos locales (solo SQLite de arranque)
+/database/*.sqlite
+/database/*.sqlite-journal
+/database/*.sqlite-shm
+/database/*.sqlite-wal
 
 # Docker / datos locales
 docker/data/

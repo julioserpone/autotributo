@@ -57,7 +57,7 @@ services:
     networks:
       - autotributo
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost/"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -97,12 +97,13 @@ services:
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
       - ./:/var/www/html:cached
-    command: sh -c "npm install --no-audit --no-fund && npm run dev -- --host 0.0.0.0"
+    command: sh -c "npm install --no-audit --no-fund --package-lock=false && rm -rf node_modules/.vite && npm run dev -- --host 0.0.0.0"
     environment:
       HOME: /tmp
       CHOKIDAR_USEPOLLING: "true"
+      VITE_PORT: ${VITE_PORT:-5173}
     ports:
-      - "5173:5173"
+      - "${VITE_PORT:-5173}:${VITE_PORT:-5173}"
     networks:
       - autotributo
     restart: unless-stopped
