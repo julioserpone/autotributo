@@ -4,7 +4,7 @@ Sistema de automatización contable para Ecuador (**SRI**): ingesta de comproban
 
 Orientado a estudios contables y contadores independientes. El MVP es **single-tenant** (un estudio por despliegue) con el esquema preparado para activar multitenancy sin migrar datos (ADR-0006).
 
-> **Estado:** F2-01 completado; siguiente tarea **F2-02 (layout S3 del robot)**. Consulta la tabla viva en [`docs/09-progress.md`](docs/09-progress.md). El repositorio contiene Laravel 13.38, la SPA Vue 3 + TypeScript estricto, tenancy single-tenant con aislamiento por `tenant_id`, la integración del paquete `sri-comprobantes-php` y los gates de calidad (Pint, PHPStan/Larastan nivel 8, Pest, Vitest, Playwright y ESLint).
+> **Estado:** F2-02 completado; siguiente tarea **F2-03 (orquestación `SriSyncRun`)**. Consulta la tabla viva en [`docs/09-progress.md`](docs/09-progress.md). El repositorio contiene Laravel 13.38, la SPA Vue 3 + TypeScript estricto, tenancy single-tenant con aislamiento por `tenant_id`, la integración del paquete `sri-comprobantes-php`, el layout S3 real del robot y los gates de calidad (Pint, PHPStan/Larastan nivel 8, Pest, Vitest, Playwright y ESLint).
 
 ---
 

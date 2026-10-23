@@ -62,6 +62,25 @@ return [
             'report' => false,
         ],
 
+        /*
+         * Bucket separado del robot. El robot escribe y la app solo lee.
+         * El prefijo opcional se aplica aquí para que las claves del dominio
+         * no dependan de la configuración de la Lambda.
+         */
+        'sri' => [
+            'driver' => 's3',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('SRI_ROBOT_REGION', env('AWS_DEFAULT_REGION')),
+            'bucket' => env('SRI_ROBOT_OUTPUT_BUCKET'),
+            'prefix' => env('SRI_ROBOT_OUTPUT_PREFIX', ''),
+            'endpoint' => env('AWS_ENDPOINT'),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

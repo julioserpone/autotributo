@@ -6,12 +6,15 @@ namespace App\Providers;
 
 use App\Domain\Sri\Contracts\SriAuthorizationGateway;
 use App\Domain\Sri\Contracts\SriRobotGateway;
+use App\Domain\Sri\Contracts\SriRobotObjectStore;
 use App\Integrations\Sri\FakeSriAuthorizationGateway;
 use App\Integrations\Sri\FakeSriRobotGateway;
+use App\Integrations\Sri\FilesystemSriRobotObjectStore;
 use App\Integrations\Sri\LambdaSriRobotGateway;
 use App\Integrations\Sri\PackageSriAuthorizationGateway;
 use Aws\Lambda\LambdaClient;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 use JulioSerpone\SriComprobantes\Client\AutorizacionClient;
@@ -75,6 +78,12 @@ final class SriServiceProvider extends ServiceProvider
                     'region' => (string) config('sri.robot.region', 'us-east-1'),
                 ]),
                 (string) config('sri.robot.function', 'sri-txt-robot'),
+            );
+        });
+
+        $this->app->singleton(SriRobotObjectStore::class, function (Application $app): SriRobotObjectStore {
+            return new FilesystemSriRobotObjectStore(
+                Storage::disk((string) config('sri.robot.output_disk', 'sri')),
             );
         });
     }

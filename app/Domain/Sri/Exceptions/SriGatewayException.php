@@ -32,4 +32,9 @@ final class SriGatewayException extends RuntimeException
             $previous,
         );
     }
+
+    public static function robotObjectUnreadable(): self
+    {
+        return new self('No fue posible leer un objeto del robot SRI.');
+    }
 }

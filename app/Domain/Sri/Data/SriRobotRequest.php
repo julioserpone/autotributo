@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Sri\Data;
 
+use App\Domain\Sri\Enums\SriDocumentType;
 use InvalidArgumentException;
 
 /**
@@ -21,8 +22,6 @@ final readonly class SriRobotRequest
 
     /** @var list<string> */
     public array $documentTypes;
-
-    private const ALLOWED_DOCUMENT_TYPES = ['01', '03', '04', '05', '07'];
 
     /**
      * @param  list<string>  $periods  Formatos YYYY-MM o YYYY-MM-DD.
@@ -53,7 +52,7 @@ final readonly class SriRobotRequest
         $documentTypes = array_values(array_unique($documentTypes));
 
         foreach ($documentTypes as $documentType) {
-            if (! in_array($documentType, self::ALLOWED_DOCUMENT_TYPES, true)) {
+            if (SriDocumentType::tryFrom($documentType) === null) {
                 throw new InvalidArgumentException("Tipo de comprobante no soportado: {$documentType}.");
             }
         }

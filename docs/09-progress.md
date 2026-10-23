@@ -10,7 +10,7 @@
 |---|---|---|---|
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
 | F1 · Núcleo tenant-ready | En curso | 2/11 | F1-02 · Tenancy-ready y aislamiento por tenant |
-| F2 · Ingesta SRI | En curso | 1/12 | F2-01 · Puertos SRI y paquete `sri-comprobantes-php` |
+| F2 · Ingesta SRI | En curso | 2/12 | F2-02 · Layout S3 real del robot, lectura y checksums |
 | F3 · Motor fiscal + IA | Pendiente | 0/9 | — |
 | F4 · Frontend | Pendiente | 0/12 | — |
 | F5 · Declaraciones | Pendiente | 0/12 | — |
@@ -37,7 +37,7 @@
 | ID | Tarea | Estado | Evidencia |
 |---|---|---|---|
 | F2-01 | Puerto `SriGateway` | Completado | `ce98289` · `sri-comprobantes-php` v0.1.2 · `SriAuthorizationGateway`, `SriRobotGateway`, adaptadores package/Lambda y fakes · 51 tests, 98.0% cobertura |
-| F2-02 | Layout S3 del robot | Pendiente | — |
+| F2-02 | Layout S3 del robot | Completado | `SriRobotObjectPath`, disco `sri`, `SriRobotObjectStore` con SHA-256, layout `{ambiente}/{ruc}/{periodo}` · 61 tests, 97.7% cobertura |
 | F2-03 | `SriSyncRun` y orquestación | Pendiente | — |
 | F2-04 | Callback firmado | Pendiente | Bloqueado: `sri-txt-robot` aún no emite callback |
 | F2-05 | Reconciliación | Pendiente | — |

@@ -75,7 +75,9 @@ Notas:
 | `SRI_TIMEOUT` | `30` | — | Segundos de espera SOAP |
 | `SRI_ROBOT_DRIVER` | `lambda` | — | |
 | `SRI_ROBOT_FUNCTION` | `sri-txt-robot-prod` | — | |
+| `SRI_ROBOT_ENVIRONMENT` | `produccion` | — | Debe coincidir con `SRI_AMBIENTE` de la Lambda |
 | `SRI_ROBOT_OUTPUT_BUCKET` | `autotributo-prod-sri` | — | Bucket del robot, separado del de la app |
+| `SRI_ROBOT_OUTPUT_PREFIX` | vacío | — | Prefijo opcional; debe coincidir con la Lambda |
 | `SRI_ROBOT_CALLBACK_SECRET` | aleatorio 32+ bytes | ✅ | HMAC del webhook |
 | `SRI_ROBOT_PUBLIC_KEY` | base64 | — | Clave pública para sellar credenciales |
 | `SRI_CREDENTIALS_KEY` | base64 32 bytes | ✅ | Cifra credenciales SRI; guardar copia en el gestor de secretos de la organización |

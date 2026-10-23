@@ -19,6 +19,9 @@ Además:
 - Credenciales de producción **jamás** en una máquina local ni en un `.env` versionado.
 - La aplicación debe fallar al arrancar si `AWS_BUCKET` no corresponde a `APP_ENV`.
 - Región recomendada: `us-east-1` (menor latencia y coste para Ecuador). Usa la misma región para ambos buckets.
+- El bucket `-sri` lo **escribe el robot** y lo **lee la app**. La jerarquía real
+  es `{ambiente}/{ruc}/{periodo}/...`, no `runs/{run_id}/...`. El `ambiente`
+  (`dev`, `test`, `produccion`) debe coincidir con `SRI_ROBOT_ENVIRONMENT`.
 
 ## 2. Crear los buckets
 
@@ -129,7 +132,28 @@ Notas:
 
 - **No** configures expiración automática de los XML ni de versiones anteriores: la retención fiscal es ≥ 7 años y debe revisarse con el contador.
 - Los exports temporales se borran con un comando programado a los 7 días. No uses una regla de prefijo para borrarlos si viven bajo `tenants/`, porque podrías borrar documentos.
-- El bucket `-sri` solo necesita `AbortIncompleteMultipartUpload` y transición a `STANDARD_IA`; su contenido se rige por la misma retención. Ejemplo: `lifecycle-sri.json` con `"Filter": { "Prefix": "runs/" }`, transición a `STANDARD_IA` a los 90 días y aborto de multipart a los 7 días.
+- El bucket `-sri` usa la jerarquía `{ambiente}/{ruc}/{periodo}`. Como el bucket es por ambiente, aplica una regla sin filtro de prefijo para todo el bucket: transición a `STANDARD_IA` a los 90 días y aborto de multipart a los 7 días. Ejemplo `lifecycle-sri.json`:
+
+```json
+{
+  "Rules": [
+    {
+      "ID": "sri-reports-to-standard-ia",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "" },
+      "Transitions": [
+        { "Days": 90, "StorageClass": "STANDARD_IA" }
+      ],
+      "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 7 }
+    }
+  ]
+}
+```
+
+```bash
+aws s3api put-bucket-lifecycle-configuration \
+  --bucket "$SRI_BUCKET" --lifecycle-configuration file://lifecycle-sri.json
+```
 
 ## 4. IAM de mínimo privilegio
 
@@ -179,6 +203,22 @@ Notas:
       "Resource": "arn:aws:s3:::autotributo-prod-app/backups/*"
     },
     {
+      "Sid": "SriRobotReadObjects",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectAttributes"
+      ],
+      "Resource": "arn:aws:s3:::autotributo-prod-sri/produccion/*"
+    },
+    {
+      "Sid": "SriRobotListBucket",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::autotributo-prod-sri",
+      "Condition": { "StringLike": { "s3:prefix": ["produccion/*"] } }
+    },
+    {
       "Sid": "InvokeSriRobot",
       "Effect": "Allow",
       "Action": "lambda:InvokeFunction",
@@ -201,7 +241,7 @@ Reemplaza `ACCOUNT_ID` por el ID de tu cuenta AWS. Guarda `AccessKeyId`/`SecretA
 
 ### Rol del robot SRI
 
-El robot solo escribe la salida:
+El robot solo escribe la salida (y lee para su propia idempotencia):
 
 ```json
 {
@@ -209,14 +249,14 @@ El robot solo escribe la salida:
   "Statement": [
     {
       "Effect": "Allow",
-      "Action": ["s3:PutObject", "s3:AbortMultipartUpload"],
-      "Resource": "arn:aws:s3:::autotributo-prod-sri/runs/*"
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:AbortMultipartUpload"],
+      "Resource": "arn:aws:s3:::autotributo-prod-sri/produccion/*"
     }
   ]
 }
 ```
 
-Si el robot corre como Lambda, adjunta esta política a su **execution role**. La app solo necesita `lambda:InvokeFunction` sobre esa función.
+Si el robot corre como Lambda, adjunta esta política a su **execution role**. La app solo necesita `lambda:InvokeFunction` sobre esa función y lectura sobre el prefijo `produccion/*`.
 
 ## 5. Configuración de Laravel
 
@@ -240,6 +280,8 @@ AWS_BUCKET=autotributo-local-app
 AWS_ENDPOINT=
 AWS_USE_PATH_STYLE_ENDPOINT=false
 SRI_ROBOT_OUTPUT_BUCKET=autotributo-local-sri
+SRI_ROBOT_ENVIRONMENT=dev
+SRI_ROBOT_OUTPUT_PREFIX=
 ```
 
 ### Staging / producción (Laravel Cloud)
@@ -250,10 +292,14 @@ Configura las mismas variables en el panel de Cloud, con el usuario y bucket del
 FILESYSTEM_DISK=s3
 AWS_BUCKET=autotributo-prod-app
 SRI_ROBOT_OUTPUT_BUCKET=autotributo-prod-sri
+SRI_ROBOT_ENVIRONMENT=produccion
+SRI_ROBOT_OUTPUT_PREFIX=
 AWS_DEFAULT_REGION=us-east-1
 AWS_ENDPOINT=
 AWS_USE_PATH_STYLE_ENDPOINT=false
 ```
+
+`SRI_ROBOT_ENVIRONMENT` y `SRI_ROBOT_OUTPUT_PREFIX` deben coincidir exactamente con `SRI_AMBIENTE` y el prefijo configurados en la Lambda del robot. Si no coinciden, la app buscará objetos que el robot nunca escribió.
 
 No definas `AWS_ENDPOINT` ni `AWS_USE_PATH_STYLE_ENDPOINT=true` en Cloud: son ajustes para emuladores locales.
 
@@ -278,6 +324,11 @@ aws s3api get-bucket-versioning --bucket "$APP_BUCKET"
 
 # Bloqueo público
 aws s3api get-public-access-block --bucket "$APP_BUCKET"
+
+# Lectura del manifiesto del robot (cuando ya exista)
+aws s3api head-object \
+  --bucket "$SRI_BUCKET" \
+  --key produccion/1758871873001/2026-08/manifest.json
 ```
 
 Prueba también desde Laravel cuando exista el esqueleto:
@@ -315,9 +366,11 @@ El coste real se monitorea con Cost Explorer y AWS Budgets. El almacenamiento no
 ## 9. Checklist
 
 - [ ] Buckets `-app` y `-sri` creados por ambiente, en la misma región.
+- [ ] Layout `{ambiente}/{ruc}/{periodo}` acordado con la Lambda y reflejado en `SRI_ROBOT_ENVIRONMENT`/`SRI_ROBOT_OUTPUT_PREFIX`.
 - [ ] Bloqueo de acceso público y política TLS aplicados.
 - [ ] Versionado y SSE activos.
 - [ ] Lifecycle de documentos y limpieza de exports definidos.
+- [ ] Checksums SHA-256 calculados al leer los objetos del robot.
 - [ ] Usuario IAM por ambiente/componente con política mínima.
 - [ ] Credenciales guardadas en el gestor de secretos y cargadas en Cloud.
 - [ ] `AWS_BUCKET` coincide con `APP_ENV` (guarda de arranque).
