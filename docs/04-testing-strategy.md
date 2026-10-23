@@ -123,20 +123,32 @@ Incluye también: listados con `filter[company_id]` ajeno, `POST` con `company_i
 
 ```php
 it('sella las credenciales y no las envía en claro', function () {
-    Http::fake(['*/2015-03-31/functions/*' => Http::response(['StatusCode' => 202])]);
+    $keypair = sodium_crypto_box_keypair();
+    $publicKey = base64_encode(sodium_crypto_box_publickey($keypair));
+    $lambda = Mockery::mock(LambdaClient::class);
+    $lambda->shouldReceive('invoke')->once()->withArgs(function (array $args): bool {
+        $payload = json_decode($args['Payload'], true);
 
-    $gateway = new LambdaSriGateway(config('services.sri_robot'));
-    $gateway->dispatch(new SriRunRequest(/* ... */));
+        expect($payload)->not->toHaveKey('password')
+            ->and($payload['sealed_credentials'])->toBeString()
+            ->and($payload['sealed_credentials'])->not->toContain('clave-real');
 
-    Http::assertSent(function (Request $request) {
-        $payload = $request->data();
+        $plain = sodium_crypto_box_seal_open(
+            base64_decode($payload['sealed_credentials'], true),
+            $keypair,
+        );
 
-        expect($payload['sealed_credentials'])->not->toContain('clave-real');
-        expect($payload['output']['bucket'])->toBe('autotributo-test-sri');
-        expect($payload)->not->toHaveKey('password');
+        expect($plain)->toContain('clave-real');
 
         return true;
-    });
+    })->andReturn(new Result(['StatusCode' => 202]));
+
+    $gateway = new LambdaSriRobotGateway($lambda, 'sri-txt-robot', $publicKey);
+    $gateway->dispatch(new SriRobotRequest(
+        ruc: '1758871873001',
+        periods: ['2026-08'],
+        credentials: new SriRobotCredentials('1758871873001', 'clave-real'),
+    ));
 });
 ```
 

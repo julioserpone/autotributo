@@ -37,4 +37,13 @@ final class SriGatewayException extends RuntimeException
     {
         return new self('No fue posible leer un objeto del robot SRI.');
     }
+
+    public static function robotCredentialsUnavailable(?Throwable $previous = null): self
+    {
+        return new self(
+            'No fue posible preparar las credenciales selladas del robot SRI.',
+            0,
+            $previous,
+        );
+    }
 }

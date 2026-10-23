@@ -42,6 +42,9 @@ trait BelongsToTenant
      */
     public function tenant(): BelongsTo
     {
-        return $this->belongsTo(config('tenancy.tenant_model'));
+        /** @var class-string<Tenant> $tenantModel */
+        $tenantModel = config('tenancy.tenant_model');
+
+        return $this->belongsTo($tenantModel);
     }
 }

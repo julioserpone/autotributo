@@ -220,7 +220,7 @@ POST lambda:Invoke (Event)
 ```
 
 Reglas:
-- **Las credenciales del contribuyente nunca viajan en claro.** Se sellan con `sodium_crypto_box_seal` usando la clave pública del robot; la privada vive en AWS Secrets Manager y solo la Lambda la lee. Si el runtime no soporta libsodium, se usa envelope encryption con KMS.
+- **Las credenciales del contribuyente nunca viajan en claro.** Se sellan con `sodium_crypto_box_seal` usando la clave pública del robot; la privada vive en la variable `SRI_CREDENTIALS_PRIVATE_KEY` de la Lambda y solo esa función la lee. No se usa AWS Secrets Manager.
 - La Lambda no conoce la base de datos. Solo descarga, empaqueta y escribe en S3.
 - El callback se firma con HMAC-SHA256 (`X-Autotributo-Signature: t=<ts>,v1=<hmac>`), tolerancia 300 s, deduplicación por `event_id`.
 - Si el callback se pierde, un job de reconciliación (`ReconcileSriRuns`, cada 10 min) lista el prefijo S3 de runs pendientes y continúa el flujo. **La verdad está en S3, no en el callback.**

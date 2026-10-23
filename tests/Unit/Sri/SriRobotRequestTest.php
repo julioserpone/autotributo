@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Sri\Data\SriRobotCredentials;
 use App\Domain\Sri\Data\SriRobotRequest;
 
 it('construye el contrato exacto del robot', function (): void {
@@ -37,3 +38,38 @@ it('rechaza períodos, RUC o tipos inválidos', function (string $field): void {
     expect(fn () => new SriRobotRequest(...$args))
         ->toThrow(InvalidArgumentException::class);
 })->with(['ruc', 'period', 'type', 'empty-periods']);
+
+it('incluye el sobre sellado en el payload', function (): void {
+    $request = new SriRobotRequest(
+        ruc: '1758871873001',
+        periods: ['2026-08'],
+        documentTypes: ['01'],
+        credentials: new SriRobotCredentials('1758871873001', 'clave-real'),
+    );
+
+    expect($request->toPayload('sobre-sellado'))->toBe([
+        'ruc' => '1758871873001',
+        'periodos' => ['2026-08'],
+        'tipos' => ['01'],
+        'forzar' => false,
+        'sealed_credentials' => 'sobre-sellado',
+    ]);
+});
+
+it('no permite construir el payload con credenciales sin sellar', function (): void {
+    $request = new SriRobotRequest(
+        ruc: '1758871873001',
+        periods: ['2026-08'],
+        credentials: new SriRobotCredentials('1758871873001', 'clave-real'),
+    );
+
+    expect(fn () => $request->toPayload())->toThrow(InvalidArgumentException::class);
+});
+
+it('rechaza credenciales de otro RUC', function (): void {
+    expect(fn () => new SriRobotRequest(
+        ruc: '1758871873001',
+        periods: ['2026-08'],
+        credentials: new SriRobotCredentials('0999999999001', 'clave-real'),
+    ))->toThrow(InvalidArgumentException::class);
+});

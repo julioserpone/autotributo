@@ -219,8 +219,8 @@ feature branch → PR → CI (lint, tests, e2e, seguridad) → preview env
 |---|---|
 | Función Lambda | Timeout 15 min, memoria 1–2 GB, `/tmp` ampliado solo si es imprescindible (mejor streaming a S3) |
 | Invocación | Asíncrona (`Event`); destino on-success/on-failure a S3 |
-| Credenciales | Clave privada de sellado en Secrets Manager; rotación anual |
-| Permisos | Escritura solo en `sri-robot/{env}/*`; lectura del secreto; logs en CloudWatch |
+| Credenciales | Clave privada de sellado en `SRI_CREDENTIALS_PRIVATE_KEY` de la función; rotación anual |
+| Permisos | Escritura solo en `sri-robot/{env}/*`; lectura de la variable de entorno; logs en CloudWatch |
 | Concurrencia | Límite reservado para no saturar el portal del SRI ni el presupuesto |
 | Alarmas | Errores > 5 % en 5 min, duración p95 > 10 min, throttles |
 | Retención de logs | 30 días (sin datos sensibles) |

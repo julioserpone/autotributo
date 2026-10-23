@@ -33,8 +33,9 @@ return [
     |--------------------------------------------------------------------------
     |
     | Contrato real del handler:
-    | {ruc, periodos[], tipos[], forzar}. Las credenciales del portal y el
-    | bucket de salida se configuran en la función Lambda, no en este payload.
+    | {ruc, periodos[], tipos[], forzar, sealed_credentials?}. En modo
+    | dinámico la app sella las credenciales con `public_key`; la clave
+    | privada y el bucket de salida viven en la función Lambda.
     |
     */
 

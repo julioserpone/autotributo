@@ -78,6 +78,7 @@ final class SriServiceProvider extends ServiceProvider
                     'region' => (string) config('sri.robot.region', 'us-east-1'),
                 ]),
                 (string) config('sri.robot.function', 'sri-txt-robot'),
+                (string) config('sri.robot.public_key', ''),
             );
         });
 
