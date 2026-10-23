@@ -54,6 +54,7 @@ it('crea el run y despacha el robot', function (): void {
         ->and($run->company_id)->toBe($this->company->id)
         ->and($run->date_from->toDateString())->toBe('2026-08-01')
         ->and($run->date_to->toDateString())->toBe('2026-08-31')
+        ->and($run->periods)->toBe(['2026-08'])
         ->and($run->document_types)->toBe(['01', '04'])
         ->and($run->lambda_request_id)->toBe('fake-1')
         ->and($run->started_at)->not->toBeNull()

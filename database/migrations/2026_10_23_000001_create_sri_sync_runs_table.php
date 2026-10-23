@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('status', 20)->default('queued')->index();
             $table->date('date_from');
             $table->date('date_to');
+            $table->jsonb('periods');
             $table->jsonb('document_types');
             $table->string('idempotency_key', 64)->unique();
             $table->string('lambda_request_id', 128)->nullable();

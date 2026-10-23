@@ -1,10 +1,10 @@
 # 10 — Integración SRI
 
-> Alcance: F2-01, F2-02 y la base de F2-03. El paquete consulta el XML por
-> clave de acceso, el robot descarga los reportes, la app lee su bucket S3 y
-> los runs de sincronización se orquestan con idempotencia. El callback, la
-> reconciliación, el parser XML y la persistencia de comprobantes llegan en
-> F2-04 a F2-08.
+> Alcance: F2-01, F2-02, F2-03 y F2-05. El paquete consulta el XML por clave
+> de acceso, el robot descarga los reportes, la app lee su bucket S3, orquesta
+> los runs con idempotencia y los reconcilia contra el manifiesto. El callback
+> (F2-04), el parser XML (F2-06) y la persistencia de comprobantes (F2-07/F2-08)
+> siguen pendientes.
 
 ## 1. Paquete `sri-comprobantes-php`
 
@@ -39,10 +39,13 @@ es reproducible en Laravel Cloud. La consulta masiva se orquesta en la app.
 ```text
 app/Domain/Sri/
 ├── Actions/
-│   └── StartSriSync.php              # crea y despacha runs idempotentes
+│   ├── StartSriSync.php              # crea y despacha runs idempotentes
+│   ├── ReconcileSriRun.php           # reconcilia un run contra S3
+│   └── ReconcileSriRuns.php          # selecciona y reconcilia runs activos
 ├── Contracts/
 │   ├── SriAuthorizationGateway.php   # XML por clave
-│   └── SriRobotGateway.php           # descarga de TXT
+│   ├── SriRobotGateway.php           # descarga de TXT
+│   └── SriRobotObjectStore.php       # lectura del bucket del robot
 ├── Data/
 │   ├── AuthorizationQuery.php
 │   ├── AuthorizationResult.php
@@ -50,13 +53,17 @@ app/Domain/Sri/
 │   ├── SriRobotCredentials.php       # sobre que se sella
 │   ├── SriRobotRequest.php
 │   ├── SriRobotDispatch.php
+│   ├── SriRobotObjectPath.php        # layout {ambiente}/{ruc}/{periodo}
 │   ├── SriSyncBatch.php              # runs de una solicitud
 │   └── SriSyncWindow.php             # agrupación y corte de 93 días
 ├── Enums/
 │   ├── AuthorizationStatus.php
+│   ├── SriDocumentType.php
+│   ├── SriSyncRunFileStatus.php
 │   └── SriSyncRunStatus.php
 └── Models/
-    └── SriSyncRun.php
+    ├── SriSyncRun.php
+    └── SriSyncRunFile.php
 ```
 
 Adaptadores de infraestructura:
@@ -67,6 +74,8 @@ Adaptadores de infraestructura:
 | `LambdaSriRobotGateway` | Invoca `sri-txt-robot` en AWS Lambda (`Event`) |
 | `FakeSriAuthorizationGateway` | Desarrollo y tests sin red |
 | `FakeSriRobotGateway` | Desarrollo y tests sin AWS |
+| `FilesystemSriRobotObjectStore` | Lectura del disco `sri` (S3 en Cloud) |
+| `ReconcileSriRunsCommand` | Comando `sri:reconcile-runs` programado cada 10 min |
 
 El dominio solo depende de los contratos. Ningún controlador o job debe
 importar clases de SOAP o del SDK de AWS.
@@ -117,8 +126,7 @@ Salida esperada del robot en su bucket:
 `SriRobotObjectPath` construye estas claves en el dominio; el prefijo opcional
 del bucket lo aplica el disco `sri` de Laravel (`SRI_ROBOT_OUTPUT_PREFIX`). El
 robot **no** publica checksums en el manifiesto actual: la app calcula SHA-256
-al leer (`SriRobotObjectStore::sha256`) y lo persistirá en
-`sri_sync_run_files` cuando exista F2-03/F2-08.
+al leer y lo persiste en `sri_sync_run_files` durante F2-05.
 
 ### Lectura desde Laravel
 
@@ -159,7 +167,64 @@ Reglas:
   F2-04/F2-09.
 - La tabla `companies` se incorporó con lo mínimo para la FK del run; el CRUD
   completo y la validación de RUC pertenecen a F1-05.
-- `sri_sync_run_files` y la reconciliación por S3 llegan en F2-05/F2-08.
+- `sri_sync_run_files` se llena en F2-05; el parser de F2-06 consume esos
+  archivos y el de F2-07 interpreta el manifiesto/TXT.
+
+### Reconciliación por S3 (F2-05)
+
+El robot no envía callback. La app reconcilia cada 10 minutos los runs activos
+contra el bucket del robot:
+
+```text
+sri:reconcile-runs --limit=50   # programado con withoutOverlapping()
+```
+
+`ReconcileSriRuns` selecciona runs en `invoking`, `downloading` o `parsing`.
+`ReconcileSriRun` procesa cada período persistido en `sri_sync_runs.periods`
+(con respaldo mensual para runs antiguos) y usa este manifiesto real:
+
+```json
+{
+  "ambiente": "produccion",
+  "ruc": "1758871873001",
+  "periodo": "2026-09",
+  "generadoEn": "2026-10-21T16:45:48+00:00",
+  "descargas": [
+    {
+      "ruc": "1758871873001",
+      "periodo": "2026-09",
+      "tipo": "01",
+      "tipoEtiqueta": "Factura",
+      "claveTxt": "produccion/1758871873001/2026-09/facturas-recibidas-2026-09.txt",
+      "bytes": 8164,
+      "totalClaves": 44,
+      "tareaCaptcha": "navegador"
+    }
+  ],
+  "totalClaves": 44
+}
+```
+
+El JSON de claves asociado tiene `ambiente`, `ruc`, `periodo`, `tipo`,
+`tipoEtiqueta`, `archivo`, `total` y `clavesAcceso[]`. La reconciliación
+valida que `ambiente`, `ruc` y `periodo` coincidan con el run, que el tipo sea
+conocido, que `bytes` coincida con el TXT, que `total` coincida con
+`count(clavesAcceso)` y que `archivo` sea el nombre del TXT.
+
+Reglas de estado:
+
+| Situación | Estado del run |
+|---|---|
+| Aún no existe ningún `manifest.json` | Se queda en `invoking` |
+| Hay al menos un manifiesto | Pasa a `downloading` |
+| Todos los períodos y archivos están disponibles y válidos | Pasa a `parsing` |
+| Falta un TXT, un JSON o hay un archivo inválido | Se queda en `downloading` con el detalle en `sri_sync_run_files` |
+
+Cada objeto se registra con `updateOrCreate` por `(run_id, s3_key)` para que
+repetir la reconciliación sea idempotente. Estados de archivo:
+`pending`, `available`, `missing`, `invalid` y `processed` (este último lo
+usará el parser). Un fallo de un run no detiene la reconciliación de los
+siguientes; el error se reporta y el scheduler reintenta en la próxima pasada.
 
 ## 4. Variables de entorno
 
@@ -203,6 +268,7 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 | `tests/Unit/Sri/SriSyncWindowTest.php` | Agrupación, corte exacto de 93 días y rangos sin huecos |
 | `tests/Unit/Sri/SriSyncRunStatusTest.php` | Transiciones permitidas, estados terminales y saltos inválidos |
 | `tests/Feature/Sri/StartSriSyncTest.php` | Creación, idempotencia, división, fallo y cancelación |
+| `tests/Feature/Sri/ReconcileSriRunTest.php` | Manifiesto/TXT/claves, faltantes, JSON inválido, bytes, identidad, idempotencia, multiperíodo, comando y tenant por defecto |
 | `tests/Feature/Sri/SriRobotObjectStoreTest.php` | Lectura, existencia, SHA-256 y objeto ausente en el disco `sri` |
 | `tests/Feature/Sri/SriServiceProviderTest.php` | Selección de adaptadores por configuración |
 
@@ -212,10 +278,11 @@ por dobles.
 ## 6. Siguientes pasos
 
 1. **F2-04:** callback firmado. Requiere modificar `sri-txt-robot` para emitir
-   `event_id`, timestamp y HMAC; hoy no existe.
-2. **F2-05:** reconciliación por S3 usando `manifest.json` y los JSON de claves.
-3. **F2-06 a F2-08:** parser XML, persistencia idempotente y fixtures.
-4. **F1-05/F1-06:** CRUD de empresas y almacenamiento cifrado de credenciales;
+   `event_id`, timestamp y HMAC; hoy no existe. Mientras tanto, F2-05 cubre la
+   reconciliación por S3.
+2. **F2-06 a F2-08:** parser XML, parser de manifiesto/TXT, persistencia
+   idempotente y fixtures.
+3. **F1-05/F1-06:** CRUD de empresas y almacenamiento cifrado de credenciales;
    `StartSriSync` ya acepta el sobre, pero la app aún debe leerlo de la base.
 
 ## 7. Seguridad

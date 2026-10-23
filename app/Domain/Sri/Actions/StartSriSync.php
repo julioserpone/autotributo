@@ -97,6 +97,7 @@ final readonly class StartSriSync
                 'status' => SriSyncRunStatus::Queued,
                 'date_from' => $window->from->toDateString(),
                 'date_to' => $window->to->toDateString(),
+                'periods' => $periods,
                 'document_types' => $request->documentTypes,
                 'idempotency_key' => $runKey,
                 'totals' => [

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Sri\Actions\ReconcileSriRun;
 use App\Domain\Sri\Contracts\SriAuthorizationGateway;
 use App\Domain\Sri\Contracts\SriRobotGateway;
 use App\Domain\Sri\Contracts\SriRobotObjectStore;
@@ -85,6 +86,13 @@ final class SriServiceProvider extends ServiceProvider
         $this->app->singleton(SriRobotObjectStore::class, function (Application $app): SriRobotObjectStore {
             return new FilesystemSriRobotObjectStore(
                 Storage::disk((string) config('sri.robot.output_disk', 'sri')),
+            );
+        });
+
+        $this->app->singleton(ReconcileSriRun::class, function (Application $app): ReconcileSriRun {
+            return new ReconcileSriRun(
+                $app->make(SriRobotObjectStore::class),
+                (string) config('sri.robot.environment', 'dev'),
             );
         });
     }

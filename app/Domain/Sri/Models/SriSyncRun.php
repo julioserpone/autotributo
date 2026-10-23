@@ -10,6 +10,7 @@ use App\Domain\Tenancy\Models\Concerns\BelongsToTenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -28,6 +29,7 @@ use InvalidArgumentException;
  * @property SriSyncRunStatus $status
  * @property Carbon $date_from
  * @property Carbon $date_to
+ * @property list<string> $periods
  * @property list<string> $document_types
  * @property string $idempotency_key
  * @property string|null $lambda_request_id
@@ -52,6 +54,7 @@ final class SriSyncRun extends Model
         'status' => SriSyncRunStatus::class,
         'date_from' => 'date',
         'date_to' => 'date',
+        'periods' => 'array',
         'document_types' => 'array',
         'totals' => 'array',
         'started_at' => 'datetime',
@@ -81,6 +84,14 @@ final class SriSyncRun extends Model
     public function requestedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    /**
+     * @return HasMany<SriSyncRunFile, $this>
+     */
+    public function files(): HasMany
+    {
+        return $this->hasMany(SriSyncRunFile::class, 'run_id');
     }
 
     public function isActive(): bool
