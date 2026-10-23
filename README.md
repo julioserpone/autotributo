@@ -4,7 +4,7 @@ Sistema de automatización contable para Ecuador (**SRI**): ingesta de comproban
 
 Orientado a estudios contables y contadores independientes. El MVP es **single-tenant** (un estudio por despliegue) con el esquema preparado para activar multitenancy sin migrar datos (ADR-0006).
 
-> **Estado:** F1-01 completado. El repositorio ya contiene Laravel 13.11, la SPA Vue 3 + TypeScript estricto y los gates de calidad (Pint, PHPStan/Larastan nivel 8, Pest, Vitest, Playwright y ESLint). Siguiente tarea: **F1-02 (tenancy-ready)**.
+> **Estado:** F1-02 completado; siguiente tarea **F1-03 (identidad)**. Consulta la tabla viva en [`docs/09-progress.md`](docs/09-progress.md). El repositorio contiene Laravel 13.38, la SPA Vue 3 + TypeScript estricto, tenancy single-tenant con aislamiento por `tenant_id` y los gates de calidad (Pint, PHPStan/Larastan nivel 8, Pest, Vitest, Playwright y ESLint).
 
 ---
 
@@ -34,6 +34,7 @@ Orientado a estudios contables y contadores independientes. El MVP es **single-t
 | [`docs/06-laravel-cloud-deployment.md`](docs/06-laravel-cloud-deployment.md) | Build/deploy, variables, colas, storage, backups, runbooks |
 | [`docs/07-governance-and-best-practices.md`](docs/07-governance-and-best-practices.md) | Git, revisión, estándares de código, ADRs, seguridad |
 | [`docs/08-mvp-backlog.md`](docs/08-mvp-backlog.md) | Historias de usuario y criterios de aceptación (Gherkin) |
+| [`docs/09-progress.md`](docs/09-progress.md) | Tabla viva de avance por fase y tarea |
 | [`docs/aws-s3-setup.md`](docs/aws-s3-setup.md) | Buckets por ambiente, IAM, cifrado, lifecycle y verificación de S3 |
 | [`docs/fiscal-signoff.md`](docs/fiscal-signoff.md) | Registro de validación fiscal firmado por el contador |
 | [`docs/adr/`](docs/adr/) | Registros de decisión de arquitectura |

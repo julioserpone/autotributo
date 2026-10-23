@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Domain\Tenancy\Http\Middleware\EnsureTenantIsActive;
+use App\Domain\Tenancy\Http\Middleware\InitializeTenantContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,7 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'tenant.context' => InitializeTenantContext::class,
+            'tenant.active' => EnsureTenantIsActive::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

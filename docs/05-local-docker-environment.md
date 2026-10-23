@@ -31,7 +31,7 @@ No es necesario instalar PHP, Composer ni Postgres en el host: todo corre en con
 ## 3. Primer arranque
 
 ```bash
-git clone <repo> autotributo && cd autotributo
+git clone <repo> ~/Projects/autotributo && cd ~/Projects/autotributo
 cp .env.example .env
 
 # 1) Levantar infraestructura
