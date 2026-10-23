@@ -37,7 +37,7 @@
 | ID | Tarea | Estado | Evidencia |
 |---|---|---|---|
 | F2-01 | Puerto `SriGateway` | Completado | `ce98289` · `sri-comprobantes-php` v0.1.2 · `SriAuthorizationGateway`, `SriRobotGateway`, adaptadores package/Lambda y fakes · 51 tests, 98.0% cobertura |
-| F2-02 | Layout S3 del robot | Completado | `SriRobotObjectPath`, disco `sri`, `SriRobotObjectStore` con SHA-256, layout `{ambiente}/{ruc}/{periodo}` · 61 tests, 97.7% cobertura |
+| F2-02 | Layout S3 del robot | Completado | `6abd600` · `SriRobotObjectPath`, disco `sri`, `SriRobotObjectStore` con SHA-256, layout `{ambiente}/{ruc}/{periodo}` · 61 tests, 97.7% cobertura |
 | F2-03 | `SriSyncRun` y orquestación | Pendiente | — |
 | F2-04 | Callback firmado | Pendiente | Bloqueado: `sri-txt-robot` aún no emite callback |
 | F2-05 | Reconciliación | Pendiente | — |
