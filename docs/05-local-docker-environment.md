@@ -16,7 +16,7 @@ No es necesario instalar PHP, Composer ni Postgres en el host: todo corre en con
 
 | Servicio | Imagen | Puerto host | Uso |
 |---|---|---|---|
-| `app` | `docker/php/Dockerfile` (PHP 8.5-FPM) | — | Aplicación Laravel |
+| `app` | `docker/php/Dockerfile` (PHP 8.5-FPM) | — | Aplicación Laravel; incluye `ext-soap` para el paquete SRI |
 | `web` | `nginx:1.27-alpine` | `8000` | Servidor HTTP |
 | `queue` | misma imagen | — | Worker de colas (`sri,ai,reports,default`) |
 | `scheduler` | misma imagen | — | `schedule:work` |

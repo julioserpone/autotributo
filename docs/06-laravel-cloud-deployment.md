@@ -24,6 +24,8 @@ Cada entorno tiene su propia base de datos, bucket, colas y credenciales. **Nunc
 | Log drain | Sentry / proveedor de logs |
 
 > El filesystem del contenedor es **efímero y por réplica**. Todo lo persistente va a Object Storage.
+>
+> El runtime debe incluir `ext-soap` (paquete `sri-comprobantes-php`), además de `dom`, `libxml` y `openssl`. Verificar en el primer deploy de staging con `php -m`.
 
 ## 3. Build y deploy
 
@@ -68,6 +70,9 @@ Notas:
 | `AWS_BUCKET` | `autotributo-prod-app` | — | Bucket de la app; **nunca** el de staging |
 | `AWS_ENDPOINT` | *(vacío)* | — | Vacío para AWS real; no usar endpoint local en Cloud |
 | `AWS_USE_PATH_STYLE_ENDPOINT` | `false` | — | AWS S3 usa virtual-hosted style |
+| `SRI_AUTHORIZATION_DRIVER` | `package` | — | `fake` solo en local/tests |
+| `SRI_ENVIRONMENT` | `1` | — | `1` pruebas, `2` producción |
+| `SRI_TIMEOUT` | `30` | — | Segundos de espera SOAP |
 | `SRI_ROBOT_DRIVER` | `lambda` | — | |
 | `SRI_ROBOT_FUNCTION` | `sri-txt-robot-prod` | — | |
 | `SRI_ROBOT_OUTPUT_BUCKET` | `autotributo-prod-sri` | — | Bucket del robot, separado del de la app |

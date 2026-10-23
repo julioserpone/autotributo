@@ -10,7 +10,7 @@
 |---|---|---|---|
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
 | F1 · Núcleo tenant-ready | En curso | 2/11 | F1-02 · Tenancy-ready y aislamiento por tenant |
-| F2 · Ingesta SRI | Pendiente | 0/12 | — |
+| F2 · Ingesta SRI | En curso | 1/12 | F2-01 · Puertos SRI y paquete `sri-comprobantes-php` |
 | F3 · Motor fiscal + IA | Pendiente | 0/9 | — |
 | F4 · Frontend | Pendiente | 0/12 | — |
 | F5 · Declaraciones | Pendiente | 0/12 | — |
@@ -31,6 +31,23 @@
 | F1-09 | Convenciones de API | Pendiente | — |
 | F1-10 | Provisión inicial | Pendiente | — |
 | F1-11 | Deploy a staging | Pendiente | — |
+
+## Fase 2 · Ingesta SRI
+
+| ID | Tarea | Estado | Evidencia |
+|---|---|---|---|
+| F2-01 | Puerto `SriGateway` | Completado | `sri-comprobantes-php` v0.1.2 · `SriAuthorizationGateway`, `SriRobotGateway`, adaptadores package/Lambda y fakes · 51 tests, 98.0% cobertura |
+| F2-02 | Layout S3 del robot | Pendiente | — |
+| F2-03 | `SriSyncRun` y orquestación | Pendiente | — |
+| F2-04 | Callback firmado | Pendiente | Bloqueado: `sri-txt-robot` aún no emite callback |
+| F2-05 | Reconciliación | Pendiente | — |
+| F2-06 | Parser XML | Pendiente | — |
+| F2-07 | Parser de manifiesto/TXT | Pendiente | — |
+| F2-08 | Persistencia idempotente | Pendiente | — |
+| F2-09 | Progreso en vivo | Pendiente | — |
+| F2-10 | Resiliencia | Pendiente | — |
+| F2-11 | Límites y cuotas | Pendiente | — |
+| F2-12 | Observabilidad | Pendiente | — |
 
 ## Cómo actualizar
 

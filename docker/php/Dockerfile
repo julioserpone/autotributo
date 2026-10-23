@@ -10,6 +10,7 @@ FROM php:${PHP_VERSION}-fpm-alpine AS base
 
 RUN apk add --no-cache \
         icu-dev \
+        libxml2-dev \
         libzip-dev \
         oniguruma-dev \
         postgresql-dev \
@@ -26,6 +27,7 @@ RUN apk add --no-cache \
         pcntl \
         pdo_pgsql \
         pgsql \
+        soap \
         sockets \
         zip \
     && pecl install redis \

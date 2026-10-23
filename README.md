@@ -4,7 +4,7 @@ Sistema de automatización contable para Ecuador (**SRI**): ingesta de comproban
 
 Orientado a estudios contables y contadores independientes. El MVP es **single-tenant** (un estudio por despliegue) con el esquema preparado para activar multitenancy sin migrar datos (ADR-0006).
 
-> **Estado:** F1-02 completado; siguiente tarea **F1-03 (identidad)**. Consulta la tabla viva en [`docs/09-progress.md`](docs/09-progress.md). El repositorio contiene Laravel 13.38, la SPA Vue 3 + TypeScript estricto, tenancy single-tenant con aislamiento por `tenant_id` y los gates de calidad (Pint, PHPStan/Larastan nivel 8, Pest, Vitest, Playwright y ESLint).
+> **Estado:** F2-01 completado; siguiente tarea **F2-02 (layout S3 del robot)**. Consulta la tabla viva en [`docs/09-progress.md`](docs/09-progress.md). El repositorio contiene Laravel 13.38, la SPA Vue 3 + TypeScript estricto, tenancy single-tenant con aislamiento por `tenant_id`, la integración del paquete `sri-comprobantes-php` y los gates de calidad (Pint, PHPStan/Larastan nivel 8, Pest, Vitest, Playwright y ESLint).
 
 ---
 
@@ -17,7 +17,8 @@ Orientado a estudios contables y contadores independientes. El MVP es **single-t
 | Base de datos | PostgreSQL 16 | JSONB, índices GIN, RLS como defensa en profundidad |
 | Caché / colas | Valkey (Redis-compatible) | En Cloud: `QUEUE_CONNECTION=cloud` (SQS administrado) |
 | Tiempo real | Laravel Reverb | En Cloud: cluster administrado; local: contenedor propio |
-| Ingesta SRI | AWS Lambda `julioserpone/sri-txt-robot` | Invocación asíncrona + S3 + callback firmado |
+| Ingesta SRI | AWS Lambda `julioserpone/sri-txt-robot` | Invocación asíncrona + S3; callback pendiente de implementar en el robot |
+| Consulta SRI | `julioserpone/sri-comprobantes-php` ^0.1 | SOAP por clave de acceso; XML autorizado |
 | Frontend | Vue 3 + TypeScript + Vite + Tailwind 4 + shadcn-vue | Pinia, TanStack Query, Chart.js, Echo |
 | Calidad | Pest 4, PHPStan/Larastan nivel 8, Pint, Vitest, Playwright | Gates obligatorios en CI |
 | Deploy | Laravel Cloud + AWS S3 | Build/deploy commands, colas administradas, Scheduler; S3 en cuenta propia con bucket por ambiente |
@@ -35,6 +36,7 @@ Orientado a estudios contables y contadores independientes. El MVP es **single-t
 | [`docs/07-governance-and-best-practices.md`](docs/07-governance-and-best-practices.md) | Git, revisión, estándares de código, ADRs, seguridad |
 | [`docs/08-mvp-backlog.md`](docs/08-mvp-backlog.md) | Historias de usuario y criterios de aceptación (Gherkin) |
 | [`docs/09-progress.md`](docs/09-progress.md) | Tabla viva de avance por fase y tarea |
+| [`docs/10-sri-integration.md`](docs/10-sri-integration.md) | Paquete SRI, puertos, contrato real del robot y pruebas |
 | [`docs/aws-s3-setup.md`](docs/aws-s3-setup.md) | Buckets por ambiente, IAM, cifrado, lifecycle y verificación de S3 |
 | [`docs/fiscal-signoff.md`](docs/fiscal-signoff.md) | Registro de validación fiscal firmado por el contador |
 | [`docs/adr/`](docs/adr/) | Registros de decisión de arquitectura |

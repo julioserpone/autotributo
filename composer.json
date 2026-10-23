@@ -7,9 +7,12 @@
     "license": "proprietary",
     "require": {
         "php": "^8.5",
+        "aws/aws-sdk-php": "^3.0",
+        "julioserpone/sri-comprobantes-php": "^0.1",
         "laravel/framework": "^13.17",
         "laravel/reverb": "^1.12",
         "laravel/tinker": "^3.0",
+        "league/flysystem-aws-s3-v3": "^3.0",
         "stancl/tenancy": "^3.10"
     },
     "require-dev": {
@@ -102,5 +105,12 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": [
+        {
+            "name": "sri-comprobantes",
+            "type": "vcs",
+            "url": "https://github.com/julioserpone/sri-comprobantes-php.git"
+        }
+    ]
 }
