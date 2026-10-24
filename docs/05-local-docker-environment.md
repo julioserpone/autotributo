@@ -46,6 +46,19 @@ open http://localhost:8000
 
 > El repositorio ya incluye el esqueleto de F1-01 (Laravel 13 + SPA Vue/TS). Si el puerto `5173` está ocupado por otro proyecto, agrega `VITE_PORT=5174` al `.env` antes de `make up`; Compose y Vite usarán ese puerto.
 
+### 3.1 UID/GID personalizados (necesario para Playwright)
+
+El compose usa `UID/GID` 1000 por defecto, porque ese es el usuario de los runners de GitHub. Si tu usuario local tiene otro UID (macOS usa `501`), los archivos que generan `composer install`, `artisan` o Vite quedarán con dueño 1000 y el mount `:cached` de Docker Desktop puede negar la escritura al ejecutar suites completas (E2E incluido). Usa el override versionado como ejemplo:
+
+```bash
+cp .env.compose.example .env.compose
+# edita UID y GID con la salida de `id -u` e `id -g`
+cp docker-compose.override.example.yml docker-compose.override.yml
+make build && make up
+```
+
+`.env.compose` y `docker-compose.override.yml` están ignorados por git: cada máquina elige sus IDs sin ensuciar el repositorio. Sin override, todo funciona con `make up` normal en macOS; el override solo hace falta si quieres que los archivos generados dentro de los contenedores te pertenezcan.
+
 ## 4. URLs y tenants en local
 
 | Recurso | URL |
@@ -137,7 +150,7 @@ server: {
 | Síntoma | Causa / solución |
 |---|---|
 | Nginx 502 | `php-fpm` no arrancó o la app lanzó un error: `make ps`, `make logs`, revisa `storage/logs/laravel.log` |
-| `Permission denied` en `storage/` | El compose ejecuta los contenedores con tu `UID/GID`. Verifica `id -u` y `id -g`, y reconstruye con `make build` |
+| `Permission denied` en `storage/` | El compose ejecuta los contenedores con tu `UID/GID`. Verifica `id -u` y `id -g`, y reconstruye con `make build`. Si tu UID no es 1000, usa el override de la sección 3.1 |
 | `could not translate host name "db"` | Estás ejecutando `php artisan` en el host: usa `make art` |
 | Puerto 8000 ocupado | Cambia el mapeo en `docker-compose.yml` (`"8001:80"`) o detén el proceso |
 | Puerto 5173 ocupado | Agrega `VITE_PORT=5174` al `.env` y ejecuta `make up`; Vite y Compose usan ese puerto |
@@ -145,6 +158,7 @@ server: {
 | Vite no compila tras `npm install` | `make restart` y revisa `make logs`; el contenedor limpia `node_modules/.vite` al arrancar |
 | Reverb se desconecta | Verifica `REVERB_HOST/PORT` y que `8080` esté libre; en local el host es `localhost`, no `reverb` |
 | Tests lentos | `pest --parallel`; en Docker, 4 procesos por defecto. Ajusta con `--processes=4` |
+| `database "autotributo_test" does not exist` | Tras `docker compose down -v` se pierde el volumen: `docker compose exec -T db psql -U autotributo -d postgres -c 'CREATE DATABASE autotributo_test;'` |
 | `NoSuchBucket` o 403 con AWS S3 | Verifica `AWS_BUCKET` del ambiente, `AWS_DEFAULT_REGION`, credenciales IAM y que el bucket exista. En local no reutilices credenciales de producción |
 | No aparecen los archivos en local | `FILESYSTEM_DISK=local`; están en `storage/app/private` (`make shell` para inspeccionar) |
 

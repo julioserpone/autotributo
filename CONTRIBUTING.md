@@ -123,6 +123,17 @@ docker compose exec -T app ./vendor/bin/phpstan analyse --memory-limit=1G --no-p
 docker compose exec -T app php artisan test
 ```
 
+Base de datos de pruebas: la suite usa la base `autotributo_test` (definida en
+`.env.testing.example`), separada de la de desarrollo. Si recreas los volúmenes
+con `docker compose down -v`, vuelve a crearla una vez:
+
+```bash
+docker compose exec -T db psql -U autotributo -d postgres -c 'CREATE DATABASE autotributo_test;'
+make migrate && make seed   # base de desarrollo
+```
+
+Si `php artisan test --parallel` responde con `database "autotributo_test" does not exist`, falta ese paso.
+
 Reglas:
 
 - Un cambio de comportamiento requiere un test que falle sin el cambio.
@@ -141,12 +152,15 @@ npm run test:unit -- --run
 npm run build
 ```
 
-E2E (requiere el stack local y Playwright):
+E2E (requiere el stack local y Playwright). **No corre en CI**: levanta todo el stack de Docker Compose, es lento y caro en runners alojados, así que se ejecuta en local antes de mergear cambios de UI:
 
 ```bash
-npx playwright install chromium
+make up && make migrate && make seed        # stack listo y migrado
+npx playwright install chromium             # una sola vez
 make e2e
 ```
+
+El `smoke.spec.ts` actual valida que la SPA carga, que Vite sirve los assets y que `GET /api/v1/health` responde. Si tu UID/GID no es 1000, usa el override descrito en [`docs/05-local-docker-environment.md`](docs/05-local-docker-environment.md) para que Playwright pueda ejecutarse con el stack completo.
 
 ## 7. Seguridad
 
@@ -161,14 +175,15 @@ make e2e
 
 1. Actualiza `main` y abre el PR contra `main`.
 2. Usa el [template de PR](.github/PULL_REQUEST_TEMPLATE.md).
-3. El título debe cumplir Conventional Commits; el workflow `PR title` lo valida.
+3. El título debe cumplir Conventional Commits; el workflow `PR title` lo valida y es un check obligatorio.
 4. Mantén el diff pequeño (≤ 400 líneas sin lockfiles). Si es mayor, divide.
-5. Verifica que CI esté verde: backend, frontend, actionlint y seguridad.
+5. Verifica que CI esté verde: backend, frontend, actionlint y seguridad. El botón de merge permanece bloqueado mientras algún check obligatorio esté pendiente o en rojo, aunque tú seas administrador.
 6. Resuelve conversaciones y deja el contexto de decisiones en el PR.
 7. El merge es **squash**; el título del PR se convierte en el commit.
-8. No hagas merge sin autorización explícita del maintainer.
 
 La política de aprobaciones se define en la protección de `main`. Por defecto el repositorio usa **0 aprobaciones obligatorias** para el maintainer único; si se incorpora equipo, se sube el mínimo en el ruleset. Consulta [`docs/github-branch-protection.md`](docs/github-branch-protection.md).
+
+Si un check obligatorio no arranca (por ejemplo, el workflow cambió en el mismo PR y el merge queda esperándolo), **no** lo saltes: aleja el PR para que el workflow del archivo actual se dispare, o corrige el workflow en un PR aparte.
 
 ## 9. Documentación y decisiones
 

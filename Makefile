@@ -118,7 +118,7 @@ security: ## Auditorías de dependencias y secretos
 github-lint: ## Valida los workflows de GitHub Actions con actionlint
 	docker run --rm -v "$$PWD:/repo" -w /repo rhysd/actionlint:latest -color
 
-e2e: ## Playwright contra el stack local (requiere: npx playwright install)
+e2e: ## E2E local con Playwright (no corre en CI: usar antes de mergear UI)
 	npx playwright test
 
 ## --- Utilidades -----------------------------------------------------------

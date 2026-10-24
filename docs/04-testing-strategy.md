@@ -166,6 +166,8 @@ Flujos mínimos:
 
 Reglas: `data-testid` estables, sin esperas arbitrarias (`expect(...).toBeVisible()`), datos sembrados por API/CLI, un usuario por test, limpieza por transacción o truncate.
 
+Dónde se ejecutan: **en local** (`make up && make migrate && make seed` y `make e2e`), no en CI. Levantar el stack completo en un runner alojado tarda varios minutos y consume una cuota de minutos desproporcionada para el valor que aporta un smoke test; el checklist del PR exige correrlos antes de mergear cambios de UI. Si más adelante se automatizan en CI, se agregan como check obligatorio en el ruleset de `main`.
+
 ### 4.5 Frontend
 
 - Componentes: props/eventos/estados (loading, empty, error), slots, accesibilidad (`getByRole`).
@@ -267,15 +269,16 @@ arch('todos los modelos de negocio usan el trait de tenant')
 ```
 pre-commit  → Pint (staged), gitleaks, tests unitarios rápidos
 pre-push    → make test-unit + typecheck
-CI (PR)     → Pint --test, PHPStan, Pest (paralelo, cobertura), Vitest, build, Playwright, auditorías
+local       → make e2e (Playwright, stack completo) antes de mergear cambios de UI
+CI (PR)     → Pint --test, PHPStan, Pest (paralelo, cobertura), Vitest, build, actionlint, auditorías
 nightly     → ai-eval, mutation testing, k6 smoke, restore de backup
 ```
 
-Fallos de CI bloquean el merge (branch protection). Un test intermitente se arregla o se elimina en < 24 h; nunca se marca como `skip` sin issue y fecha.
+Fallos de CI bloquean el merge: el ruleset de `main` no se puede saltar ni con permisos de administrador, y el botón de merge permanece bloqueado mientras falte cualquier check obligatorio (ver [`docs/github-branch-protection.md`](github-branch-protection.md)). Un test intermitente se arregla o se elimina en < 24 h; nunca se marca como `skip` sin issue y fecha.
 
 ## 12. Reporte de resultados
 
 - Cobertura y resultados publicados como artefacto del PR.
-- Playwright: `playwright-report/` en fallos.
+- Playwright (local): `playwright-report/` en fallos.
 - Evaluación IA: `docs/reports/ai-eval-YYYY-MM-DD.md` con tabla de métricas y coste.
 - Cada release incluye un resumen: tests ejecutados, cobertura, incidencias conocidas y riesgos abiertos.

@@ -22,7 +22,7 @@ Orientado a estudios contables y contadores independientes. El MVP es **single-t
 | Ingesta SRI | AWS Lambda `julioserpone/sri-txt-robot` | Invocación asíncrona + S3; callback pendiente de implementar en el robot |
 | Consulta SRI | `julioserpone/sri-comprobantes-php` ^0.1 | SOAP por clave de acceso; XML autorizado |
 | Frontend | Vue 3 + TypeScript + Vite + Tailwind 4 + shadcn-vue | Pinia, TanStack Query, Chart.js, Echo |
-| Calidad | Pest 4, PHPStan/Larastan nivel 8, Pint, Vitest, Playwright | Gates obligatorios en CI |
+| Calidad | Pest 4, PHPStan/Larastan nivel 8, Pint, Vitest, Playwright | Gates obligatorios en CI (Playwright se ejecuta en local) |
 | Deploy | Laravel Cloud + AWS S3 | Build/deploy commands, colas administradas, Scheduler; S3 en cuenta propia con bucket por ambiente |
 
 ## Documentos
@@ -63,7 +63,7 @@ make check                                        # Pint + PHPStan + Pest
 npm run typecheck && npm run lint                 # TypeScript estricto + ESLint
 npm run test:unit -- --run                        # Vitest
 npm run build                                     # build de producción
-npx playwright install chromium && make e2e       # E2E contra http://localhost:8000
+npx playwright install chromium && make e2e       # E2E local (no corre en CI)
 ```
 
 ## Comunidad y gobierno
@@ -80,7 +80,7 @@ npx playwright install chromium && make e2e       # E2E contra http://localhost:
 | [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/) | Templates de bug y feature request |
 | [`docs/github-branch-protection.md`](docs/github-branch-protection.md) | Protección de `main`, checks y política de merge |
 
-`main` no acepta pushes directos: todo cambio entra por PR, con CI verde y merge squash. La política se aplica con el ruleset versionado en [`.github/rulesets/main-protection.json`](.github/rulesets/main-protection.json). Los hooks locales se instalan con `make hooks`.
+`main` no acepta pushes directos: todo cambio entra por PR, con CI verde y merge squash. El ruleset versionado en [`.github/rulesets/main-protection.json`](.github/rulesets/main-protection.json) exige los checks de backend, frontend, seguridad, actionlint y título de PR; el merge queda bloqueado mientras falte cualquiera (también para administradores). Playwright/`make e2e` se ejecuta en local antes de mergear cambios de UI para no gastar minutos de CI. Los hooks locales se instalan con `make hooks`.
 
 ## Principios del proyecto
 

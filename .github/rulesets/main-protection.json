@@ -45,6 +45,9 @@
           },
           {
             "context": "Workflow lint (actionlint)"
+          },
+          {
+            "context": "Conventional PR title"
           }
         ]
       }

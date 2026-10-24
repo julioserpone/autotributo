@@ -41,6 +41,7 @@ Closes #
 - [ ] `composer validate --strict --no-check-publish` is green
 - [ ] `npm run typecheck && npm run lint && npm run test:unit -- --run` is green when frontend changed
 - [ ] `actionlint` is green when workflows changed
+- [ ] `make e2e` is green locally when the UI or the Docker stack changed (E2E is not run in CI)
 - [ ] No `sleep()`, real network calls, or real credentials in tests
 
 ## Security and operations
