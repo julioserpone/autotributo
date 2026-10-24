@@ -17,8 +17,17 @@ permissions:
 env:
   PHP_VERSION: "8.5"
   NODE_VERSION: "24"
+  # Job names are the required status check contexts of the main-protection
+  # ruleset (.github/rulesets/main-protection.json). Rename both places together.
+  CHECK_BACKEND: "Backend (Pint, PHPStan, Pest)"
+  CHECK_FRONTEND: "Frontend (types, lint, Vitest, build)"
+  CHECK_SECURITY: "Security (secrets and dependencies)"
+  CHECK_WORKFLOWS: "Workflow lint (actionlint)"
 
 jobs:
+  # E2E (Playwright) runs locally against the Docker stack (`make e2e`) on
+  # purpose: it boots the whole compose stack and is slow and costly on hosted
+  # runners. If it is ever added back to CI, add its name to the ruleset too.
   backend:
     name: ${{ env.CHECK_BACKEND }}
     runs-on: ubuntu-latest
@@ -117,52 +126,3 @@ jobs:
 
       - name: Gitleaks
         uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  e2e:
-    name: E2E (Playwright)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [backend, frontend]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Start the local stack
-        run: |
-          echo "UID=$(id -u)" >> "$GITHUB_ENV"
-          echo "GID=$(id -g)" >> "$GITHUB_ENV"
-          cp .env.example .env
-          docker compose build app
-          docker compose up -d db valkey mailpit app web
-          docker compose exec -T -u 0 app chown -R "$(id -u $(whoami)):$(id -g $(whoami))" /var/www/html
-          docker compose exec -T app mkdir -p vendor node_modules storage bootstrap/cache
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          docker compose exec -T app composer install --no-interaction --prefer-dist
-          docker compose exec -T app php artisan key:generate
-          docker compose exec -T app php artisan migrate --seed --force
-          docker compose run --rm vite npm ci
-          docker compose run --rm vite npm run build
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - run: npm ci --no-audit --no-fund
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
-        env:
-          APP_URL: http://localhost:8000
-
-      - name: Logs on failure
-        if: failure()
-        run: docker compose logs --tail=200
-
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
