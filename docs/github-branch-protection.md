@@ -18,7 +18,6 @@
 | Bypass | Nadie (tampoco administradores) |
 | Merges mientras falten checks | Bloqueado |
 | Checks obligatorios | Backend, Frontend, Security, Workflow lint, Conventional PR title |
-| E2E (Playwright) | **No** es check obligatorio: se ejecuta en local |
 
 La fuente de verdad es el ruleset versionado en
 [`.github/rulesets/main-protection.json`](../.github/rulesets/main-protection.json),
@@ -40,9 +39,9 @@ Dos detalles explican el comportamiento anterior:
 
 - Si un check obligatorio **nunca se reporta** (por ejemplo, el workflow no se
   dispara para ese PR), GitHub lo considera pendiente de forma indefinida. Los
-  workflows actuales publican siempre su check gracias a que no tienen `paths`
-  ni `if:` a nivel de job; el E2E se eliminó de CI justamente para no dejar un
-  check colgado por fallos de infraestructura.
+  workflows actuales publican siempre su check porque no tienen `paths` ni
+  `if:` a nivel de job, y ningún job requerido depende de infraestructura
+  pesada (Playwright se ejecuta en local).
 - Con `strict_required_status_checks_policy: true` el PR debe estar al día con
   `main`; si `main` avanzó, hay que actualizar la rama y esperar a que CI vuelva
   a correr antes de mergear.
@@ -71,17 +70,24 @@ Si renombras un job, renómbralo también en el ruleset y vuelve a aplicar el
 script; si no, el check viejo queda pendiente para siempre y `main` deja de
 recibir merges.
 
+Para renovar los contexts sin bloquear PRs abiertos, aplica el ruleset en dos
+tiempos: primero el workflow que publica el job nuevo, después el ruleset que lo
+exige y retira el viejo. Un ruleset se aplica al instante, pero los checks de un
+PR se evalúan con el workflow de la **rama base**: si el base todavía declara el
+job eliminado, GitHub lo ejecuta y lo reporta.
+
 ## E2E fuera de CI
 
 Playwright levanta todo el stack de Docker Compose (build de la imagen, Postgres
 y Valkey, migraciones, Vite), tarda varios minutos y consume muchos minutos de
-runner. Por eso **no** corre en CI:
+runner. Por eso **no** forma parte del pipeline de GitHub ni es un check
+obligatorio:
 
 - Se ejecuta en local con `make up && make migrate && make seed` y `make e2e`.
 - El checklist de `.github/PULL_REQUEST_TEMPLATE.md` exige ejecutarlo antes de
   mergear cambios de UI.
-- Si en el futuro se vuelve a añadir a CI y pasa a ser obligatorio, hay que
-  agregar `E2E (Playwright)` a `required_status_checks`.
+- No se agrega de vuelta a CI salvo decisión explícita; si algún día se hace,
+  debe publicarse primero como job y después añadirse al ruleset.
 
 ## Aplicar la configuración
 

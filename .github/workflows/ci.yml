@@ -19,20 +19,15 @@ env:
   NODE_VERSION: "24"
 
 # These job names are required status check contexts and must match
-# .github/rulesets/main-protection.json where a check is required. Keep them as
-# literal strings: expressions such as `name: ${{ env.X }}` resolve to an empty
-# context and the PR can never become mergeable.
+# .github/rulesets/main-protection.json. Keep them as literal strings:
+# expressions such as `name: ${{ env.X }}` resolve to an empty context and the
+# PR can never become mergeable.
 #
-# Contract for adding or removing a job:
-#   1. Land the workflow change without touching the ruleset: the new job must
-#      report, so a later run can find its context in the default branch.
-#   2. Only then add its context to a new ruleset version.
-# Removing a job and its rule in the same push would leave the rule pointing at
-# a context that never reports again, blocking every merge.
+# Playwright is NOT part of CI: it boots the whole Docker Compose stack, which is
+# slow and costly on hosted runners. Run it locally with `make e2e` before
+# merging UI changes (see CONTRIBUTING.md). Never add it back as a required check
+# without a real need for it on the server.
 jobs:
-  # E2E (Playwright) is intentionally not part of CI: it boots the whole
-  # Docker Compose stack, which is slow and costly on hosted runners. Run it
-  # locally with `make e2e` before merging UI changes (see CONTRIBUTING.md).
   backend:
     name: Backend (Pint, PHPStan, Pest)
     runs-on: ubuntu-latest
@@ -88,19 +83,6 @@ jobs:
 
       - name: Dependency audit
         run: composer audit --no-interaction
-  # Transient job, NOT required by the ruleset: it removes the obsolete
-  # `E2E (Playwright)` context so the required checks in the versioned ruleset
-  # no longer include a job that is now run locally. Delete this job and the
-  # ruleset rule together once a CI run has reported `Legacy E2E context
-  # retired` (see docs/github-branch-protection.md).
-  retire-e2e-context:
-    name: Legacy E2E context retired
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    steps:
-      - name: Noop
-        run: echo "The E2E suite moved to local 'make e2e'; this workflow only retires its old check context."
-
   frontend:
     name: Frontend (types, lint, Vitest, build)
     runs-on: ubuntu-latest
@@ -145,51 +127,3 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  e2e:
-    name: E2E (Playwright)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [backend, frontend]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Start the local stack
-        run: |
-          echo "UID=$(id -u)" >> "$GITHUB_ENV"
-          echo "GID=$(id -g)" >> "$GITHUB_ENV"
-          cp .env.example .env
-          docker compose build app
-          docker compose up -d db valkey mailpit app web
-          # The checkout belongs to the runner, while the containers run as
-          # UID/GID 1000; hand the workspace over before composer writes to it.
-          docker compose exec -T -u 0 app chown -R "$(id -u "$(whoami)"):$(id -g "$(whoami)")" /var/www/html
-          docker compose exec -T app mkdir -p vendor node_modules storage bootstrap/cache
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          docker compose exec -T app composer install --no-interaction --prefer-dist
-          docker compose exec -T app php artisan key:generate
-          docker compose exec -T app php artisan migrate --seed --force
-          docker compose run --rm vite npm ci
-          docker compose run --rm vite npm run build
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - run: npm ci --no-audit --no-fund
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
-        env:
-          APP_URL: http://localhost:8000
-
-      - name: Logs on failure
-        if: failure()
-        run: docker compose logs --tail=200
-
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
