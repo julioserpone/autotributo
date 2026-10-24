@@ -7,21 +7,36 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
 
 env:
   PHP_VERSION: "8.5"
   NODE_VERSION: "24"
 
+# These job names are required status check contexts and must match
+# .github/rulesets/main-protection.json where a check is required. Keep them as
+# literal strings: expressions such as `name: ${{ env.X }}` resolve to an empty
+# context and the PR can never become mergeable.
+#
+# Contract for adding or removing a job:
+#   1. Land the workflow change without touching the ruleset: the new job must
+#      report, so a later run can find its context in the default branch.
+#   2. Only then add its context to a new ruleset version.
+# Removing a job and its rule in the same push would leave the rule pointing at
+# a context that never reports again, blocking every merge.
 jobs:
-  # Los jobs se activan cuando existe el esqueleto Laravel (Fase 1).
-  # Mientras el repositorio solo contenga documentación, se omiten limpiamente.
+  # E2E (Playwright) is intentionally not part of CI: it boots the whole
+  # Docker Compose stack, which is slow and costly on hosted runners. Run it
+  # locally with `make e2e` before merging UI changes (see CONTRIBUTING.md).
   backend:
     name: Backend (Pint, PHPStan, Pest)
-    if: ${{ hashFiles('composer.json') != '' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     services:
       postgres:
@@ -34,12 +49,6 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U autotributo -d autotributo_test"
           --health-interval 5s --health-timeout 5s --health-retries 10
-      valkey:
-        image: valkey/valkey:8-alpine
-        ports: ["6379:6379"]
-        options: >-
-          --health-cmd "valkey-cli ping"
-          --health-interval 5s --health-timeout 5s --health-retries 10
 
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +57,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ env.PHP_VERSION }}
-          extensions: pdo_pgsql, pgsql, redis, intl, bcmath, zip, gd, pcntl, pcov
+          extensions: soap, sodium, pdo_pgsql, pgsql, redis, intl, bcmath, zip, gd, pcntl, pcov
           coverage: pcov
           tools: composer:v2
 
@@ -56,32 +65,47 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.composer/cache
-          key: composer-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
 
-      - name: Preparar entorno de test
+      - name: Prepare test environment
         run: |
           cp .env.testing.example .env
           composer install --no-interaction --prefer-dist --no-progress
           php artisan key:generate
 
-      - name: Estilo (Pint)
+      - name: Validate Composer
+        run: composer validate --strict --no-check-publish
+
+      - name: Code style (Pint)
         run: ./vendor/bin/pint --test
 
-      - name: Análisis estático (PHPStan/Larastan)
+      - name: Static analysis (PHPStan)
         run: ./vendor/bin/phpstan analyse --memory-limit=1G --no-progress
 
-      - name: Tests + cobertura
-        run: ./vendor/bin/pest --parallel --coverage --min=80
+      - name: Tests and coverage
+        run: ./vendor/bin/pest --coverage --min=80
 
-      - name: Auditoría de dependencias
+      - name: Dependency audit
         run: composer audit --no-interaction
+  # Transient job, NOT required by the ruleset: it removes the obsolete
+  # `E2E (Playwright)` context so the required checks in the versioned ruleset
+  # no longer include a job that is now run locally. Delete this job and the
+  # ruleset rule together once a CI run has reported `Legacy E2E context
+  # retired` (see docs/github-branch-protection.md).
+  retire-e2e-context:
+    name: Legacy E2E context retired
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Noop
+        run: echo "The E2E suite moved to local 'make e2e'; this workflow only retires its old check context."
 
   frontend:
-    name: Frontend (tipos, lint, Vitest, build)
-    if: ${{ hashFiles('package.json') != '' }}
+    name: Frontend (types, lint, Vitest, build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
     steps:
       - uses: actions/checkout@v4
 
@@ -93,26 +117,55 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm run test:unit -- --run
+      - run: npm run test:unit --run
       - run: npm run build
       - run: npm audit --audit-level=high
 
+  workflows:
+    name: Workflow lint (actionlint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint GitHub Actions
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest -color
+
+  security:
+    name: Security (secrets and dependencies)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   e2e:
     name: E2E (Playwright)
-    if: ${{ hashFiles('composer.json') != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [backend, frontend]
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Levantar stack
+      - name: Start the local stack
         run: |
           echo "UID=$(id -u)" >> "$GITHUB_ENV"
           echo "GID=$(id -g)" >> "$GITHUB_ENV"
           cp .env.example .env
           docker compose build app
           docker compose up -d db valkey mailpit app web
+          # The checkout belongs to the runner, while the containers run as
+          # UID/GID 1000; hand the workspace over before composer writes to it.
+          docker compose exec -T -u 0 app chown -R "$(id -u "$(whoami)"):$(id -g "$(whoami)")" /var/www/html
+          docker compose exec -T app mkdir -p vendor node_modules storage bootstrap/cache
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           docker compose exec -T app composer install --no-interaction --prefer-dist
           docker compose exec -T app php artisan key:generate
           docker compose exec -T app php artisan migrate --seed --force
@@ -130,7 +183,7 @@ jobs:
         env:
           APP_URL: http://localhost:8000
 
-      - name: Logs en caso de fallo
+      - name: Logs on failure
         if: failure()
         run: docker compose logs --tail=200
 
@@ -140,17 +193,3 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
-
-  security:
-    name: Secretos y dependencias
-    if: ${{ hashFiles('composer.json') != '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

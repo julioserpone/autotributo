@@ -1,0 +1,11 @@
+title = "Autotributo gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test-only keys and fixtures. Never allow production secrets."
+paths = [
+  '''\.env\.testing\.example$''',
+  '''^tests/''',
+]

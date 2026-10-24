@@ -1,0 +1,36 @@
+# Copia este archivo como `docker-compose.override.yml` para que los
+# contenedores usen tu UID/GID real (Linux) y los archivos generados por
+# `composer install`, artisan o Vite no queden como root.
+#
+#   cp .env.compose.example .env.compose
+#   cp docker-compose.override.example.yml docker-compose.override.yml
+#
+# En macOS el bind mount ya mapea la propiedad al usuario local, así que el
+# override no hace falta; con él puedes usar `make e2e` aunque tu UID no sea
+# 1000. `docker-compose.override.yml` está en .gitignore.
+
+x-app: &app
+  build:
+    args:
+      UID: ${UID:-1000}
+      GID: ${GID:-1000}
+  user: "${UID:-1000}:${GID:-1000}"
+
+x-node: &node
+  user: "${UID:-1000}:${GID:-1000}"
+
+services:
+  app:
+    <<: *app
+
+  queue:
+    <<: *app
+
+  scheduler:
+    <<: *app
+
+  reverb:
+    <<: *app
+
+  vite:
+    <<: *node
