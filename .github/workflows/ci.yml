@@ -20,7 +20,7 @@ env:
 
 jobs:
   backend:
-    name: Backend (Pint, PHPStan, Pest)
+    name: ${{ env.CHECK_BACKEND }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -76,7 +76,7 @@ jobs:
         run: composer audit --no-interaction
 
   frontend:
-    name: Frontend (types, lint, Vitest, build)
+    name: ${{ env.CHECK_FRONTEND }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -96,7 +96,7 @@ jobs:
       - run: npm audit --audit-level=high
 
   workflows:
-    name: Workflow lint (actionlint)
+    name: ${{ env.CHECK_WORKFLOWS }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -106,7 +106,7 @@ jobs:
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest -color
 
   security:
-    name: Security (secrets and dependencies)
+    name: ${{ env.CHECK_SECURITY }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -136,7 +136,8 @@ jobs:
           cp .env.example .env
           docker compose build app
           docker compose up -d db valkey mailpit app web
-          docker compose exec -T -u 0 app sh -c 'chown "$(id -u):$(id -g)" .env && mkdir -p vendor node_modules storage bootstrap/cache && chown -R "$(id -u):$(id -g)" vendor node_modules storage bootstrap/cache'
+          docker compose exec -T -u 0 app chown -R "$(id -u $(whoami)):$(id -g $(whoami))" /var/www/html
+          docker compose exec -T app mkdir -p vendor node_modules storage bootstrap/cache
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           docker compose exec -T app composer install --no-interaction --prefer-dist
           docker compose exec -T app php artisan key:generate
