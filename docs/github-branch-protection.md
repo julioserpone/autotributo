@@ -83,6 +83,31 @@ runner. Por eso **no** corre en CI:
 - Si en el futuro se vuelve a añadir a CI y pasa a ser obligatorio, hay que
   agregar `E2E (Playwright)` a `required_status_checks`.
 
+### Cómo jubilar un context (lección aprendida)
+
+Un ruleset se aplica en el instante en que se actualiza, pero los contexts de
+un check se leen del **workflow del branch por defecto**: en un PR, GitHub solo
+ve los jobs que existen hoy en `main`, aunque la rama del PR ya los haya
+cambiado. Quitar un job y su regla en el mismo push deja una regla apuntando a
+un context que nunca vuelve a reportar, y **todos** los PR quedan bloqueados
+con el check en pendiente (`UNSTABLE`).
+
+Procedimiento seguro:
+
+1. Agrega el job nuevo (o un noop con el nombre nuevo) y súbelo: debe reportar
+   en un run real. Así se hizo con `Legacy E2E context retired`.
+2. Aplica el ruleset que exige el nombre nuevo y elimina el viejo (aquí se
+   aplicó directamente con el script; el cambio versionado llegó en el PR
+   siguiente).
+3. Si quedaron PRs con el check viejo «in progress», pídeles un re-run con
+   `gh api -X POST repos/<owner>/<repo>/check-runs/<id>/rerequest`.
+
+Comprobación rápida de que el ruleset se aplica a un PR:
+
+```bash
+gh pr view <n> --json mergeStateStatus,statusCheckRollup
+```
+
 ## Aplicar la configuración
 
 El repositorio es público y la cuenta es administradora, así que los rulesets

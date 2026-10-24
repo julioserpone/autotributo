@@ -48,6 +48,9 @@
           },
           {
             "context": "Conventional PR title"
+          },
+          {
+            "context": "Legacy E2E context retired"
           }
         ]
       }
