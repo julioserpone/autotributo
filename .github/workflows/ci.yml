@@ -18,11 +18,17 @@ env:
   PHP_VERSION: "8.5"
   NODE_VERSION: "24"
 
-# IMPORTANT: job names below must stay literal strings. Required status check
-# contexts come from the workflow file of the default branch, so expressions
-# such as `name: ${{ env.X }}` resolve to an empty context in the ruleset and
-# the PR can never become mergeable. Keep them in sync with
-# .github/rulesets/main-protection.json.
+# These job names are required status check contexts and must match
+# .github/rulesets/main-protection.json where a check is required. Keep them as
+# literal strings: expressions such as `name: ${{ env.X }}` resolve to an empty
+# context and the PR can never become mergeable.
+#
+# Contract for adding or removing a job:
+#   1. Land the workflow change without touching the ruleset: the new job must
+#      report, so a later run can find its context in the default branch.
+#   2. Only then add its context to a new ruleset version.
+# Removing a job and its rule in the same push would leave the rule pointing at
+# a context that never reports again, blocking every merge.
 jobs:
   # E2E (Playwright) is intentionally not part of CI: it boots the whole
   # Docker Compose stack, which is slow and costly on hosted runners. Run it
@@ -82,6 +88,18 @@ jobs:
 
       - name: Dependency audit
         run: composer audit --no-interaction
+  # Transient job, NOT required by the ruleset: it removes the obsolete
+  # `E2E (Playwright)` context so the required checks in the versioned ruleset
+  # no longer include a job that is now run locally. Delete this job and the
+  # ruleset rule together once a CI run has reported `Legacy E2E context
+  # retired` (see docs/github-branch-protection.md).
+  retire-e2e-context:
+    name: Legacy E2E context retired
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Noop
+        run: echo "The E2E suite moved to local 'make e2e'; this workflow only retires its old check context."
 
   frontend:
     name: Frontend (types, lint, Vitest, build)
