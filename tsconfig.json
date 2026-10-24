@@ -18,9 +18,8 @@
         "skipLibCheck": true,
         "jsx": "preserve",
         "types": ["vite/client", "node"],
-        "baseUrl": ".",
         "paths": {
-            "@/*": ["resources/js/*"]
+            "@/*": ["./resources/js/*"]
         }
     },
     "include": [
