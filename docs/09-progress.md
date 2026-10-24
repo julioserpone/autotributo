@@ -2,7 +2,7 @@
 
 > Tabla viva del proyecto. Se actualiza al cerrar cada tarea (una tarea = un commit/PR). La fuente de verdad del alcance sigue siendo `docs/02-implementation-plan.md`.
 
-**Última actualización:** 2026-10-22
+**Última actualización:** 2026-10-23
 
 ## Resumen por fase
 
@@ -10,7 +10,7 @@
 |---|---|---|---|
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
 | F1 · Núcleo tenant-ready | En curso | 2/11 | F1-02 · Tenancy-ready y aislamiento por tenant |
-| F2 · Ingesta SRI | En curso | 2/12 | F2-02 · Layout S3 real del robot, lectura y checksums |
+| F2 · Ingesta SRI | En curso | 4/12 | F2-05 · Reconciliación de runs contra el manifiesto S3 |
 | F3 · Motor fiscal + IA | Pendiente | 0/9 | — |
 | F4 · Frontend | Pendiente | 0/12 | — |
 | F5 · Declaraciones | Pendiente | 0/12 | — |
@@ -38,9 +38,9 @@
 |---|---|---|---|
 | F2-01 | Puerto `SriGateway` | Completado | `ce98289` · `sri-comprobantes-php` v0.1.2 · `SriAuthorizationGateway`, `SriRobotGateway`, adaptadores package/Lambda y fakes · 51 tests, 98.0% cobertura |
 | F2-02 | Layout S3 del robot | Completado | `6abd600` · `SriRobotObjectPath`, disco `sri`, `SriRobotObjectStore` con SHA-256, layout `{ambiente}/{ruc}/{periodo}` · 61 tests, 97.7% cobertura |
-| F2-03 | `SriSyncRun` y orquestación | Pendiente | — |
-| F2-04 | Callback firmado | Pendiente | Bloqueado: `sri-txt-robot` aún no emite callback |
-| F2-05 | Reconciliación | Pendiente | — |
+| F2-03 | `SriSyncRun` y orquestación | Completado | `23c9ac6` · `SriSyncRun`, `SriSyncRunFile`, `StartSriSync`, estados/transiciones idempotentes y dispatch al robot · tests de feature y unit |
+| F2-04 | Callback firmado | Pendiente | Bloqueado: `sri-txt-robot` aún no emite callback firmado (falta contrato `event_id`, timestamp, HMAC, secreto compartido, URL, reintentos) |
+| F2-05 | Reconciliación | Completado | `f5f82e9` · `periods`, `sri_sync_run_files`, `ReconcileSriRun(s)`, `sri:reconcile-runs`, scheduler `*/10`, validación de manifiesto/TXT/claves y transición a `parsing` · 12 tests F2-05 · suite 107 tests / 310 assertions |
 | F2-06 | Parser XML | Pendiente | — |
 | F2-07 | Parser de manifiesto/TXT | Pendiente | — |
 | F2-08 | Persistencia idempotente | Pendiente | — |

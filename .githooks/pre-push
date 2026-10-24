@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+
+set -eu
+
+protected_ref="refs/heads/main"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    if [ "${remote_ref}" = "${protected_ref}" ]; then
+        printf '%s\n' "Direct pushes to main are blocked. Create a branch and open a pull request." >&2
+        exit 1
+    fi
+done

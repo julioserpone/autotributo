@@ -10,9 +10,9 @@ export UID := $(shell id -u)
 export GID := $(shell id -g)
 
 .PHONY: help up down restart build rebuild ps logs shell app-logs \
-        install key migrate fresh seed tinker art composer npm \
+        install key migrate fresh seed tinker art composer npm hooks \
         test test-unit test-feature test-contract coverage \
-        lint lint-fix analyse check security e2e \
+        lint lint-fix analyse check security github-lint e2e \
         psql redis storage-url mailpit-url reverb-logs queue-logs \
         reset
 
@@ -78,6 +78,10 @@ composer: ## Ejemplo: make composer cmd="require paquete/paquete"
 npm: ## Ejemplo: make npm cmd="add pinia"
 	$(NODE) npm $(cmd)
 
+hooks: ## Instala los hooks locales de Git (pre-push y commit-msg)
+	git config core.hooksPath .githooks
+	@echo "Hooks instalados desde .githooks"
+
 ## --- Calidad --------------------------------------------------------------
 test: ## Suite completa (unit + feature + contract)
 	$(ARTISAN) test --parallel
@@ -110,6 +114,9 @@ check: lint test ## Gate completo local (equivalente a CI)
 security: ## Auditorías de dependencias y secretos
 	$(APP) composer audit
 	$(DC) exec vite npm audit --audit-level=high || true
+
+github-lint: ## Valida los workflows de GitHub Actions con actionlint
+	docker run --rm -v "$$PWD:/repo" -w /repo rhysd/actionlint:latest -color
 
 e2e: ## Playwright contra el stack local (requiere: npx playwright install)
 	npx playwright test

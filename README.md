@@ -1,10 +1,12 @@
 # Autotributo
 
+[![CI](https://github.com/julioserpone/autotributo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/julioserpone/autotributo/actions/workflows/ci.yml)
+
 Sistema de automatización contable para Ecuador (**SRI**): ingesta de comprobantes electrónicos, clasificación semántica de ítems con IA, auditoría fiscal preventiva y generación asistida de formularios **104 (IVA)**, **103 (retenciones)**, **102/101 (Renta)**.
 
 Orientado a estudios contables y contadores independientes. El MVP es **single-tenant** (un estudio por despliegue) con el esquema preparado para activar multitenancy sin migrar datos (ADR-0006).
 
-> **Estado:** F2-02 completado; siguiente tarea **F2-03 (orquestación `SriSyncRun`)**. Consulta la tabla viva en [`docs/09-progress.md`](docs/09-progress.md). El repositorio contiene Laravel 13.38, la SPA Vue 3 + TypeScript estricto, tenancy single-tenant con aislamiento por `tenant_id`, la integración del paquete `sri-comprobantes-php`, el layout S3 real del robot y los gates de calidad (Pint, PHPStan/Larastan nivel 8, Pest, Vitest, Playwright y ESLint).
+> **Estado:** F2-03 y F2-05 completados; F2-04 bloqueado hasta que `sri-txt-robot` emita un callback firmado. Siguiente tarea: **F2-06 (parser XML)**. Consulta la tabla viva en [`docs/09-progress.md`](docs/09-progress.md). El repositorio contiene Laravel 13.38, la SPA Vue 3 + TypeScript estricto, tenancy single-tenant con aislamiento por `tenant_id`, la integración del paquete `sri-comprobantes-php`, el layout S3 real del robot, la reconciliación de runs contra el manifiesto S3 y los gates de calidad (Pint, PHPStan/Larastan nivel 8, Pest, Vitest, Playwright y ESLint).
 
 ---
 
@@ -39,6 +41,7 @@ Orientado a estudios contables y contadores independientes. El MVP es **single-t
 | [`docs/10-sri-integration.md`](docs/10-sri-integration.md) | Paquete SRI, puertos, contrato real del robot y pruebas |
 | [`docs/aws-s3-setup.md`](docs/aws-s3-setup.md) | Buckets por ambiente, IAM, cifrado, lifecycle y verificación de S3 |
 | [`docs/fiscal-signoff.md`](docs/fiscal-signoff.md) | Registro de validación fiscal firmado por el contador |
+| [`docs/github-branch-protection.md`](docs/github-branch-protection.md) | Reglas de `main`, checks obligatorios y aplicación del ruleset |
 | [`docs/adr/`](docs/adr/) | Registros de decisión de arquitectura |
 
 ## Inicio rápido
@@ -47,6 +50,7 @@ Orientado a estudios contables y contadores independientes. El MVP es **single-t
 cp .env.example .env
 make up            # levanta app, nginx, Postgres, Valkey, Reverb, Vite
 make install       # composer install + npm ci + key:generate + migrate --seed
+make hooks         # activa pre-push y commit-msg locales
 open http://localhost:8000
 ```
 
@@ -61,6 +65,22 @@ npm run test:unit -- --run                        # Vitest
 npm run build                                     # build de producción
 npx playwright install chromium && make e2e       # E2E contra http://localhost:8000
 ```
+
+## Comunidad y gobierno
+
+| Archivo | Propósito |
+|---|---|
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Ramas, commits, pruebas, estándares y flujo de PR |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | Normas de convivencia y enforcement |
+| [`SECURITY.md`](SECURITY.md) | Reporte privado de vulnerabilidades y manejo de secretos |
+| [`SUPPORT.md`](SUPPORT.md) | Dónde pedir ayuda y qué información incluir |
+| [`CHANGELOG.md`](CHANGELOG.md) | Cambios relevantes por release |
+| [`LICENSE`](LICENSE) | Licencia propietaria; todos los derechos reservados |
+| [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) | Checklist obligatorio de PR |
+| [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/) | Templates de bug y feature request |
+| [`docs/github-branch-protection.md`](docs/github-branch-protection.md) | Protección de `main`, checks y política de merge |
+
+`main` no acepta pushes directos: todo cambio entra por PR, con CI verde y merge squash. La política se aplica con el ruleset versionado en [`.github/rulesets/main-protection.json`](.github/rulesets/main-protection.json). Los hooks locales se instalan con `make hooks`.
 
 ## Principios del proyecto
 

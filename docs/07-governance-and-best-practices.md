@@ -16,8 +16,8 @@ main ──●──●──●──●──●──●──►  (protegida
 | Commits | [Conventional Commits](https://www.conventionalcommits.org/): `feat(sri): add signed callback endpoint` |
 | Merge | Squash merge; el mensaje del PR se convierte en el commit |
 | PR | ≤ 400 líneas de diff (sin lockfiles); si es mayor, dividir |
-| Revisión | 1 aprobación mínima; 2 si toca cálculos fiscales, tenancy o seguridad |
-| Protección | CI obligatorio, rama actualizada, sin force-push, sin merge directo |
+| Revisión | PR obligatorio; 0 aprobaciones obligatorias para el maintainer único. Con equipo: 1 aprobación, 2 si toca cálculos fiscales, tenancy o seguridad |
+| Protección | Ruleset `main-protection`: CI obligatorio, rama actualizada, squash-only, historial lineal, sin force-push, sin borrado y sin merge directo. Ver [`docs/github-branch-protection.md`](github-branch-protection.md) |
 | Releases | Tag `vX.Y.Z` (SemVer) + `CHANGELOG.md` generado |
 | Hotfix | Rama desde `main` con test de regresión; deploy inmediato y postmortem si hubo impacto |
 
@@ -174,7 +174,7 @@ Plantilla:
 - 2FA obligatorio en GitHub, Laravel Cloud, AWS y el proveedor de IA.
 - Acceso a producción por rol mínimo; sin credenciales compartidas.
 - Secretos rotados trimestralmente y tras cualquier salida de personal.
-- `gitleaks` en pre-commit y CI; si se filtra un secreto, se **rota**, no solo se borra del historial.
+- `gitleaks` en CI y hooks locales; si se filtra un secreto, se **rota**, no solo se borra del historial.
 - Revisión de dependencias y de configuración de CORS/CSP en cada release.
 - Los datos de producción no se copian a local; se anonimizan.
 - Escaneo de vulnerabilidades de la app (ZAP o equivalente) antes del go-live y semestralmente.
