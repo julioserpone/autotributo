@@ -137,6 +137,9 @@ jobs:
           cp .env.example .env
           docker compose build app
           docker compose up -d db valkey mailpit app web
+          docker compose exec -T -u 0 app mkdir -p vendor node_modules storage bootstrap/cache
+          docker compose exec -T -u 0 chown -R "$(id -u):$(id -g)" vendor node_modules storage bootstrap/cache
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           docker compose exec -T app composer install --no-interaction --prefer-dist
           docker compose exec -T app php artisan key:generate
           docker compose exec -T app php artisan migrate --seed --force
