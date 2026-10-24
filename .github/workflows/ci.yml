@@ -88,18 +88,36 @@ jobs:
 
       - name: Dependency audit
         run: composer audit --no-interaction
-  # Transient job, NOT required by the ruleset: it removes the obsolete
-  # `E2E (Playwright)` context so the required checks in the versioned ruleset
-  # no longer include a job that is now run locally. Delete this job and the
-  # ruleset rule together once a CI run has reported `Legacy E2E context
-  # retired` (see docs/github-branch-protection.md).
+  # The E2E suite moved to `make e2e` (local). GitHub reports any requested
+  # check whose job disappears as a perpetual neutral, so removing a job whose
+  # context is (or was) required needs a stub under the new name plus a ruleset
+  # update. This job, named `Legacy E2E context retired` and required by the
+  # ruleset, supersedes the deleted `E2E (Playwright)`:
+  #   1. It exists so a run publishes the new context we require.
+  #   2. It re-requests the obsolete run for PRs still waiting on it, because a
+  #      queued runner that finds no matching job never ends by itself.
   retire-e2e-context:
     name: Legacy E2E context retired
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 5
+    permissions:
+      checks: write
     steps:
-      - name: Noop
-        run: echo "The E2E suite moved to local 'make e2e'; this workflow only retires its old check context."
+      - name: Retire the E2E check context
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "Nothing to retire outside pull requests."
+            exit 0
+          fi
+          head="${{ github.event.pull_request.head.sha }}"
+          stale="$(gh api "repos/${{ github.repository }}/commits/${head}/check-runs?per_page=100" \
+            --jq '[.check_runs[] | select(.name == "E2E (Playwright)") | .id] | .[]')"
+          for id in ${stale}; do
+            echo "Re-requesting E2E (Playwright) check run ${id} so it stops blocking the PR."
+            gh api -X POST "repos/${{ github.repository }}/check-runs/${id}/rerequest" || true
+          done
 
   frontend:
     name: Frontend (types, lint, Vitest, build)
