@@ -1,5 +1,9 @@
 name: CI
 
+# pull_request events are pinned to the workflow definition of the base branch,
+# so editing ci.yml never changes the checks of a pull request that is already
+# open. Pull requests whose base still has an older ci.yml keep running that
+# version (and its old required contexts) until the base is updated.
 on:
   push:
     branches: [main]
