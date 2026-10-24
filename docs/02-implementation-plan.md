@@ -94,10 +94,10 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | ID | Tarea | Est. | Detalle |
 |---|---|---|---|
 | F2-01 | Puerto `SriGateway` | 1 d | Contrato + `LambdaSriGateway` + `FakeSriGateway` (fixtures); DTOs de request/response |
-| F2-02 | Layout S3 del robot | 1 d | `runs/{run_id}/{manifest.json, documents/*.xml.gz}`; checksums; ciclo de vida; bucket separado para el robot |
+| F2-02 | Layout S3 del robot | 1 d | `{ambiente}/{ruc}/{periodo}/` con TXT, `-claves.json` y `manifest.json`; checksums calculados por la app; bucket separado para el robot |
 | F2-03 | `SriSyncRun` y orquestación | 2 d | Máquina de estados, `StartSriSync`, división de rangos > 93 días, `Idempotency-Key`, cancelación |
 | F2-04 | Callback firmado | 1 d | Endpoint `POST /webhooks/sri-robot`, HMAC + timestamp + dedupe `event_id`, límite de tamaño, 202 |
-| F2-05 | Reconciliación | 1 d | `ReconcileSriRuns` cada 10 min: lista prefijos pendientes en S3 y reanuda |
+| F2-05 | Reconciliación | 1 d | `sri:reconcile-runs` cada 10 min: valida manifiesto/TXT/claves, llena `sri_sync_run_files` y deja el run en `parsing` |
 | F2-06 | Parser XML | 3 d | Factura, NC, ND, liquidación, retención; DTOs; validación de totales; XXE-safe; errores por documento |
 | F2-07 | Parser de manifiesto/TXT | 1 d | Índice del robot, rutas, codificación, archivos corruptos |
 | F2-08 | Persistencia idempotente | 2 d | `upsert` por `access_key`; ítems, impuestos, retenciones; deduplicación; `source` |

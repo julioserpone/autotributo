@@ -47,12 +47,15 @@ El handler de `sri-txt-robot` acepta este evento:
   "ruc": "1758871873001",
   "periodos": ["2026-08"],
   "tipos": ["01", "04"],
-  "forzar": false
+  "forzar": false,
+  "sealed_credentials": "base64(sodium_crypto_box_seal({...}))"
 }
 ```
 
-- Las credenciales del portal se configuran en la función Lambda, no en el
-  payload de Laravel.
+- La app usa el modo dinámico: sella `{ruc, password, claveAdicional, iat}`
+  con la clave pública del robot. La contraseña no viaja en claro.
+- La clave privada vive en `SRI_CREDENTIALS_PRIVATE_KEY` de la Lambda, no en
+  AWS Secrets Manager. El modo estático queda como respaldo.
 - El bucket y el prefijo S3 también se configuran en Lambda.
 - El robot escribe TXT, un JSON de claves y un `manifest.json` bajo su propia
   jerarquía `{ambiente}/{ruc}/{periodo}/`.

@@ -1,8 +1,10 @@
 # 10 — Integración SRI
 
-> Alcance: F2-01 y F2-02. El paquete consulta el XML por clave de acceso, el
-> robot descarga los reportes y la app lee su bucket S3. La persistencia y el
-> parser XML llegan en F2-03 a F2-08.
+> Alcance: F2-01, F2-02, F2-03 y F2-05. El paquete consulta el XML por clave
+> de acceso, el robot descarga los reportes, la app lee su bucket S3, orquesta
+> los runs con idempotencia y los reconcilia contra el manifiesto. El callback
+> (F2-04), el parser XML (F2-06) y la persistencia de comprobantes (F2-07/F2-08)
+> siguen pendientes.
 
 ## 1. Paquete `sri-comprobantes-php`
 
@@ -36,16 +38,32 @@ es reproducible en Laravel Cloud. La consulta masiva se orquesta en la app.
 
 ```text
 app/Domain/Sri/
+├── Actions/
+│   ├── StartSriSync.php              # crea y despacha runs idempotentes
+│   ├── ReconcileSriRun.php           # reconcilia un run contra S3
+│   └── ReconcileSriRuns.php          # selecciona y reconcilia runs activos
 ├── Contracts/
 │   ├── SriAuthorizationGateway.php   # XML por clave
-│   └── SriRobotGateway.php           # descarga de TXT
+│   ├── SriRobotGateway.php           # descarga de TXT
+│   └── SriRobotObjectStore.php       # lectura del bucket del robot
 ├── Data/
 │   ├── AuthorizationQuery.php
 │   ├── AuthorizationResult.php
 │   ├── SriMessage.php
+│   ├── SriRobotCredentials.php       # sobre que se sella
 │   ├── SriRobotRequest.php
-│   └── SriRobotDispatch.php
-└── Enums/AuthorizationStatus.php
+│   ├── SriRobotDispatch.php
+│   ├── SriRobotObjectPath.php        # layout {ambiente}/{ruc}/{periodo}
+│   ├── SriSyncBatch.php              # runs de una solicitud
+│   └── SriSyncWindow.php             # agrupación y corte de 93 días
+├── Enums/
+│   ├── AuthorizationStatus.php
+│   ├── SriDocumentType.php
+│   ├── SriSyncRunFileStatus.php
+│   └── SriSyncRunStatus.php
+└── Models/
+    ├── SriSyncRun.php
+    └── SriSyncRunFile.php
 ```
 
 Adaptadores de infraestructura:
@@ -56,6 +74,8 @@ Adaptadores de infraestructura:
 | `LambdaSriRobotGateway` | Invoca `sri-txt-robot` en AWS Lambda (`Event`) |
 | `FakeSriAuthorizationGateway` | Desarrollo y tests sin red |
 | `FakeSriRobotGateway` | Desarrollo y tests sin AWS |
+| `FilesystemSriRobotObjectStore` | Lectura del disco `sri` (S3 en Cloud) |
+| `ReconcileSriRunsCommand` | Comando `sri:reconcile-runs` programado cada 10 min |
 
 El dominio solo depende de los contratos. Ningún controlador o job debe
 importar clases de SOAP o del SDK de AWS.
@@ -69,7 +89,8 @@ Evento real del handler de `sri-txt-robot`:
   "ruc": "1758871873001",
   "periodos": ["2026-08", "2026-09"],
   "tipos": ["01", "03", "04", "05", "07"],
-  "forzar": false
+  "forzar": false,
+  "sealed_credentials": "base64(sodium_crypto_box_seal({...}))"
 }
 ```
 
@@ -78,8 +99,17 @@ Reglas:
 - `periodos` acepta `YYYY-MM` o `YYYY-MM-DD`.
 - `tipos` usa los códigos de la ficha técnica; una lista vacía deja que el
   robot use los tipos configurados en su YAML.
-- Las credenciales del portal y el bucket S3 viven en la Lambda, nunca en el
-  payload de Laravel.
+- El robot puede operar en **modo estático** (contraseña en la Lambda) o
+  **dinámico** (el evento trae `sealed_credentials`). La aplicación usa el
+  modo dinámico: sella `{ruc, password, claveAdicional, iat}` con
+  `sodium_crypto_box_seal` y la clave pública de `SRI_ROBOT_PUBLIC_KEY`.
+- La clave privada correspondiente vive en la variable
+  `SRI_CREDENTIALS_PRIVATE_KEY` de la Lambda, no en AWS Secrets Manager. La
+  contraseña nunca viaja en claro y no se persiste en el payload.
+- El `ruc` exterior y el interior del sobre deben coincidir. La Lambda rechaza
+  sobres caducados (`SRI_CREDENTIALS_MAX_AGE_SECONDS`).
+- El bucket S3 vive en la configuración de la Lambda, no en el payload de
+  Laravel.
 - La invocación es asíncrona (`InvocationType=Event`); la respuesta es un
   `RequestId`, no el resultado de la descarga.
 - El robot actual **no** envía callback HTTP. La app debe reconciliar contra
@@ -96,8 +126,7 @@ Salida esperada del robot en su bucket:
 `SriRobotObjectPath` construye estas claves en el dominio; el prefijo opcional
 del bucket lo aplica el disco `sri` de Laravel (`SRI_ROBOT_OUTPUT_PREFIX`). El
 robot **no** publica checksums en el manifiesto actual: la app calcula SHA-256
-al leer (`SriRobotObjectStore::sha256`) y lo persistirá en
-`sri_sync_run_files` cuando exista F2-03/F2-08.
+al leer y lo persiste en `sri_sync_run_files` durante F2-05.
 
 ### Lectura desde Laravel
 
@@ -109,6 +138,93 @@ al leer (`SriRobotObjectStore::sha256`) y lo persistirá en
 
 La app solo lee el bucket del robot. El rol IAM del robot es el único que
 escribe; el usuario de la app no necesita `s3:PutObject` sobre `-sri`.
+
+### Orquestación de runs (F2-03)
+
+`StartSriSync` recibe una empresa, un `SriRobotRequest` (con credenciales) y
+una clave de idempotencia. Crea uno o varios `SriSyncRun` y despacha el robot:
+
+| Pieza | Responsabilidad |
+|---|---|
+| `SriSyncWindow` | Agrupa períodos completos y corta rangos mayores a 93 días |
+| `SriSyncBatch` | Devuelve los runs creados por una solicitud |
+| `SriSyncRunStatus` | Máquina de estados (`queued` → `invoking` → `downloading` → `parsing` → `completed`/`partial`/`failed`/`cancelled`) |
+| `SriSyncRun` | Persiste empresa, rango, tipos, `idempotency_key`, `lambda_request_id`, totales y error seguro |
+| `StartSriSync` | Idempotencia, división, despacho y marcado de fallos |
+
+Reglas:
+
+- Una solicitud con períodos que cubren más de 93 días se divide en varios
+  runs. Los meses no se cortan: se agrupan períodos completos.
+- La misma `idempotency_key` devuelve los runs existentes y **no** vuelve a
+  invocar la Lambda. Para reintentar un run fallido se usa una clave nueva.
+- El estado del run se mueve solo con transiciones permitidas; un estado
+  terminal no se reabre.
+- Si el gateway falla, el run queda `failed` con `error_code` y un mensaje
+  seguro; la excepción se propaga al llamador.
+- La cancelación se hace con `SriSyncRun::cancel()` y solo aplica a runs
+  activos. La cancelación de la invocación asíncrona real queda pendiente de
+  F2-04/F2-09.
+- La tabla `companies` se incorporó con lo mínimo para la FK del run; el CRUD
+  completo y la validación de RUC pertenecen a F1-05.
+- `sri_sync_run_files` se llena en F2-05; el parser de F2-06 consume esos
+  archivos y el de F2-07 interpreta el manifiesto/TXT.
+
+### Reconciliación por S3 (F2-05)
+
+El robot no envía callback. La app reconcilia cada 10 minutos los runs activos
+contra el bucket del robot:
+
+```text
+sri:reconcile-runs --limit=50   # programado con withoutOverlapping()
+```
+
+`ReconcileSriRuns` selecciona runs en `invoking`, `downloading` o `parsing`.
+`ReconcileSriRun` procesa cada período persistido en `sri_sync_runs.periods`
+(con respaldo mensual para runs antiguos) y usa este manifiesto real:
+
+```json
+{
+  "ambiente": "produccion",
+  "ruc": "1758871873001",
+  "periodo": "2026-09",
+  "generadoEn": "2026-10-21T16:45:48+00:00",
+  "descargas": [
+    {
+      "ruc": "1758871873001",
+      "periodo": "2026-09",
+      "tipo": "01",
+      "tipoEtiqueta": "Factura",
+      "claveTxt": "produccion/1758871873001/2026-09/facturas-recibidas-2026-09.txt",
+      "bytes": 8164,
+      "totalClaves": 44,
+      "tareaCaptcha": "navegador"
+    }
+  ],
+  "totalClaves": 44
+}
+```
+
+El JSON de claves asociado tiene `ambiente`, `ruc`, `periodo`, `tipo`,
+`tipoEtiqueta`, `archivo`, `total` y `clavesAcceso[]`. La reconciliación
+valida que `ambiente`, `ruc` y `periodo` coincidan con el run, que el tipo sea
+conocido, que `bytes` coincida con el TXT, que `total` coincida con
+`count(clavesAcceso)` y que `archivo` sea el nombre del TXT.
+
+Reglas de estado:
+
+| Situación | Estado del run |
+|---|---|
+| Aún no existe ningún `manifest.json` | Se queda en `invoking` |
+| Hay al menos un manifiesto | Pasa a `downloading` |
+| Todos los períodos y archivos están disponibles y válidos | Pasa a `parsing` |
+| Falta un TXT, un JSON o hay un archivo inválido | Se queda en `downloading` con el detalle en `sri_sync_run_files` |
+
+Cada objeto se registra con `updateOrCreate` por `(run_id, s3_key)` para que
+repetir la reconciliación sea idempotente. Estados de archivo:
+`pending`, `available`, `missing`, `invalid` y `processed` (este último lo
+usará el parser). Un fallo de un run no detiene la reconciliación de los
+siguientes; el error se reporta y el scheduler reintenta en la próxima pasada.
 
 ## 4. Variables de entorno
 
@@ -127,7 +243,14 @@ SRI_ROBOT_REGION=us-east-1
 SRI_ROBOT_ENVIRONMENT=dev          # dev | test | produccion (debe coincidir con la Lambda)
 SRI_ROBOT_OUTPUT_BUCKET=autotributo-local-sri
 SRI_ROBOT_OUTPUT_PREFIX=           # prefijo opcional; vacío por defecto
+SRI_ROBOT_PUBLIC_KEY=              # base64 de la clave pública del robot
 ```
+
+`SRI_ROBOT_PUBLIC_KEY` se obtiene con
+`sri-txt-robot generar-claves --publica <archivo>` o del archivo
+`~/.sri-txt-robot/publica.b64`. No confunda esta clave con
+`SRI_CREDENTIALS_KEY`: la primera sella el sobre para el robot; la segunda
+cifra las credenciales en la base de datos de la app.
 
 En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 `SRI_ROBOT_DRIVER=fake` evita AWS. En staging/producción se usa `package` y
@@ -138,9 +261,14 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 | Archivo | Qué prueba |
 |---|---|
 | `tests/Unit/Sri/PackageSriAuthorizationGatewayTest.php` | Autorizado, rechazado, PPR, sin respuesta y fallo de transporte |
-| `tests/Unit/Sri/SriRobotRequestTest.php` | Payload exacto, deduplicación y validaciones |
-| `tests/Unit/Sri/LambdaSriRobotGatewayTest.php` | Payload de invocación, modo `Event`, `RequestId` y error AWS |
+| `tests/Unit/Sri/SriRobotRequestTest.php` | Payload exacto, deduplicación, validaciones y sobre sellado |
+| `tests/Unit/Sri/SriRobotCredentialsTest.php` | Contenido del sobre, `iat` y redacción de la contraseña |
+| `tests/Unit/Sri/LambdaSriRobotGatewayTest.php` | Payload de invocación, modo `Event`, `RequestId`, sellado y error AWS |
 | `tests/Unit/Sri/SriRobotObjectPathTest.php` | Layout real, slugs, períodos diarios y validaciones |
+| `tests/Unit/Sri/SriSyncWindowTest.php` | Agrupación, corte exacto de 93 días y rangos sin huecos |
+| `tests/Unit/Sri/SriSyncRunStatusTest.php` | Transiciones permitidas, estados terminales y saltos inválidos |
+| `tests/Feature/Sri/StartSriSyncTest.php` | Creación, idempotencia, división, fallo y cancelación |
+| `tests/Feature/Sri/ReconcileSriRunTest.php` | Manifiesto/TXT/claves, faltantes, JSON inválido, bytes, identidad, idempotencia, multiperíodo, comando y tenant por defecto |
 | `tests/Feature/Sri/SriRobotObjectStoreTest.php` | Lectura, existencia, SHA-256 y objeto ausente en el disco `sri` |
 | `tests/Feature/Sri/SriServiceProviderTest.php` | Selección de adaptadores por configuración |
 
@@ -149,18 +277,23 @@ por dobles.
 
 ## 6. Siguientes pasos
 
-1. **F2-03:** `SriSyncRun`, `StartSriSync`, división de rangos de 93 días,
-   idempotencia y cancelación.
-2. **F2-04:** callback firmado. Requiere modificar `sri-txt-robot` para emitir
-   `event_id`, timestamp y HMAC; hoy no existe.
-3. **F2-05:** reconciliación por S3 usando `manifest.json` y los JSON de claves.
-4. **F2-06 a F2-08:** parser XML, persistencia idempotente y fixtures.
+1. **F2-04:** callback firmado. Requiere modificar `sri-txt-robot` para emitir
+   `event_id`, timestamp y HMAC; hoy no existe. Mientras tanto, F2-05 cubre la
+   reconciliación por S3.
+2. **F2-06 a F2-08:** parser XML, parser de manifiesto/TXT, persistencia
+   idempotente y fixtures.
+3. **F1-05/F1-06:** CRUD de empresas y almacenamiento cifrado de credenciales;
+   `StartSriSync` ya acepta el sobre, pero la app aún debe leerlo de la base.
 
 ## 7. Seguridad
 
 - No registrar XML completos, credenciales ni claves de acceso completas.
-- No enviar credenciales en el evento del robot; su configuración vive en la
-  Lambda.
+- Las credenciales del portal se sellan con `sodium_crypto_box_seal` antes de
+  salir de la app; el payload y los logs solo contienen el sobre.
+- No registrar `SriRobotCredentials` ni llamar a `toSealingPayload()` fuera
+  del sellador. `__debugInfo()` redacta la contraseña.
+- Mantener `SRI_ROBOT_PUBLIC_KEY` y `SRI_CREDENTIALS_PRIVATE_KEY` separadas:
+  la pública puede vivir en la app; la privada solo en la Lambda.
 - No desactivar TLS ni `verify_peer` en `SoapTransport`.
 - Mantener `SRI_CREDENTIALS_KEY` fuera del repositorio y con respaldo en el
   gestor de secretos.

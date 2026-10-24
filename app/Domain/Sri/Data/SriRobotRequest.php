@@ -11,9 +11,11 @@ use InvalidArgumentException;
  * Evento que consume la función Lambda `sri-txt-robot`.
  *
  * El contrato real del robot es deliberadamente pequeño: RUC, períodos,
- * tipos de comprobante y la bandera para forzar una descarga. El bucket, las
- * credenciales del portal y el callback viven en la configuración de la
- * función Lambda, no en el payload enviado por Laravel.
+ * tipos de comprobante, la bandera para forzar una descarga y, cuando el
+ * robot opera en modo dinámico, un sobre con las credenciales del portal.
+ * El sobre se cifra con la clave pública del robot; la contraseña nunca viaja
+ * en claro. El bucket y el callback viven en la configuración de la función
+ * Lambda.
  */
 final readonly class SriRobotRequest
 {
@@ -32,9 +34,14 @@ final readonly class SriRobotRequest
         array $periods,
         array $documentTypes = [],
         public bool $force = false,
+        public ?SriRobotCredentials $credentials = null,
     ) {
         if (preg_match('/^\d{10}(\d{3})?$/', $this->ruc) !== 1) {
             throw new InvalidArgumentException('El RUC debe tener 10 o 13 dígitos.');
+        }
+
+        if ($this->credentials !== null && $this->credentials->ruc !== $this->ruc) {
+            throw new InvalidArgumentException('El RUC de las credenciales no coincide con la solicitud.');
         }
 
         $periods = array_values(array_unique($periods));
@@ -65,17 +72,33 @@ final readonly class SriRobotRequest
      * Payload exacto que espera `sri_txt_robot.handler`.
      *
      * Las claves están en español porque forman parte del contrato externo
-     * ya implementado por el robot.
+     * ya implementado por el robot. Si la solicitud lleva credenciales, el
+     * llamador debe entregar el sobre ya sellado; así no se puede construir
+     * por accidente un payload sin credenciales en modo dinámico.
      *
-     * @return array{ruc: string, periodos: list<string>, tipos: list<string>, forzar: bool}
+     * @return array{ruc: string, periodos: list<string>, tipos: list<string>, forzar: bool, sealed_credentials?: string}
      */
-    public function toPayload(): array
+    public function toPayload(?string $sealedCredentials = null): array
     {
-        return [
+        if ($this->credentials !== null && $sealedCredentials === null) {
+            throw new InvalidArgumentException('Las credenciales deben sellarse antes de construir el payload.');
+        }
+
+        if ($sealedCredentials !== null && trim($sealedCredentials) === '') {
+            throw new InvalidArgumentException('El sobre de credenciales no puede estar vacío.');
+        }
+
+        $payload = [
             'ruc' => $this->ruc,
             'periodos' => $this->periods,
             'tipos' => $this->documentTypes,
             'forzar' => $this->force,
         ];
+
+        if ($sealedCredentials !== null) {
+            $payload['sealed_credentials'] = $sealedCredentials;
+        }
+
+        return $payload;
     }
 }

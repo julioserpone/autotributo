@@ -233,6 +233,7 @@ Para documentos tipo `07`: `id`, `tenant_id`, `invoice_id`, `tax_type` (`IR`,`IV
 | requested_by | bigint | |
 | status | varchar(20) | `queued`,`invoking`,`downloading`,`parsing`,`completed`,`partial`,`failed`,`cancelled` |
 | date_from / date_to | date | |
+| periods | jsonb | Períodos `YYYY-MM` solicitados; base de la reconciliación S3 |
 | document_types | jsonb | |
 | idempotency_key | varchar(64) unique | Evita doble cobro/ejecución |
 | lambda_request_id | varchar(128) null | |
@@ -245,7 +246,11 @@ Para documentos tipo `07`: `id`, `tenant_id`, `invoice_id`, `tax_type` (`IR`,`IV
 Índices: `(tenant_id, company_id, created_at desc)`, `index(status)` para reconciliación.
 
 ### `sri_sync_run_files`
-`id`, `run_id`, `tenant_id`, `file_name`, `s3_key`, `checksum`, `document_type`, `status`, `error_message`, `processed_at`. Unique `(run_id, s3_key)`.
+`id`, `run_id`, `tenant_id`, `file_name`, `s3_key`, `checksum` (SHA-256 hex),
+`document_type`, `status`, `error_message`, `processed_at`. Unique
+`(run_id, s3_key)`; índice `(tenant_id, status)`. Estados:
+`pending`, `available`, `missing`, `invalid`, `processed`. La reconciliación
+F2-05 registra manifiesto, TXT y JSON de claves; el parser F2-06 los consume.
 
 ### `sri_run_events`
 Log de progreso: `id`, `run_id`, `tenant_id`, `level`, `message`, `context jsonb`, `created_at`. Retención 90 días.
