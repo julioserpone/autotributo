@@ -33,6 +33,7 @@ use InvalidArgumentException;
  * @property list<string> $document_types
  * @property string $idempotency_key
  * @property string|null $lambda_request_id
+ * @property string|null $callback_event_id
  * @property string|null $s3_prefix
  * @property array<string, int>|null $totals
  * @property string|null $error_code
@@ -116,9 +117,14 @@ final class SriSyncRun extends Model
         $this->save();
     }
 
-    public function markInvoking(?string $requestId): void
+    public function markInvoking(?string $requestId, ?string $eventId = null): void
     {
         $this->lambda_request_id = $requestId;
+
+        if ($eventId !== null && $eventId !== '') {
+            $this->callback_event_id = $eventId;
+        }
+
         $this->started_at ??= now();
         $this->transitionTo(SriSyncRunStatus::Invoking);
     }

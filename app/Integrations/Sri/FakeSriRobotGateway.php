@@ -24,6 +24,7 @@ final class FakeSriRobotGateway implements SriRobotGateway
             functionName: 'fake-sri-txt-robot',
             statusCode: 202,
             requestId: 'fake-'.count($this->requests),
+            eventId: 'fake-evt-'.count($this->requests),
         );
     }
 }

@@ -11,6 +11,7 @@ use App\Domain\Sri\Data\SriRobotRequest;
 use App\Domain\Sri\Exceptions\SriGatewayException;
 use Aws\Exception\AwsException;
 use Aws\Lambda\LambdaClient;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use JsonException;
 use SodiumException;
@@ -29,6 +30,7 @@ final readonly class LambdaSriRobotGateway implements SriRobotGateway
         private LambdaClient $lambda,
         private string $functionName,
         private ?string $publicKey = null,
+        private string $callbackUrl = '',
     ) {
         if (trim($this->functionName) === '') {
             throw new InvalidArgumentException('El nombre de la función Lambda del robot es obligatorio.');
@@ -37,18 +39,31 @@ final readonly class LambdaSriRobotGateway implements SriRobotGateway
 
     public function dispatch(SriRobotRequest $request): SriRobotDispatch
     {
+        // El callback asíncrono necesita un identificador que la app pueda
+        // correlacionar con el run. Se genera aquí y viaja en el payload.
+        $eventId = (string) Str::ulid();
+
         try {
             $sealedCredentials = $request->credentials !== null
                 ? $this->sealCredentials($request->credentials)
                 : null;
 
-            $payload = json_encode($request->toPayload($sealedCredentials), JSON_THROW_ON_ERROR);
+            $payload = array_merge(
+                $request->toPayload($sealedCredentials),
+                array_filter(
+                    [
+                        'event_id' => $eventId,
+                        'callback_url' => trim($this->callbackUrl),
+                    ],
+                    static fn (string $valor): bool => $valor !== '',
+                ),
+            );
 
             $result = $this->lambda->invoke([
                 'FunctionName' => $this->functionName,
                 'InvocationType' => 'Event',
                 'LogType' => 'None',
-                'Payload' => $payload,
+                'Payload' => json_encode($payload, JSON_THROW_ON_ERROR),
             ]);
         } catch (SriGatewayException $exception) {
             throw $exception;
@@ -62,6 +77,7 @@ final readonly class LambdaSriRobotGateway implements SriRobotGateway
             functionName: $this->functionName,
             statusCode: (int) ($result['StatusCode'] ?? 0),
             requestId: is_string($requestId) ? $requestId : null,
+            eventId: $eventId,
         );
     }
 

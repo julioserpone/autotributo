@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Sri\Http\Middleware\VerifySriRobotCallback;
 use App\Domain\Tenancy\Http\Middleware\EnsureTenantIsActive;
 use App\Domain\Tenancy\Http\Middleware\InitializeTenantContext;
 use Illuminate\Console\Scheduling\Schedule;
@@ -26,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant.context' => InitializeTenantContext::class,
             'tenant.active' => EnsureTenantIsActive::class,
+            'sri.callback' => VerifySriRobotCallback::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
