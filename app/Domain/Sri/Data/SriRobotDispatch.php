@@ -13,6 +13,7 @@ final readonly class SriRobotDispatch
         public string $functionName,
         public int $statusCode,
         public ?string $requestId = null,
+        public ?string $eventId = null,
     ) {}
 
     public function isAccepted(): bool

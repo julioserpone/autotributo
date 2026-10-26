@@ -39,7 +39,7 @@
 | F2-01 | Puerto `SriGateway` | Completado | `ce98289` · `sri-comprobantes-php` v0.1.2 · `SriAuthorizationGateway`, `SriRobotGateway`, adaptadores package/Lambda y fakes · 51 tests, 98.0% cobertura |
 | F2-02 | Layout S3 del robot | Completado | `6abd600` · `SriRobotObjectPath`, disco `sri`, `SriRobotObjectStore` con SHA-256, layout `{ambiente}/{ruc}/{periodo}` · 61 tests, 97.7% cobertura |
 | F2-03 | `SriSyncRun` y orquestación | Completado | `23c9ac6` · `SriSyncRun`, `SriSyncRunFile`, `StartSriSync`, estados/transiciones idempotentes y dispatch al robot · tests de feature y unit |
-| F2-04 | Callback firmado | Pendiente | Bloqueado: `sri-txt-robot` aún no emite callback firmado (falta contrato `event_id`, timestamp, HMAC, secreto compartido, URL, reintentos) |
+| F2-04 | Callback firmado | Completado | `POST /api/v1/webhooks/sri-robot` con HMAC-SHA256, ventana temporal, límite de tamaño y dedupe por `event_id`; `sri_robot_callbacks`, correlación por `callback_event_id` y `event_id`/`callback_url` en la invocación · tests de firma, expiración, duplicado, tamaño y transición · validado desde `sri-txt-robot` en AWS (callback `failed` con `202` al primer intento) |
 | F2-05 | Reconciliación | Completado | `f5f82e9` · `periods`, `sri_sync_run_files`, `ReconcileSriRun(s)`, `sri:reconcile-runs`, scheduler `*/10`, validación de manifiesto/TXT/claves y transición a `parsing` · 12 tests F2-05 · suite 107 tests / 310 assertions |
 | F2-06 | Parser XML | Pendiente | — |
 | F2-07 | Parser de manifiesto/TXT | Pendiente | — |

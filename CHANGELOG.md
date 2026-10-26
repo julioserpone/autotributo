@@ -9,6 +9,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 ### Added
 
 - F2-03: orquestación de `SriSyncRun` con estados, transiciones idempotentes y dispatch al robot.
+- F2-04: callback firmado del robot en `POST /api/v1/webhooks/sri-robot` (HMAC-SHA256 sobre `timestamp.cuerpo`, ventana ±300 s, límite de 256 KB y dedupe por `event_id`); `event_id`/`callback_url` en la invocación, `callback_event_id` en el run y transición a `downloading`/`failed`.
 - F2-05: reconciliación de runs activos contra el manifiesto S3, validación de TXT/claves y transición a `parsing`.
 - Comando `sri:reconcile-runs` y scheduler cada 10 minutos.
 - Archivos de comunidad y gobierno: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `SUPPORT.md`, `CHANGELOG.md`, `LICENSE`.
@@ -35,7 +36,6 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ### Known limitations
 
-- F2-04 (callback firmado) sigue bloqueado: `sri-txt-robot` aún no emite callback.
 - La protección de `main` no puede aplicarse en un repositorio privado con GitHub Free; requiere GitHub Pro o visibilidad pública. Ver `docs/github-branch-protection.md`.
 
 ## [0.1.0] - 2026-10-23

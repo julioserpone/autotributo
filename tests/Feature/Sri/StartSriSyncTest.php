@@ -57,6 +57,7 @@ it('crea el run y despacha el robot', function (): void {
         ->and($run->periods)->toBe(['2026-08'])
         ->and($run->document_types)->toBe(['01', '04'])
         ->and($run->lambda_request_id)->toBe('fake-1')
+        ->and($run->callback_event_id)->toBe('fake-evt-1')
         ->and($run->started_at)->not->toBeNull()
         ->and($run->totals)->toEqual([
             'found' => 0,

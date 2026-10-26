@@ -20,14 +20,18 @@ it('invoca la Lambda con el payload del robot y modo asíncrono', function (): v
     $lambda->shouldReceive('invoke')
         ->once()
         ->withArgs(function (array $arguments): bool {
+            $payload = json_decode((string) $arguments['Payload'], true, flags: JSON_THROW_ON_ERROR);
+
             expect($arguments['InvocationType'])->toBe('Event')
                 ->and($arguments['FunctionName'])->toBe('sri-txt-robot')
-                ->and(json_decode((string) $arguments['Payload'], true))->toBe([
+                ->and($payload)->toMatchArray([
                     'ruc' => '1758871873001',
                     'periodos' => ['2026-08'],
                     'tipos' => ['01'],
                     'forzar' => false,
-                ]);
+                ])
+                ->and($payload['event_id'])->toBeString()->toHaveLength(26)
+                ->and($payload)->not->toHaveKey('callback_url');
 
             return true;
         })
@@ -41,7 +45,36 @@ it('invoca la Lambda con el payload del robot y modo asíncrono', function (): v
 
     expect($dispatch->isAccepted())->toBeTrue()
         ->and($dispatch->requestId)->toBe('req-123')
+        ->and($dispatch->eventId)->toBeString()->toHaveLength(26)
         ->and($dispatch->statusCode)->toBe(202);
+});
+
+it('incluye la URL de callback y el mismo event_id de la invocación', function (): void {
+    $lambda = Mockery::mock(LambdaClient::class);
+    $capturado = null;
+
+    $lambda->shouldReceive('invoke')
+        ->once()
+        ->withArgs(function (array $arguments) use (&$capturado): bool {
+            $capturado = json_decode((string) $arguments['Payload'], true, flags: JSON_THROW_ON_ERROR);
+
+            return true;
+        })
+        ->andReturn(new Result([
+            'StatusCode' => 202,
+            'ResponseMetadata' => ['RequestId' => 'req-callback'],
+        ]));
+
+    $dispatch = (new LambdaSriRobotGateway(
+        $lambda,
+        'sri-txt-robot',
+        null,
+        'https://app.ejemplo.test/api/v1/webhooks/sri-robot',
+    ))->dispatch(new SriRobotRequest('1790012345001', ['2026-08']));
+
+    expect($capturado)->toBeArray()
+        ->and($capturado['callback_url'])->toBe('https://app.ejemplo.test/api/v1/webhooks/sri-robot')
+        ->and($capturado['event_id'])->toBe($dispatch->eventId);
 });
 
 it('envuelve los errores de AWS en una excepción de dominio', function (): void {

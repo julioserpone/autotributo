@@ -42,7 +42,7 @@ return [
     'robot' => [
         'driver' => env('SRI_ROBOT_DRIVER', 'fake'),
         'function' => env('SRI_ROBOT_FUNCTION', 'sri-txt-robot'),
-        'region' => env('SRI_ROBOT_REGION', env('AWS_DEFAULT_REGION', 'us-east-1')),
+        'region' => env('SRI_ROBOT_REGION', env('AWS_DEFAULT_REGION', 'us-east-2')),
         'environment' => env('SRI_ROBOT_ENVIRONMENT', 'dev'),
         'output_disk' => env('SRI_ROBOT_OUTPUT_DISK', 'sri'),
         'output_bucket' => env('SRI_ROBOT_OUTPUT_BUCKET'),
@@ -50,6 +50,9 @@ return [
         'deadline_seconds' => (int) env('SRI_ROBOT_DEADLINE_SECONDS', 840),
         'callback_url' => env('SRI_ROBOT_CALLBACK_URL'),
         'callback_secret' => env('SRI_ROBOT_CALLBACK_SECRET'),
+        // Ventana de aceptación de la firma y tamaño máximo del cuerpo.
+        'callback_tolerance_seconds' => (int) env('SRI_ROBOT_CALLBACK_TOLERANCE_SECONDS', 300),
+        'callback_max_bytes' => (int) env('SRI_ROBOT_CALLBACK_MAX_BYTES', 262_144),
         'public_key' => env('SRI_ROBOT_PUBLIC_KEY'),
     ],
 

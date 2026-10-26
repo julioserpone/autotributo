@@ -137,7 +137,12 @@ al leer y lo persiste en `sri_sync_run_files` durante F2-05.
 | `FilesystemSriRobotObjectStore` | Adaptador del disco `sri` (S3 en Cloud) |
 
 La app solo lee el bucket del robot. El rol IAM del robot es el único que
-escribe; el usuario de la app no necesita `s3:PutObject` sobre `-sri`.
+escribe; el usuario de la app no necesita `s3:PutObject` sobre `-sri`. Además
+de `s3:GetObject`/`s3:ListBucket` en el prefijo de salida, la identidad de la
+app necesita `lambda:InvokeFunction` sobre
+`arn:aws:lambda:us-east-2:076767082111:function:sri-txt-robot`. El usuario de
+despliegue (`sri-txt-robot-deployer`) no debe reutilizarse como credencial de la
+aplicación: tiene `AWSLambda_FullAccess` y permisos de más.
 
 ### Orquestación de runs (F2-03)
 
@@ -164,16 +169,53 @@ Reglas:
   seguro; la excepción se propaga al llamador.
 - La cancelación se hace con `SriSyncRun::cancel()` y solo aplica a runs
   activos. La cancelación de la invocación asíncrona real queda pendiente de
-  F2-04/F2-09.
+  F2-09.
 - La tabla `companies` se incorporó con lo mínimo para la FK del run; el CRUD
   completo y la validación de RUC pertenecen a F1-05.
 - `sri_sync_run_files` se llena en F2-05; el parser de F2-06 consume esos
   archivos y el de F2-07 interpreta el manifiesto/TXT.
 
+### Callback firmado (F2-04)
+
+Cada invocación incluye un `event_id` (ULID generado por la app) y la
+`callback_url` configurada. El run guarda ese identificador en
+`callback_event_id`, así el callback se correlaciona sin ambigüedad.
+
+El robot envía al terminar (éxito, parcial o fallo):
+
+```text
+POST /api/v1/webhooks/sri-robot
+Content-Type: application/json
+X-Sri-Event-Id: 01J9Z8Q7K3...
+X-Sri-Timestamp: 1792791111
+X-Sri-Signature: sha256=<hex>
+X-Sri-Delivery-Attempt: 1
+```
+
+- **Firma:** `HMAC-SHA256(secreto, "{timestamp}.{cuerpo exacto}")`.
+- **Ventana:** ±300 s (`SRI_ROBOT_CALLBACK_TOLERANCE_SECONDS`).
+- **Tamaño:** 256 KB (`SRI_ROBOT_CALLBACK_MAX_BYTES`).
+- **Dedupe:** `event_id` único en `sri_robot_callbacks`; un duplicado
+  responde `202` sin reprocesar.
+- **Respuesta:** `202 accepted` en éxito y duplicado; `401` firma o timestamp
+  inválidos; `413` cuerpo grande; `422` contrato inválido; `503` secreto no
+  configurado (el robot reintenta).
+
+Efecto en el run:
+
+- `completed`/`partial`: `invoking` → `downloading`, listo para que
+  `sri:reconcile-runs` valide el manifiesto.
+- `failed`: el run pasa a `failed` con `error_code=robot_failed`.
+- Un run ya final no se reabre; el evento se guarda igual.
+
+El receptor vive en `App\Domain\Sri\Http\Middleware\VerifySriRobotCallback` y
+`SriRobotCallbackController`; la ruta no usa sesión ni contexto de tenant.
+
 ### Reconciliación por S3 (F2-05)
 
-El robot no envía callback. La app reconcilia cada 10 minutos los runs activos
-contra el bucket del robot:
+Además del callback, la app reconcilia cada 10 minutos los runs activos
+contra el bucket del robot. El callback acelera la transición, pero la
+reconciliación sigue siendo la que valida los archivos:
 
 ```text
 sri:reconcile-runs --limit=50   # programado con withoutOverlapping()
@@ -239,10 +281,14 @@ SRI_RETRY_MAX_DELAY_MS=5000
 
 SRI_ROBOT_DRIVER=fake              # fake | lambda
 SRI_ROBOT_FUNCTION=sri-txt-robot
-SRI_ROBOT_REGION=us-east-1
+SRI_ROBOT_REGION=us-east-2
 SRI_ROBOT_ENVIRONMENT=dev          # dev | test | produccion (debe coincidir con la Lambda)
 SRI_ROBOT_OUTPUT_BUCKET=autotributo-local-sri
 SRI_ROBOT_OUTPUT_PREFIX=           # prefijo opcional; vacío por defecto
+SRI_ROBOT_CALLBACK_URL="${APP_URL}/api/v1/webhooks/sri-robot"
+SRI_ROBOT_CALLBACK_SECRET=         # mínimo 16 caracteres
+SRI_ROBOT_CALLBACK_TOLERANCE_SECONDS=300
+SRI_ROBOT_CALLBACK_MAX_BYTES=262144
 SRI_ROBOT_PUBLIC_KEY=              # base64 de la clave pública del robot
 ```
 

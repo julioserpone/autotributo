@@ -80,6 +80,7 @@ final class SriServiceProvider extends ServiceProvider
                 ]),
                 (string) config('sri.robot.function', 'sri-txt-robot'),
                 (string) config('sri.robot.public_key', ''),
+                (string) config('sri.robot.callback_url', ''),
             );
         });
 

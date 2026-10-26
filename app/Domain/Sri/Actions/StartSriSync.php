@@ -150,7 +150,7 @@ final readonly class StartSriSync
             );
         }
 
-        $run->markInvoking($dispatch->requestId);
+        $run->markInvoking($dispatch->requestId, $dispatch->eventId);
 
         return $run->refresh();
     }
