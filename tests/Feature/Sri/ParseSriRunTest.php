@@ -73,13 +73,13 @@ function publishPeriod(
     ReconcileFixtures::putPeriod($company, $period, $type, $txt, $keys);
 }
 
-it('interpreta el TXT de un run en parsing y lo completa', function (): void {
+it('interpreta el TXT de un run en parsing y lo deja listo para importar', function (): void {
     publishPeriod($this->company, '2026-09');
     $run = ($this->parsedRun)();
 
     $result = $this->action->handle($run);
 
-    expect($result['run']->status)->toBe(SriSyncRunStatus::Completed)
+    expect($result['run']->status)->toBe(SriSyncRunStatus::Parsing)
         ->and($result['batches'])->toHaveCount(1)
         ->and($result['batches'][0]->count())->toBe(2)
         ->and($result['run']->totals['found'])->toBe(2)
@@ -100,7 +100,7 @@ it('primero reconcilia un run en downloading y luego lo interpreta', function ()
 
     $result = $this->action->handle($run);
 
-    expect($result['run']->status)->toBe(SriSyncRunStatus::Completed)
+    expect($result['run']->status)->toBe(SriSyncRunStatus::Parsing)
         ->and($result['batches'])->toHaveCount(1);
 });
 
@@ -111,7 +111,7 @@ it('deja el run en partial cuando falta un tipo solicitado', function (): void {
 
     $result = $this->action->handle($run);
 
-    expect($result['run']->status)->toBe(SriSyncRunStatus::Partial)
+    expect($result['run']->status)->toBe(SriSyncRunStatus::Parsing)
         ->and($result['run']->error_code)->toBe('incomplete_package')
         ->and($result['batches'])->toHaveCount(1);
 });
@@ -130,7 +130,8 @@ it('deja el run en partial cuando el TXT y el JSON de claves no coinciden', func
     $run = ($this->parsedRun)();
     $result = $this->action->handle($run);
 
-    expect($result['run']->status)->toBe(SriSyncRunStatus::Partial)
+    expect($result['run']->status)->toBe(SriSyncRunStatus::Parsing)
+        ->and($result['run']->error_code)->toBe('incomplete_package')
         ->and($result['batches'][0]->missingAccessKeys)->toBe([$listed[1]]);
 });
 
@@ -171,7 +172,8 @@ it('es idempotente al repetir la interpretación', function (): void {
     $this->action->handle($run);
     $second = $this->action->handle(SriSyncRun::query()->findOrFail($run->id));
 
-    expect($second['run']->status)->toBe(SriSyncRunStatus::Completed)
+    expect($second['run']->status)->toBe(SriSyncRunStatus::Parsing)
+        ->and($second['batches'])->toHaveCount(1)
         ->and($second['run']->files()->where('status', SriSyncRunFileStatus::Processed->value)->count())->toBe(1);
 });
 
@@ -180,10 +182,10 @@ it('se ejecuta desde el comando para un run puntual', function (): void {
     $run = ($this->parsedRun)();
 
     $this->artisan('sri:parse-run', ['run' => $run->public_id])
-        ->expectsOutputToContain('completed')
+        ->expectsOutputToContain('parsing')
         ->assertSuccessful();
 
-    expect($run->refresh()->status)->toBe(SriSyncRunStatus::Completed);
+    expect($run->refresh()->status)->toBe(SriSyncRunStatus::Parsing);
 });
 
 it('falla el comando con un run inexistente', function (): void {

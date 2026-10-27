@@ -71,7 +71,7 @@ final readonly class ParseSriRun
     {
         $ruc = (string) $run->company()->firstOrFail()->ruc;
         $files = $run->files()
-            ->where('status', SriSyncRunFileStatus::Available)
+            ->whereIn('status', [SriSyncRunFileStatus::Available, SriSyncRunFileStatus::Processed])
             ->whereNotNull('document_type')
             ->where('s3_key', 'like', '%.txt')
             ->get();
@@ -168,9 +168,12 @@ final readonly class ParseSriRun
         if (! $complete) {
             $run->error_code = 'incomplete_package';
             $run->error_message = 'El paquete del robot tiene archivos vacíos o claves inconsistentes.';
+            $run->save();
         }
 
-        $run->transitionTo($complete ? SriSyncRunStatus::Completed : SriSyncRunStatus::Partial);
+        // El run se queda en `parsing` a propósito: el veredicto final lo da
+        // `ImportSriRun` cuando ya hay comprobantes guardados. Cerrarlo aquí
+        // haría que la importación encontrara el run final y no hiciera nada.
     }
 
     private function parseFile(SriSyncRun $run, SriSyncRunFile $file, string $ruc): ?SriPeriodBatch

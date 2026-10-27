@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Sri\Actions\ImportSriRun;
 use App\Domain\Sri\Actions\ParseSriRun;
+use App\Domain\Sri\Actions\PersistSriInvoice;
 use App\Domain\Sri\Actions\ReconcileSriRun;
 use App\Domain\Sri\Contracts\SriAuthorizationGateway;
 use App\Domain\Sri\Contracts\SriInvoiceParser;
@@ -102,6 +104,17 @@ final class SriServiceProvider extends ServiceProvider
             return new ReconcileSriRun(
                 $app->make(SriRobotObjectStore::class),
                 (string) config('sri.robot.environment', 'dev'),
+            );
+        });
+
+        $this->app->singleton(PersistSriInvoice::class, fn (): PersistSriInvoice => new PersistSriInvoice);
+
+        $this->app->singleton(ImportSriRun::class, function (Application $app): ImportSriRun {
+            return new ImportSriRun(
+                $app->make(SriAuthorizationGateway::class),
+                $app->make(SriInvoiceParser::class),
+                $app->make(PersistSriInvoice::class),
+                $app->make(ParseSriRun::class),
             );
         });
 

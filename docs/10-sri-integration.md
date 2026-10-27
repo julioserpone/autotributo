@@ -348,6 +348,35 @@ El adaptador `PackageSriInvoiceParser` traduce al modelo de la app y aporta:
 - Un XML malformado, un raíz no soportado o un campo obligatorio ausente lanzan
   `SriXmlException` con motivo, nunca el contenido del documento.
 
+### Persistencia (F2-08)
+
+`ImportSriRun` recorre los lotes de `ParseSriRun`, consulta el XML con
+`SriAuthorizationGateway`, lo interpreta y lo guarda con `PersistSriInvoice`:
+
+```text
+sri:import-run {run|public_id}
+```
+
+| Situación | Resultado |
+|---|---|
+| Clave nueva | `created`, con ítems, impuestos y retenciones |
+| Misma clave y mismo `xml_sha256` | `skipped`, no se escribe nada |
+| Misma clave y XML distinto | `updated`, los hijos se reemplazan |
+| XML ilegible o no autorizado | Cuenta en `failed`; el run sigue con el resto |
+
+Reglas:
+
+- `unique(tenant_id, company_id, access_key)` es la identidad del comprobante;
+  la misma clave en dos empresas o dos tenants son filas distintas.
+- `first_seen_at` guarda el primer run que vio el comprobante; `sync_run_id` y
+  `updated_or_created_at`, el último que lo tocó.
+- Un comprobante se escribe en su propia transacción: nunca queda a medias.
+- `totals_mismatch` se persiste tal cual para que F3 lo convierta en hallazgo.
+- Estados finales: `completed` si todo se guardó o se saltó, `partial` si algo
+  falló y otros se guardaron, `failed` (`import_failed`) si no se guardó nada.
+- **`ParseSriRun` deja el run en `parsing`**: el veredicto final lo da la
+  importación, que es la que sabe cuántos comprobantes quedaron guardados.
+
 ## 5. Variables de entorno
 
 ```dotenv
@@ -401,6 +430,8 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 | `tests/Unit/Sri/AccessKeyListParserTest.php` | TXT con BOM/CRLF, líneas inválidas, duplicados y cruce con el JSON de claves |
 | `tests/Feature/Sri/ParseSriRunTest.php` | Run `completed`/`partial`/`failed`, marca de archivos, idempotencia y comando |
 | `tests/Unit/Sri/ComprobanteReaderIntegrationTest.php` | Los seis tipos por el adaptador: totales, ítems, impuestos, retenciones, XXE, tamaño y XML malformado |
+| `tests/Feature/Sri/PersistSriInvoiceTest.php` | Creación, hijos, idempotencia, actualización, aislamiento por empresa y retenciones |
+| `tests/Feature/Sri/ImportSriRunTest.php` | Importación completa, reimportación sin duplicados, `partial`, `failed`, XML corrupto y comando |
 
 No hay red en la suite: el transporte SOAP y el cliente Lambda se sustituyen
 por dobles.
