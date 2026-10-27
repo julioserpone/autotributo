@@ -21,10 +21,11 @@ Por eso el parseo entra como **puerto + adaptador**:
 |---|---|
 | `SriInvoiceParser` (contrato) | Lo que consume el dominio; no menciona el paquete ni DOM |
 | `App\Integrations\Sri\PackageSriInvoiceParser` | Adaptador registrado en `SriServiceProvider` |
-| `App\Domain\Sri\Parsers\SriXmlParser` | Implementación actual, delegada por el adaptador |
+| `JulioSerpone\SriComprobantes\Comprobante\ComprobanteReader` | Implementación v0.2.0 del paquete (01, 03, 04, 05, 06, 07) |
 
-Cuando el paquete publique el parser, el único cambio es el cuerpo de
-`PackageSriInvoiceParser`; acciones, jobs y tests no se tocan. Lo mismo aplica
+**Migrado:** desde `v0.2.0` el paquete incluye `ComprobanteReader` y la app ya
+no tiene parser propio; `PackageSriInvoiceParser` solo traduce el DTO del
+paquete al del dominio. Lo mismo aplica
 a `SriAccessKey`, que ya delega el módulo 11 en
 `JulioSerpone\SriComprobantes\AccessKey\AccessKeyGenerator`.
 
@@ -49,7 +50,7 @@ Se instala desde GitHub por VCS, porque no está en Packagist:
 }
 ```
 
-La versión resuelta es `v0.1.2`, que incluye:
+La versión resuelta es `v0.2.0`, que incluye:
 
 - `Client\AutorizacionClient` y `Transport\SoapTransport`.
 - `Config\SriEnvironment` y `Config\SriService`.
@@ -326,7 +327,10 @@ Reglas:
 
 ### XML del comprobante
 
-`SriXmlParser` interpreta factura, nota de crédito y nota de débito:
+La lectura la hace `ComprobanteReader` del paquete (v0.2.0). Soportado:
+factura (`01`), liquidación de compra (`03`), nota de crédito (`04`), nota de
+débito (`05`), guía de remisión (`06`) y comprobante de retención (`07`).
+El adaptador `PackageSriInvoiceParser` traduce al modelo de la app y aporta:
 
 - XXE desactivado (`LIBXML_NONET`, sin `LIBXML_NOENT`, sin DTD) y límite de
   5 MiB.
@@ -338,6 +342,9 @@ Reglas:
   calcula aquí porque es la clave de las reglas y la caché de IA.
 - La tarifa (`<tarifa>`) solo viene en el detalle; la cabecera trae
   `codigoPorcentaje`, que es lo que se declara en el 104.
+- El código de impuesto del SRI se mapea a `IR` (1), `IVA` (2), `ICE` (3) o
+  `IRBPNR` (5); en retenciones, `SriRetentionData` lleva tipo, código, base,
+  porcentaje, valor retenido y documento sustento.
 - Un XML malformado, un raíz no soportado o un campo obligatorio ausente lanzan
   `SriXmlException` con motivo, nunca el contenido del documento.
 
@@ -393,7 +400,7 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 | `tests/Unit/Sri/SriAccessKeyTest.php` | Estructura, tipos, verificador (módulo 11) y claves mal formadas |
 | `tests/Unit/Sri/AccessKeyListParserTest.php` | TXT con BOM/CRLF, líneas inválidas, duplicados y cruce con el JSON de claves |
 | `tests/Feature/Sri/ParseSriRunTest.php` | Run `completed`/`partial`/`failed`, marca de archivos, idempotencia y comando |
-| `tests/Unit/Sri/SriXmlParserTest.php` | Factura, NC, ND, totales, ítems, impuestos, XXE, tamaño y XML malformado |
+| `tests/Unit/Sri/ComprobanteReaderIntegrationTest.php` | Los seis tipos por el adaptador: totales, ítems, impuestos, retenciones, XXE, tamaño y XML malformado |
 
 No hay red en la suite: el transporte SOAP y el cliente Lambda se sustituyen
 por dobles.
@@ -448,8 +455,8 @@ Resultado esperado de una corrida válida: callback `202` (guardado en
    `upsert` por `access_key`.
 3. **F1-05/F1-06:** CRUD de empresas y almacenamiento cifrado de credenciales.
 4. **F2-09:** progreso en vivo y cancelación de la invocación asíncrona.
-5. **Parser en el paquete:** mover `SriXmlParser` a
-   `julioserpone/sri-comprobantes-php`; aquí solo se cambia el adaptador.
+5. **Rendimiento:** medir 5.000 XML con `ComprobanteReader` (benchmark de
+   F2-08) y, si hace falta, paralelizar por lotes.
 
 ## 9. Seguridad
 

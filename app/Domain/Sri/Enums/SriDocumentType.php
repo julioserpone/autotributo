@@ -16,6 +16,7 @@ enum SriDocumentType: string
     case PurchaseSettlement = '03';
     case CreditNote = '04';
     case DebitNote = '05';
+    case RemissionGuide = '06';
     case Withholding = '07';
 
     public function slug(): string
@@ -25,6 +26,7 @@ enum SriDocumentType: string
             self::PurchaseSettlement => 'liquidaciones-compra',
             self::CreditNote => 'notas-credito',
             self::DebitNote => 'notas-debito',
+            self::RemissionGuide => 'guias-remision',
             self::Withholding => 'retenciones',
         };
     }
@@ -36,6 +38,7 @@ enum SriDocumentType: string
             self::PurchaseSettlement => 'Liquidación de compra de bienes y prestación de servicios',
             self::CreditNote => 'Nota de crédito',
             self::DebitNote => 'Nota de débito',
+            self::RemissionGuide => 'Guía de remisión',
             self::Withholding => 'Comprobante de retención',
         };
     }

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d984ec8c7368f1b18030dfb58edc2dfb",
+    "content-hash": "b4cdd9729f4da08db0aa671695de77ec",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -1444,16 +1444,16 @@
         },
         {
             "name": "julioserpone/sri-comprobantes-php",
-            "version": "v0.1.2",
+            "version": "v0.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/julioserpone/sri-comprobantes-php.git",
-                "reference": "1852c4e92c3b43bf7429c01d696d8044d9457026"
+                "reference": "481304c3115fe5f2d7c81eeb35bc5beeda5f6124"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/julioserpone/sri-comprobantes-php/zipball/1852c4e92c3b43bf7429c01d696d8044d9457026",
-                "reference": "1852c4e92c3b43bf7429c01d696d8044d9457026",
+                "url": "https://api.github.com/repos/julioserpone/sri-comprobantes-php/zipball/481304c3115fe5f2d7c81eeb35bc5beeda5f6124",
+                "reference": "481304c3115fe5f2d7c81eeb35bc5beeda5f6124",
                 "shasum": ""
             },
             "require": {
@@ -1467,6 +1467,9 @@
                 "friendsofphp/php-cs-fixer": "^3.64",
                 "phpstan/phpstan": "^2.1",
                 "phpunit/phpunit": "^11.4"
+            },
+            "suggest": {
+                "aws/aws-sdk-php": "Permite usar AwsLambdaInvoker con un cliente AWS Lambda real."
             },
             "type": "library",
             "extra": {
@@ -1501,7 +1504,7 @@
                 "issues": "https://github.com/julioserpone/sri-comprobantes-php/issues",
                 "source": "https://github.com/julioserpone/sri-comprobantes-php"
             },
-            "time": "2026-10-20T20:01:52+00:00"
+            "time": "2026-10-27T01:31:12+00:00"
         },
         {
             "name": "laravel/framework",

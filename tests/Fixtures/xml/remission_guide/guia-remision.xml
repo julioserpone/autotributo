@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<guiaRemision id="comprobante" version="1.1.0">
+  <infoTributaria>
+    <ambiente>2</ambiente>
+    <tipoEmision>1</tipoEmision>
+    <razonSocial>TRANSPORTISTA DE PRUEBA S.A.</razonSocial>
+    <ruc>1758871873001</ruc>
+    <claveAcceso>{{CLAVE}}</claveAcceso>
+    <codDoc>06</codDoc>
+    <estab>001</estab>
+    <ptoEmi>003</ptoEmi>
+    <secuencial>000000127</secuencial>
+  </infoTributaria>
+  <infoGuiaRemision>
+    <dirEstablecimiento>Av. Siempre Viva 123</dirEstablecimiento>
+    <dirPartida>Av. Siempre Viva 123</dirPartida>
+    <razonSocialTransportista>TRANSPORTISTA DE PRUEBA S.A.</razonSocialTransportista>
+    <tipoIdentificacionTransportista>04</tipoIdentificacionTransportista>
+    <rucTransportista>1758871873001</rucTransportista>
+    <fechaIniTransporte>19/09/2026</fechaIniTransporte>
+    <fechaFinTransporte>19/09/2026</fechaFinTransporte>
+    <placa>ABC1234</placa>
+  </infoGuiaRemision>
+  <destinatarios>
+    <destinatario>
+      <identificacionDestinatario>1790012345001</identificacionDestinatario>
+      <razonSocialDestinatario>CLIENTE DE PRUEBA CIA. LTDA.</razonSocialDestinatario>
+      <dirDestinatario>Av. Siempre Viva 123</dirDestinatario>
+      <motivoTraslado>Venta</motivoTraslado>
+      <docAduaneroUnico></docAduaneroUnico>
+      <codEstabDestino>001</codEstabDestino>
+      <ruta>Ruta 1</ruta>
+      <codDocSustento>01</codDocSustento>
+      <numDocSustento>001001000000123</numDocSustento>
+      <numAutDocSustento>1509202601175887187300120010010000001238765432117</numAutDocSustento>
+      <fechaEmisionDocSustento>15/09/2026</fechaEmisionDocSustento>
+      <detalles>
+        <detalle>
+          <codigoInterno>SRV-001</codigoInterno>
+          <descripcion>Servicios de consultoría contable</descripcion>
+          <cantidad>1.00</cantidad>
+        </detalle>
+      </detalles>
+    </destinatario>
+  </destinatarios>
+</guiaRemision>

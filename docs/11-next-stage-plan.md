@@ -58,7 +58,7 @@ La siguiente etapa es **cerrar el tramo de parsing de F2**, empezando por
 | 4 | `SriPeriodBatch` (dominio) | Cruza las claves del TXT con el JSON de claves de la reconciliación; detecta faltantes/sobrantes por tipo; compara `SriDocumentType` | Unit |
 | 5 | `ParseSriRun` (Action) | Solo para runs en `parsing`; marca `sri_sync_run_files.status = processed` y `processed_at`; si no hay claves válidas, deja el run en `partial` con motivo | Feature con `Storage::fake('sri')` |
 | 6 | `sri:parse-run {run}` | Comando idempotente para operar un run puntual sin depender del scheduler | Feature |
-| 7 | `SriXmlParser` (F2-06 a, unit) | Factura (`01`), NC (`04`) y ND (`05`) → DTO con cabecera, ítems, impuestos y totales; XXE y entidades externas deshabilitadas; XML malformado lanza `SriXmlException` sin perder el motivo | Unit con fixtures por tipo + casos borde |
+| 7 | Lector de comprobantes (paquete v0.2.0) | 01, 03, 04, 05, 06 y 07 → DTO con cabecera, ítems, impuestos, retenciones y totales; XXE deshabilitado; XML malformado lanza `SriXmlException` sin perder el motivo | Unit en el paquete + integración en la app |
 | 8 | Validación de totales | `total = subtotal − descuento + impuestos + ICE + IRBPNR + propina`; si no cuadra, el DTO expone `totalsMismatch` en lugar de corregirlo | Tabla de casos |
 | 9 | Factories y fixtures | `tests/Fixtures/xml/{invoice,credit_note,debit_note}` con `README.md` por carpeta | — |
 | 10 | Documentación | `docs/10-sri-integration.md` actualizado, `docs/09-progress.md` con evidencia | — |
@@ -77,19 +77,22 @@ comprobantes recibidos**, que es justo lo que necesita F2-06.
 
 Sí es el lugar correcto para que viva: es lógica del formato fiscal del SRI, no
 de la aplicación, y así cualquier consumidor del paquete reutiliza la lectura.
-Mientras no exista, la app la implementa detrás de un puerto:
+
+**Hecho:** se implementó `Comprobante\ComprobanteReader` en el paquete (PR #5,
+`v0.2.0`) con los seis tipos, y la app migró a esa versión. `SriXmlParser` y
+`SriXmlValues` se eliminaron. Estado final:
 
 | Capa | Módulo | Dependencia del paquete |
 |---|---|---|
 | Dominio | `SriAccessKey` | **Sí**: delega el módulo 11 en `AccessKeyGenerator` |
 | Dominio | `SriInvoiceParser` (contrato) | No |
 | Integración | `PackageSriInvoiceParser` | **Sí**: punto único de sustitución |
-| Implementación | `App\Domain\Sri\Parsers\SriXmlParser` | No (DOM puro) |
+| Implementación | `JulioSerpone\SriComprobantes\Comprobante\ComprobanteReader` (paquete) | **Sí** |
 
-Tarea abierta fuera de esta rama: proponer el parser a
-`julioserpone/sri-comprobantes-php` (PR upstream). Cuando se publique, se
-reemplaza el cuerpo de `PackageSriInvoiceParser` y se borra `SriXmlParser`; los
-tests de `tests/Unit/Sri/SriXmlParserTest.php` se mueven al paquete.
+Los tests del lector viven ahora en el paquete
+(`tests/Unit/ComprobanteReaderTest.php`); en la app queda el test del adaptador
+(`tests/Unit/Sri/ComprobanteReaderIntegrationTest.php`), que verifica la
+traducción al modelo y sirve de contrato contra la versión instalada.
 
 ## 4. Riesgos
 

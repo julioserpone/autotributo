@@ -11,7 +11,6 @@ use App\Domain\Sri\Contracts\SriInvoiceParser;
 use App\Domain\Sri\Contracts\SriRobotGateway;
 use App\Domain\Sri\Contracts\SriRobotObjectStore;
 use App\Domain\Sri\Parsers\PeriodBatchBuilder;
-use App\Domain\Sri\Parsers\SriXmlParser;
 use App\Integrations\Sri\FakeSriAuthorizationGateway;
 use App\Integrations\Sri\FakeSriRobotGateway;
 use App\Integrations\Sri\FilesystemSriRobotObjectStore;
@@ -68,7 +67,7 @@ final class SriServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(SriInvoiceParser::class, function (Application $app): SriInvoiceParser {
-            return new PackageSriInvoiceParser($app->make(SriXmlParser::class));
+            return new PackageSriInvoiceParser;
         });
 
         $this->app->singleton(SriRobotGateway::class, function (Application $app): SriRobotGateway {

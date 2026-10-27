@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<liquidacionCompra id="comprobante" version="1.1.0">
+  <infoTributaria>
+    <ambiente>2</ambiente>
+    <tipoEmision>1</tipoEmision>
+    <razonSocial>COMPRADOR DE PRUEBA CIA. LTDA.</razonSocial>
+    <ruc>1790012345001</ruc>
+    <claveAcceso>{{CLAVE}}</claveAcceso>
+    <codDoc>03</codDoc>
+    <estab>001</estab>
+    <ptoEmi>002</ptoEmi>
+    <secuencial>000000126</secuencial>
+  </infoTributaria>
+  <infoLiquidacionCompra>
+    <fechaEmision>18/09/2026</fechaEmision>
+    <razonSocialProveedor>PROVEEDOR DE PRUEBA S.A.</razonSocialProveedor>
+    <identificacionProveedor>1758871873001</identificacionProveedor>
+    <totalSinImpuestos>200.00</totalSinImpuestos>
+    <totalDescuento>0.00</totalDescuento>
+    <totalConImpuestos>
+      <totalImpuesto>
+        <codigo>2</codigo>
+        <codigoPorcentaje>4</codigoPorcentaje>
+        <baseImponible>200.00</baseImponible>
+        <valor>30.00</valor>
+      </totalImpuesto>
+    </totalConImpuestos>
+    <importeTotal>230.00</importeTotal>
+    <moneda>USD</moneda>
+  </infoLiquidacionCompra>
+  <detalles>
+    <detalle>
+      <codigoPrincipal>LIQ-001</codigoPrincipal>
+      <descripcion>Compra de materia prima</descripcion>
+      <cantidad>10.00</cantidad>
+      <precioUnitario>20.00</precioUnitario>
+      <descuento>0.00</descuento>
+      <precioTotalSinImpuesto>200.00</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>4</codigoPorcentaje>
+          <tarifa>15.00</tarifa>
+          <baseImponible>200.00</baseImponible>
+          <valor>30.00</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+  </detalles>
+</liquidacionCompra>

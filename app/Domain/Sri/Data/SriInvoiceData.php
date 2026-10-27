@@ -19,6 +19,7 @@ final readonly class SriInvoiceData
     /**
      * @param  list<SriInvoiceItemData>  $items
      * @param  list<SriInvoiceTaxData>  $taxes
+     * @param  list<SriRetentionData>  $retentions
      * @param  list<string>  $relatedAccessKeys  Claves de las facturas ajustadas (notas de crédito y débito)
      */
     public function __construct(
@@ -47,7 +48,17 @@ final readonly class SriInvoiceData
         public array $relatedAccessKeys = [],
         public ?string $reason = null,
         public ?string $authorizationDate = null,
+        public array $retentions = [],
     ) {}
+
+    /**
+     * En notas de crédito y débito el total declarado es el ajuste, no la
+     * suma de la cabecera; en retenciones es la suma de lo retenido.
+     */
+    public function isAdjustment(): bool
+    {
+        return in_array($this->documentType, [SriDocumentType::CreditNote, SriDocumentType::DebitNote], true);
+    }
 
     /**
      * `total_cents` debe igualar subtotal − descuento + impuestos + ICE +
@@ -55,11 +66,27 @@ final readonly class SriInvoiceData
      */
     public function totalsMismatch(): bool
     {
-        return $this->totalCents !== $this->expectedTotalCents();
+        if ($this->totalCents === $this->expectedTotalCents()) {
+            return false;
+        }
+
+        return ! $this->isAdjustment();
+    }
+
+    public function retentionsTotalCents(): int
+    {
+        return array_sum(array_map(
+            static fn (SriRetentionData $retention): int => $retention->amountCents,
+            $this->retentions,
+        ));
     }
 
     public function expectedTotalCents(): int
     {
+        if ($this->documentType === SriDocumentType::Withholding) {
+            return $this->retentionsTotalCents();
+        }
+
         return $this->subtotalCents
             - $this->discountCents
             + $this->taxCents

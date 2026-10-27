@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
+use App\Domain\Sri\Data\SriInvoiceData;
 use App\Domain\Sri\Enums\SriDocumentType;
 use App\Domain\Sri\Exceptions\SriXmlException;
-use App\Domain\Sri\Parsers\SriXmlParser;
+use App\Integrations\Sri\PackageSriInvoiceParser;
 use Tests\Support\Sri\AccessKeyFactory;
 
 /**
- * Carga un fixture y sustituye las claves de acceso por las del período del
- * caso: el XML del SRI siempre trae la clave real y el parser la valida.
- *
- * @param  array<string, string>  $replace
+ * El parser del dominio es el paquete `julioserpone/sri-comprobantes-php`
+ * envuelto por `PackageSriInvoiceParser`. Estos tests verifican la traducción
+ * al modelo de la aplicación y, de paso, el contrato del paquete.
  */
 function xmlFixture(string $path, array $replace = []): string
 {
@@ -27,14 +27,23 @@ function xmlFixture(string $path, array $replace = []): string
     ]);
 }
 
+function keyed(string $path, string $type): string
+{
+    return strtr(
+        (string) file_get_contents(__DIR__.'/../../Fixtures/xml/'.$path),
+        ['{{CLAVE}}' => AccessKeyFactory::make(type: $type)],
+    );
+}
+
 beforeEach(function (): void {
-    $this->parser = new SriXmlParser;
+    $this->parser = new PackageSriInvoiceParser;
 });
 
 it('interpreta una factura completa', function (): void {
     $invoice = $this->parser->parse(xmlFixture('invoice/factura.xml'));
 
-    expect($invoice->documentType)->toBe(SriDocumentType::Invoice)
+    expect($invoice)->toBeInstanceOf(SriInvoiceData::class)
+        ->and($invoice->documentType)->toBe(SriDocumentType::Invoice)
         ->and($invoice->accessKey)->toBe(AccessKeyFactory::make())
         ->and($invoice->environment)->toBe('2')
         ->and($invoice->issueDate)->toBe('2026-09-15')
@@ -101,7 +110,8 @@ it('interpreta una nota de crédito y su documento modificado', function (): voi
     expect($note->documentType)->toBe(SriDocumentType::CreditNote)
         ->and($note->relatedAccessKeys)->toBe([AccessKeyFactory::make(sequential: '000000009')])
         ->and($note->items)->toHaveCount(1)
-        ->and($note->totalCents)->toBe(1_350);
+        ->and($note->totalCents)->toBe(1_350)
+        ->and($note->reason)->toBe('Devolución de servicios');
 });
 
 it('interpreta una nota de débito', function (): void {
@@ -111,30 +121,58 @@ it('interpreta una nota de débito', function (): void {
         ->and($note->relatedAccessKeys)->toHaveCount(1);
 });
 
+it('interpreta una liquidación de compra', function (): void {
+    $settlement = $this->parser->parse(keyed('purchase_settlement/liquidacion-compra.xml', '03'));
+
+    expect($settlement->documentType)->toBe(SriDocumentType::PurchaseSettlement)
+        ->and($settlement->receiverName)->toBe('PROVEEDOR DE PRUEBA S.A.')
+        ->and($settlement->subtotalCents)->toBe(20_000)
+        ->and($settlement->totalCents)->toBe(23_000)
+        ->and($settlement->totalsMismatch())->toBeFalse();
+});
+
+it('interpreta una guía de remisión', function (): void {
+    $guide = $this->parser->parse(keyed('remission_guide/guia-remision.xml', '06'));
+
+    expect($guide->documentType)->toBe(SriDocumentType::RemissionGuide)
+        ->and($guide->issueDate)->toBe('2026-09-19')
+        ->and($guide->receiverRuc)->toBe('1790012345001')
+        ->and($guide->items)->toHaveCount(1);
+});
+
+it('interpreta un comprobante de retención con sus retenciones', function (): void {
+    $retention = $this->parser->parse(keyed('retention/comprobante-retencion.xml', '07'));
+
+    expect($retention->documentType)->toBe(SriDocumentType::Withholding)
+        ->and($retention->retentions)->toHaveCount(2)
+        ->and($retention->retentions[0]->taxType)->toBe('IR')
+        ->and($retention->retentions[0]->retentionCode)->toBe('303')
+        ->and($retention->retentions[0]->rate)->toBe('2.00')
+        ->and($retention->retentions[0]->amountCents)->toBe(200)
+        ->and($retention->retentions[0]->supportDocumentNumber)->toBe('001001000000123')
+        ->and($retention->retentions[1]->taxType)->toBe('IVA')
+        ->and($retention->retentions[1]->amountCents)->toBe(2_700)
+        ->and($retention->retentionsTotalCents())->toBe(2_900)
+        ->and($retention->totalCents)->toBe(2_900)
+        ->and($retention->totalsMismatch())->toBeFalse();
+});
+
 it('rechaza un XML malformado', function (): void {
     expect(fn () => $this->parser->parse('<factura><infoTributaria>'))
         ->toThrow(SriXmlException::class, 'no es válido');
 });
 
-it('rechaza un nodo raíz no soportado', function (): void {
-    $xml = str_replace(['<factura', '</factura>'], ['<guiaRemision', '</guiaRemision>'], xmlFixture('invoice/factura.xml'));
-
-    expect(fn () => $this->parser->parse($xml))
-        ->toThrow(SriXmlException::class, 'no está soportado');
-});
-
-it('rechaza un comprobante sin infoTributaria', function (): void {
+it('rechaza un comprobante sin información tributaria', function (): void {
     $xml = preg_replace('#<infoTributaria>.*?</infoTributaria>#s', '', xmlFixture('invoice/factura.xml'));
 
     expect(fn () => $this->parser->parse((string) $xml))
-        ->toThrow(SriXmlException::class, 'infoTributaria');
+        ->toThrow(SriXmlException::class, 'no es válido');
 });
 
 it('rechaza una clave de acceso inválida en el XML', function (): void {
     $xml = xmlFixture('invoice/factura.xml', ['{{CLAVE}}' => AccessKeyFactory::withBrokenCheckDigit()]);
 
-    expect(fn () => $this->parser->parse($xml))
-        ->toThrow(InvalidArgumentException::class, 'dígito verificador');
+    expect(fn () => $this->parser->parse($xml))->toThrow(SriXmlException::class);
 });
 
 it('no resuelve entidades externas (XXE)', function (): void {
@@ -147,12 +185,12 @@ XML;
     try {
         $this->parser->parse($xml);
         $this->fail('El parser debía rechazar el documento.');
-    } catch (SriXmlException|InvalidArgumentException $exception) {
+    } catch (SriXmlException $exception) {
         expect($exception->getMessage())->not->toContain('root:');
     }
 });
 
 it('rechaza un XML que supera el tamaño máximo', function (): void {
     expect(fn () => $this->parser->parse(str_repeat('a', 5_242_881)))
-        ->toThrow(SriXmlException::class, 'tamaño máximo');
+        ->toThrow(SriXmlException::class, 'no es válido');
 });

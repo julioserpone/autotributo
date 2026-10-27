@@ -4,24 +4,18 @@
     <ambiente>2</ambiente>
     <tipoEmision>1</tipoEmision>
     <razonSocial>PROVEEDOR DE PRUEBA S.A.</razonSocial>
-    <nombreComercial>PROVEEDOR</nombreComercial>
     <ruc>1758871873001</ruc>
     <claveAcceso>{{CLAVE}}</claveAcceso>
     <codDoc>04</codDoc>
     <estab>001</estab>
     <ptoEmi>001</ptoEmi>
-    <secuencial>000000123</secuencial>
-    <dirMatriz>Av. Siempre Viva 123</dirMatriz>
+    <secuencial>000000124</secuencial>
   </infoTributaria>
   <infoNotaCredito>
-    <fechaEmision>15/09/2026</fechaEmision>
-    <dirEstablecimiento>Av. Siempre Viva 123</dirEstablecimiento>
-    <obligadoContabilidad>SI</obligadoContabilidad>
-    <tipoIdentificacionComprador>04</tipoIdentificacionComprador>
+    <fechaEmision>16/09/2026</fechaEmision>
     <razonSocialComprador>CLIENTE DE PRUEBA CIA. LTDA.</razonSocialComprador>
     <identificacionComprador>1790012345001</identificacionComprador>
     <totalSinImpuestos>90.00</totalSinImpuestos>
-    <totalDescuento>0.00</totalDescuento>
     <totalConImpuestos>
       <totalImpuesto>
         <codigo>2</codigo>
@@ -30,17 +24,20 @@
         <valor>13.50</valor>
       </totalImpuesto>
     </totalConImpuestos>
-    <propina>0.00</propina>
     <importeTotal>13.50</importeTotal>
     <moneda>USD</moneda>
+    <motivo>Devolución de servicios</motivo>
   </infoNotaCredito>
+  <infoNotaModificada>
+    <numDocModificado>{{CLAVE_ORIGEN}}</numDocModificado>
+  </infoNotaModificada>
   <detalles>
     <detalle>
-      <codigoPrincipal>SRV-001</codigoPrincipal>
+      <codigoInterno>SRV-001</codigoInterno>
       <descripcion>Servicios de consultoría contable</descripcion>
       <cantidad>1.00</cantidad>
-      <precioUnitario>100.00</precioUnitario>
-      <descuento>10.00</descuento>
+      <precioUnitario>90.00</precioUnitario>
+      <descuento>0.00</descuento>
       <precioTotalSinImpuesto>90.00</precioTotalSinImpuesto>
       <impuestos>
         <impuesto>
@@ -53,8 +50,4 @@
       </impuestos>
     </detalle>
   </detalles>
-  <infoNotaModificada><numDocModificado>{{CLAVE_ORIGEN}}</numDocModificado></infoNotaModificada>
-  <infoAdicional>
-    <campoAdicional nombre="Email">proveedor@example.test</campoAdicional>
-  </infoAdicional>
 </notaCredito>
