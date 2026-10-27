@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fb8a6a7a422e48ae11769adbb5a9c79f",
+    "content-hash": "d984ec8c7368f1b18030dfb58edc2dfb",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -1479,27 +1479,7 @@
                     "JulioSerpone\\SriComprobantes\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "JulioSerpone\\SriComprobantes\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "phpunit"
-                ],
-                "analyse": [
-                    "phpstan analyse --no-progress"
-                ],
-                "cs": [
-                    "php-cs-fixer fix --dry-run --diff"
-                ],
-                "check": [
-                    "@cs",
-                    "@analyse",
-                    "@test"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -11404,5 +11384,5 @@
         "ext-sodium": "*"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }

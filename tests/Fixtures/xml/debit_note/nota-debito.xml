@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<notaDebito id="comprobante" version="1.1.0">
+  <infoTributaria>
+    <ambiente>2</ambiente>
+    <tipoEmision>1</tipoEmision>
+    <razonSocial>PROVEEDOR DE PRUEBA S.A.</razonSocial>
+    <nombreComercial>PROVEEDOR</nombreComercial>
+    <ruc>1758871873001</ruc>
+    <claveAcceso>{{CLAVE}}</claveAcceso>
+    <codDoc>05</codDoc>
+    <estab>001</estab>
+    <ptoEmi>001</ptoEmi>
+    <secuencial>000000123</secuencial>
+    <dirMatriz>Av. Siempre Viva 123</dirMatriz>
+  </infoTributaria>
+  <infoNotaDebito>
+    <fechaEmision>15/09/2026</fechaEmision>
+    <dirEstablecimiento>Av. Siempre Viva 123</dirEstablecimiento>
+    <obligadoContabilidad>SI</obligadoContabilidad>
+    <tipoIdentificacionComprador>04</tipoIdentificacionComprador>
+    <razonSocialComprador>CLIENTE DE PRUEBA CIA. LTDA.</razonSocialComprador>
+    <identificacionComprador>1790012345001</identificacionComprador>
+    <totalSinImpuestos>90.00</totalSinImpuestos>
+    <totalDescuento>0.00</totalDescuento>
+    <totalConImpuestos>
+      <totalImpuesto>
+        <codigo>2</codigo>
+        <codigoPorcentaje>4</codigoPorcentaje>
+        <baseImponible>90.00</baseImponible>
+        <valor>13.50</valor>
+      </totalImpuesto>
+    </totalConImpuestos>
+    <propina>0.00</propina>
+    <importeTotal>13.50</importeTotal>
+    <moneda>USD</moneda>
+  </infoNotaDebito>
+  <detalles>
+    <detalle>
+      <codigoPrincipal>SRV-001</codigoPrincipal>
+      <descripcion>Servicios de consultoría contable</descripcion>
+      <cantidad>1.00</cantidad>
+      <precioUnitario>100.00</precioUnitario>
+      <descuento>10.00</descuento>
+      <precioTotalSinImpuesto>90.00</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>4</codigoPorcentaje>
+          <tarifa>15.00</tarifa>
+          <baseImponible>90.00</baseImponible>
+          <valor>13.50</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+  </detalles>
+  <infoNotaModificada><numDocModificado>{{CLAVE_ORIGEN}}</numDocModificado></infoNotaModificada>
+  <infoAdicional>
+    <campoAdicional nombre="Email">proveedor@example.test</campoAdicional>
+  </infoAdicional>
+</notaDebito>

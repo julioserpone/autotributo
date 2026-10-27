@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<factura id="comprobante" version="1.1.0">
+  <infoTributaria>
+    <ambiente>2</ambiente>
+    <tipoEmision>1</tipoEmision>
+    <razonSocial>PROVEEDOR DE PRUEBA S.A.</razonSocial>
+    <nombreComercial>PROVEEDOR</nombreComercial>
+    <ruc>1758871873001</ruc>
+    <claveAcceso>{{CLAVE}}</claveAcceso>
+    <codDoc>01</codDoc>
+    <estab>001</estab>
+    <ptoEmi>001</ptoEmi>
+    <secuencial>000000123</secuencial>
+    <dirMatriz>Av. Siempre Viva 123</dirMatriz>
+  </infoTributaria>
+  <infoFactura>
+    <fechaEmision>15/09/2026</fechaEmision>
+    <dirEstablecimiento>Av. Siempre Viva 123</dirEstablecimiento>
+    <obligadoContabilidad>SI</obligadoContabilidad>
+    <tipoIdentificacionComprador>04</tipoIdentificacionComprador>
+    <razonSocialComprador>CLIENTE DE PRUEBA CIA. LTDA.</razonSocialComprador>
+    <identificacionComprador>1790012345001</identificacionComprador>
+    <totalSinImpuestos>100.00</totalSinImpuestos>
+    <totalDescuento>10.00</totalDescuento>
+    <totalConImpuestos>
+      <totalImpuesto>
+        <codigo>2</codigo>
+        <codigoPorcentaje>4</codigoPorcentaje>
+        <baseImponible>90.00</baseImponible>
+        <valor>13.50</valor>
+      </totalImpuesto>
+      <totalImpuesto>
+        <codigo>2</codigo>
+        <codigoPorcentaje>0</codigoPorcentaje>
+        <baseImponible>10.00</baseImponible>
+        <valor>0.00</valor>
+      </totalImpuesto>
+    </totalConImpuestos>
+    <propina>0.00</propina>
+    <importeTotal>103.50</importeTotal>
+    <moneda>USD</moneda>
+  </infoFactura>
+  <detalles>
+    <detalle>
+      <codigoPrincipal>SRV-001</codigoPrincipal>
+      <descripcion>Servicios de consultoría contable</descripcion>
+      <cantidad>1.00</cantidad>
+      <precioUnitario>100.00</precioUnitario>
+      <descuento>10.00</descuento>
+      <precioTotalSinImpuesto>90.00</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>4</codigoPorcentaje>
+          <tarifa>15.00</tarifa>
+          <baseImponible>90.00</baseImponible>
+          <valor>13.50</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+    <detalle>
+      <codigoPrincipal>SRV-002</codigoPrincipal>
+      <descripcion>Suministros básicos</descripcion>
+      <cantidad>2.00</cantidad>
+      <precioUnitario>5.00</precioUnitario>
+      <descuento>0.00</descuento>
+      <precioTotalSinImpuesto>10.00</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>0</codigoPorcentaje>
+          <tarifa>0.00</tarifa>
+          <baseImponible>10.00</baseImponible>
+          <valor>0.00</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+  </detalles>
+  <infoAdicional>
+    <campoAdicional nombre="Email">proveedor@example.test</campoAdicional>
+  </infoAdicional>
+</factura>
