@@ -1,10 +1,10 @@
 # 10 — Integración SRI
 
-> Alcance: F2-01, F2-02, F2-03 y F2-05. El paquete consulta el XML por clave
-> de acceso, el robot descarga los reportes, la app lee su bucket S3, orquesta
-> los runs con idempotencia y los reconcilia contra el manifiesto. El callback
-> (F2-04), el parser XML (F2-06) y la persistencia de comprobantes (F2-07/F2-08)
-> siguen pendientes.
+> Alcance: F2-01 a F2-05. El paquete consulta el XML por clave de acceso, el
+> robot descarga los reportes, la app lee su bucket S3, orquesta los runs con
+> idempotencia, recibe el callback firmado del robot y reconcilia cada run
+> contra el manifiesto. El parser XML (F2-06) y la persistencia de comprobantes
+> (F2-07/F2-08) siguen pendientes.
 
 ## 1. Paquete `sri-comprobantes-php`
 
@@ -112,8 +112,9 @@ Reglas:
   Laravel.
 - La invocación es asíncrona (`InvocationType=Event`); la respuesta es un
   `RequestId`, no el resultado de la descarga.
-- El robot actual **no** envía callback HTTP. La app debe reconciliar contra
-  S3 o esperar a que el robot incorpore el callback (ver ADR 0007).
+- El robot envía un callback HTTP firmado al terminar; la app correlaciona el
+  evento por `event_id` y `sri:reconcile-runs` valida después los archivos en
+  S3. El callback acelera la transición, pero no sustituye la reconciliación.
 
 Salida esperada del robot en su bucket:
 
@@ -321,17 +322,56 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 No hay red en la suite: el transporte SOAP y el cliente Lambda se sustituyen
 por dobles.
 
-## 6. Siguientes pasos
+## 6. Prueba end-to-end en local
 
-1. **F2-04:** callback firmado. Requiere modificar `sri-txt-robot` para emitir
-   `event_id`, timestamp y HMAC; hoy no existe. Mientras tanto, F2-05 cubre la
-   reconciliación por S3.
-2. **F2-06 a F2-08:** parser XML, parser de manifiesto/TXT, persistencia
+Para validar el callback contra la Lambda real sin desplegar la app:
+
+1. Expón el entorno local con un túnel HTTPS. Expose Free asigna un subdominio
+   aleatorio en cada arranque, así que hay que actualizar la Lambda cuando
+   cambie:
+
+   ```bash
+   expose share 127.0.0.1:8000
+   aws lambda update-function-configuration --function-name sri-txt-robot \
+     --region us-east-2 --environment 'Variables={...SRI_CALLBACK_URL=https://<subdominio>.sharedwithexpose.com/api/v1/webhooks/sri-robot,...}'
+   ```
+
+   `SRI_CALLBACK_URL` es la URL por defecto. Si el evento trae su propia
+   `callback_url`, el robot solo la usa cuando su host está en
+   `SRI_CALLBACK_ALLOWED_HOSTS`; por eso la enviamos desde la app y la
+   autorizamos en la misma actualización.
+
+2. Usa una identidad IAM mínima para la app (no el usuario de despliegue):
+   `lambda:InvokeFunction` sobre la función del robot y `s3:GetObject`/
+   `s3:ListBucket` sobre el prefijo de salida. Con esas claves en `.env`
+   (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`,
+   `SRI_ROBOT_OUTPUT_BUCKET`) el contenedor deja de buscar credenciales en el
+   metadata service.
+
+3. Con `SRI_ROBOT_DRIVER=lambda`, `SRI_ROBOT_ENVIRONMENT=produccion` y el mismo
+   `SRI_ROBOT_CALLBACK_SECRET` en ambos lados, lanza un run con
+   `StartSriSync` y sigue el resultado en `sri_robot_callbacks`.
+
+   La clave pública que usa la app debe ser la del par de la Lambda. No se
+   deriva de la privada como semilla de Ed25519: `sri-txt-robot` genera
+   `nacl.public.PrivateKey`, y su pública se obtiene con
+   `base64(bytes(PrivateKey(sk).public_key))`. Si se sella con otra clave, el
+   robot responde `failed` con
+   `CredencialesError: No se pudo descifrar 'sealed_credentials'`.
+
+Resultado esperado de una corrida válida: callback `202` (guardado en
+`sri_robot_callbacks`), correlación por `event_id` y el run pasando de
+`invoking` a `downloading` para que `sri:reconcile-runs` valide el manifiesto.
+
+## 7. Siguientes pasos
+
+1. **F2-06 a F2-08:** parser XML, parser de manifiesto/TXT, persistencia
    idempotente y fixtures.
-3. **F1-05/F1-06:** CRUD de empresas y almacenamiento cifrado de credenciales;
+2. **F1-05/F1-06:** CRUD de empresas y almacenamiento cifrado de credenciales;
    `StartSriSync` ya acepta el sobre, pero la app aún debe leerlo de la base.
+3. **F2-09:** cancelación de la invocación asíncrona real.
 
-## 7. Seguridad
+## 8. Seguridad
 
 - No registrar XML completos, credenciales ni claves de acceso completas.
 - Las credenciales del portal se sellan con `sodium_crypto_box_seal` antes de

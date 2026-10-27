@@ -6,7 +6,7 @@ Sistema de automatización contable para Ecuador (**SRI**): ingesta de comproban
 
 Orientado a estudios contables y contadores independientes. El MVP es **single-tenant** (un estudio por despliegue) con el esquema preparado para activar multitenancy sin migrar datos (ADR-0006).
 
-> **Estado:** F2-03 y F2-05 completados; F2-04 bloqueado hasta que `sri-txt-robot` emita un callback firmado. Siguiente tarea: **F2-06 (parser XML)**. Consulta la tabla viva en [`docs/09-progress.md`](docs/09-progress.md). El repositorio contiene Laravel 13.38, la SPA Vue 3 + TypeScript estricto, tenancy single-tenant con aislamiento por `tenant_id`, la integración del paquete `sri-comprobantes-php`, el layout S3 real del robot, la reconciliación de runs contra el manifiesto S3 y los gates de calidad (Pint, PHPStan/Larastan nivel 8, Pest, Vitest, Playwright y ESLint).
+> **Estado:** F2-03, F2-04 y F2-05 completados. Siguiente tarea: **F2-06 (parser XML)**. Consulta la tabla viva en [`docs/09-progress.md`](docs/09-progress.md). El repositorio contiene Laravel 13.38, la SPA Vue 3 + TypeScript estricto, tenancy single-tenant con aislamiento por `tenant_id`, la integración del paquete `sri-comprobantes-php`, el layout S3 real del robot, la reconciliación de runs contra el manifiesto S3 y los gates de calidad (Pint, PHPStan/Larastan nivel 8, Pest, Vitest, Playwright y ESLint).
 
 ---
 
@@ -19,7 +19,7 @@ Orientado a estudios contables y contadores independientes. El MVP es **single-t
 | Base de datos | PostgreSQL 16 | JSONB, índices GIN, RLS como defensa en profundidad |
 | Caché / colas | Valkey (Redis-compatible) | En Cloud: `QUEUE_CONNECTION=cloud` (SQS administrado) |
 | Tiempo real | Laravel Reverb | En Cloud: cluster administrado; local: contenedor propio |
-| Ingesta SRI | AWS Lambda `julioserpone/sri-txt-robot` | Invocación asíncrona + S3; callback pendiente de implementar en el robot |
+| Ingesta SRI | AWS Lambda `julioserpone/sri-txt-robot` | Invocación asíncrona + S3 con callback firmado; la reconciliación valida el manifiesto |
 | Consulta SRI | `julioserpone/sri-comprobantes-php` ^0.1 | SOAP por clave de acceso; XML autorizado |
 | Frontend | Vue 3 + TypeScript + Vite + Tailwind 4 + shadcn-vue | Pinia, TanStack Query, Chart.js, Echo |
 | Calidad | Pest 4, PHPStan/Larastan nivel 8, Pint, Vitest, Playwright | Gates obligatorios en CI (Playwright se ejecuta en local) |
