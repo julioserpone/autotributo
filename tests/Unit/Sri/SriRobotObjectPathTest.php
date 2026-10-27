@@ -21,11 +21,12 @@ it('construye el layout real que publica sri-txt-robot', function (): void {
 it('usa los slugs exactos de todos los tipos del robot', function (): void {
     $path = new SriRobotObjectPath('test', '1758871873001', '2026-08');
 
-    expect(SriDocumentType::codes())->toBe(['01', '03', '04', '05', '07'])
+    expect(SriDocumentType::codes())->toBe(['01', '03', '04', '05', '06', '07'])
         ->and($path->textReport(SriDocumentType::Invoice))->toContain('/facturas-recibidas-')
         ->and($path->textReport(SriDocumentType::PurchaseSettlement))->toContain('/liquidaciones-compra-recibidas-')
         ->and($path->textReport(SriDocumentType::CreditNote))->toContain('/notas-credito-recibidas-')
         ->and($path->textReport(SriDocumentType::DebitNote))->toContain('/notas-debito-recibidas-')
+        ->and($path->textReport(SriDocumentType::RemissionGuide))->toContain('/guias-remision-recibidas-')
         ->and($path->textReport(SriDocumentType::Withholding))->toContain('/retenciones-recibidas-');
 });
 

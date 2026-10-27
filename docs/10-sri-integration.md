@@ -1,10 +1,36 @@
 # 10 — Integración SRI
 
-> Alcance: F2-01 a F2-05. El paquete consulta el XML por clave de acceso, el
-> robot descarga los reportes, la app lee su bucket S3, orquesta los runs con
-> idempotencia, recibe el callback firmado del robot y reconcilia cada run
-> contra el manifiesto. El parser XML (F2-06) y la persistencia de comprobantes
-> (F2-07/F2-08) siguen pendientes.
+> Alcance: F2-01 a F2-07 y F2-06 (factura, NC y ND). El paquete consulta el
+> XML por clave de acceso, el robot descarga los reportes, la app lee su bucket
+> S3, orquesta los runs con idempotencia, recibe el callback firmado del robot,
+> reconcilia cada run contra el manifiesto e interpreta el TXT de claves. La
+> persistencia de comprobantes (F2-08) sigue pendiente, y el parseo de
+> liquidaciones de compra y retenciones es la segunda parte de F2-06.
+
+## 0. Decisión: dónde vive el parseo
+
+`julioserpone/sri-comprobantes-php` es el paquete del dominio de comprobantes
+(generación, validación XSD y consulta de autorización). El **parseo de
+comprobantes recibidos** es lógica de ese mismo dominio y debería vivir allí,
+no en la aplicación. Hoy el paquete todavía no lo implementa: `Autorizacion`
+expone el XML autorizado como texto y la app es quien lo interpreta.
+
+Por eso el parseo entra como **puerto + adaptador**:
+
+| Pieza | Rol |
+|---|---|
+| `SriInvoiceParser` (contrato) | Lo que consume el dominio; no menciona el paquete ni DOM |
+| `App\Integrations\Sri\PackageSriInvoiceParser` | Adaptador registrado en `SriServiceProvider` |
+| `JulioSerpone\SriComprobantes\Comprobante\ComprobanteReader` | Implementación v0.2.0 del paquete (01, 03, 04, 05, 06, 07) |
+
+**Migrado:** desde `v0.2.0` el paquete incluye `ComprobanteReader` y la app ya
+no tiene parser propio; `PackageSriInvoiceParser` solo traduce el DTO del
+paquete al del dominio. Lo mismo aplica
+a `SriAccessKey`, que ya delega el módulo 11 en
+`JulioSerpone\SriComprobantes\AccessKey\AccessKeyGenerator`.
+
+El manifiesto y el JSON de claves **sí** se validan en la app (F2-05): son el
+contrato operativo con `sri-txt-robot`, no del formato fiscal del SRI.
 
 ## 1. Paquete `sri-comprobantes-php`
 
@@ -24,7 +50,7 @@ Se instala desde GitHub por VCS, porque no está en Packagist:
 }
 ```
 
-La versión resuelta es `v0.1.2`, que incluye:
+La versión resuelta es `v0.2.0`, que incluye:
 
 - `Client\AutorizacionClient` y `Transport\SoapTransport`.
 - `Config\SriEnvironment` y `Config\SriService`.
@@ -269,7 +295,60 @@ repetir la reconciliación sea idempotente. Estados de archivo:
 usará el parser). Un fallo de un run no detiene la reconciliación de los
 siguientes; el error se reporta y el scheduler reintenta en la próxima pasada.
 
-## 4. Variables de entorno
+## 4. Parseo de los archivos del robot (F2-07) y del XML (F2-06)
+
+### TXT de claves
+
+`ParseSriRun` toma los runs en `parsing` (o los reconcilia si están en
+`downloading`) y, por cada TXT disponible:
+
+```text
+sri:parse-run {run|public_id}   # manual; el scheduler lo hace en F2-09
+```
+
+| Pieza | Responsabilidad |
+|---|---|
+| `SriAccessKey` | Decodifica fecha, tipo, RUC, ambiente, serie y secuencial; valida estructura y verificador |
+| `AccessKeyListParser` | Lee una clave por línea, tolera BOM/CRLF/espacios, devuelve líneas inválidas con motivo |
+| `PeriodBatchBuilder` | Cruza el TXT con el JSON de claves y descarta claves de otro tipo, período o RUC |
+| `SriPeriodBatch` | Lote listo para consultar: claves válidas, inválidas, faltantes y no declaradas |
+| `ParseSriRun` | Cierra el run en `completed`, `partial` o `failed` y marca los archivos `processed` |
+
+Reglas:
+
+- Una línea inválida no invalida el archivo: se registra el motivo y el run
+  queda `partial` si el resto es procesable.
+- Un tipo solicitado en el run que no produjo ningún lote cuenta como paquete
+  incompleto (`partial`), no como run completo.
+- Sin ninguna clave válida el run pasa a `failed` con
+  `error_code=no_access_keys`.
+- Repetir el comando no duplica nada: solo se leen archivos `available` y un
+  run final no se mueve.
+
+### XML del comprobante
+
+La lectura la hace `ComprobanteReader` del paquete (v0.2.0). Soportado:
+factura (`01`), liquidación de compra (`03`), nota de crédito (`04`), nota de
+débito (`05`), guía de remisión (`06`) y comprobante de retención (`07`).
+El adaptador `PackageSriInvoiceParser` traduce al modelo de la app y aporta:
+
+- XXE desactivado (`LIBXML_NONET`, sin `LIBXML_NOENT`, sin DTD) y límite de
+  5 MiB.
+- Montos a centavos con aritmética de cadenas (sin `float`), redondeo al
+  centavo.
+- Los totales inconsistentes **no se corrigen**: `SriInvoiceData::totalsMismatch()`
+  queda en `true` para que F2-08 los registre como hallazgo.
+- `normalizedDescription` (sin acentos, mayúsculas, espacios colapsados) se
+  calcula aquí porque es la clave de las reglas y la caché de IA.
+- La tarifa (`<tarifa>`) solo viene en el detalle; la cabecera trae
+  `codigoPorcentaje`, que es lo que se declara en el 104.
+- El código de impuesto del SRI se mapea a `IR` (1), `IVA` (2), `ICE` (3) o
+  `IRBPNR` (5); en retenciones, `SriRetentionData` lleva tipo, código, base,
+  porcentaje, valor retenido y documento sustento.
+- Un XML malformado, un raíz no soportado o un campo obligatorio ausente lanzan
+  `SriXmlException` con motivo, nunca el contenido del documento.
+
+## 5. Variables de entorno
 
 ```dotenv
 SRI_AUTHORIZATION_DRIVER=package   # package | fake
@@ -303,7 +382,7 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 `SRI_ROBOT_DRIVER=fake` evita AWS. En staging/producción se usa `package` y
 `lambda`.
 
-## 5. Pruebas
+## 6. Pruebas
 
 | Archivo | Qué prueba |
 |---|---|
@@ -318,11 +397,15 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 | `tests/Feature/Sri/ReconcileSriRunTest.php` | Manifiesto/TXT/claves, faltantes, JSON inválido, bytes, identidad, idempotencia, multiperíodo, comando y tenant por defecto |
 | `tests/Feature/Sri/SriRobotObjectStoreTest.php` | Lectura, existencia, SHA-256 y objeto ausente en el disco `sri` |
 | `tests/Feature/Sri/SriServiceProviderTest.php` | Selección de adaptadores por configuración |
+| `tests/Unit/Sri/SriAccessKeyTest.php` | Estructura, tipos, verificador (módulo 11) y claves mal formadas |
+| `tests/Unit/Sri/AccessKeyListParserTest.php` | TXT con BOM/CRLF, líneas inválidas, duplicados y cruce con el JSON de claves |
+| `tests/Feature/Sri/ParseSriRunTest.php` | Run `completed`/`partial`/`failed`, marca de archivos, idempotencia y comando |
+| `tests/Unit/Sri/ComprobanteReaderIntegrationTest.php` | Los seis tipos por el adaptador: totales, ítems, impuestos, retenciones, XXE, tamaño y XML malformado |
 
 No hay red en la suite: el transporte SOAP y el cliente Lambda se sustituyen
 por dobles.
 
-## 6. Prueba end-to-end en local
+## 7. Prueba end-to-end en local
 
 Para validar el callback contra la Lambda real sin desplegar la app:
 
@@ -363,15 +446,19 @@ Resultado esperado de una corrida válida: callback `202` (guardado en
 `sri_robot_callbacks`), correlación por `event_id` y el run pasando de
 `invoking` a `downloading` para que `sri:reconcile-runs` valide el manifiesto.
 
-## 7. Siguientes pasos
+## 8. Siguientes pasos
 
-1. **F2-06 a F2-08:** parser XML, parser de manifiesto/TXT, persistencia
-   idempotente y fixtures.
-2. **F1-05/F1-06:** CRUD de empresas y almacenamiento cifrado de credenciales;
-   `StartSriSync` ya acepta el sobre, pero la app aún debe leerlo de la base.
-3. **F2-09:** cancelación de la invocación asíncrona real.
+1. **F2-06 (b):** liquidaciones de compra (`03`) y comprobantes de retención
+   (`07`), y la consulta al SRI por clave de acceso
+   (`SriAuthorizationGateway`) dentro del flujo.
+2. **F2-08:** persistencia idempotente en `invoices`/`invoice_items` con
+   `upsert` por `access_key`.
+3. **F1-05/F1-06:** CRUD de empresas y almacenamiento cifrado de credenciales.
+4. **F2-09:** progreso en vivo y cancelación de la invocación asíncrona.
+5. **Rendimiento:** medir 5.000 XML con `ComprobanteReader` (benchmark de
+   F2-08) y, si hace falta, paralelizar por lotes.
 
-## 8. Seguridad
+## 9. Seguridad
 
 - No registrar XML completos, credenciales ni claves de acceso completas.
 - Las credenciales del portal se sellan con `sodium_crypto_box_seal` antes de

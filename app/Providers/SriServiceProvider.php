@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Sri\Actions\ParseSriRun;
 use App\Domain\Sri\Actions\ReconcileSriRun;
 use App\Domain\Sri\Contracts\SriAuthorizationGateway;
+use App\Domain\Sri\Contracts\SriInvoiceParser;
 use App\Domain\Sri\Contracts\SriRobotGateway;
 use App\Domain\Sri\Contracts\SriRobotObjectStore;
+use App\Domain\Sri\Parsers\PeriodBatchBuilder;
 use App\Integrations\Sri\FakeSriAuthorizationGateway;
 use App\Integrations\Sri\FakeSriRobotGateway;
 use App\Integrations\Sri\FilesystemSriRobotObjectStore;
 use App\Integrations\Sri\LambdaSriRobotGateway;
 use App\Integrations\Sri\PackageSriAuthorizationGateway;
+use App\Integrations\Sri\PackageSriInvoiceParser;
 use Aws\Lambda\LambdaClient;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Storage;
@@ -62,6 +66,10 @@ final class SriServiceProvider extends ServiceProvider
             );
         });
 
+        $this->app->singleton(SriInvoiceParser::class, function (Application $app): SriInvoiceParser {
+            return new PackageSriInvoiceParser;
+        });
+
         $this->app->singleton(SriRobotGateway::class, function (Application $app): SriRobotGateway {
             $driver = (string) config('sri.robot.driver', 'fake');
 
@@ -93,6 +101,15 @@ final class SriServiceProvider extends ServiceProvider
         $this->app->singleton(ReconcileSriRun::class, function (Application $app): ReconcileSriRun {
             return new ReconcileSriRun(
                 $app->make(SriRobotObjectStore::class),
+                (string) config('sri.robot.environment', 'dev'),
+            );
+        });
+
+        $this->app->singleton(ParseSriRun::class, function (Application $app): ParseSriRun {
+            return new ParseSriRun(
+                $app->make(SriRobotObjectStore::class),
+                new PeriodBatchBuilder,
+                $app->make(ReconcileSriRun::class),
                 (string) config('sri.robot.environment', 'dev'),
             );
         });

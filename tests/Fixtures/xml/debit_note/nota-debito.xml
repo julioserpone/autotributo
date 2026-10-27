@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<notaDebito id="comprobante" version="1.0.0">
+  <infoTributaria>
+    <ambiente>2</ambiente>
+    <tipoEmision>1</tipoEmision>
+    <razonSocial>PROVEEDOR DE PRUEBA S.A.</razonSocial>
+    <ruc>1758871873001</ruc>
+    <claveAcceso>{{CLAVE}}</claveAcceso>
+    <codDoc>05</codDoc>
+    <estab>001</estab>
+    <ptoEmi>001</ptoEmi>
+    <secuencial>000000125</secuencial>
+  </infoTributaria>
+  <infoNotaDebito>
+    <fechaEmision>17/09/2026</fechaEmision>
+    <razonSocialComprador>CLIENTE DE PRUEBA CIA. LTDA.</razonSocialComprador>
+    <identificacionComprador>1790012345001</identificacionComprador>
+    <totalSinImpuestos>50.00</totalSinImpuestos>
+    <totalConImpuestos>
+      <totalImpuesto>
+        <codigo>2</codigo>
+        <codigoPorcentaje>4</codigoPorcentaje>
+        <baseImponible>50.00</baseImponible>
+        <valor>7.50</valor>
+      </totalImpuesto>
+    </totalConImpuestos>
+    <importeTotal>7.50</importeTotal>
+    <moneda>USD</moneda>
+  </infoNotaDebito>
+  <infoNotaModificada>
+    <numDocModificado>{{CLAVE_ORIGEN}}</numDocModificado>
+  </infoNotaModificada>
+  <detalles>
+    <detalle>
+      <codigoInterno>AJU-001</codigoInterno>
+      <descripcion>Ajuste por diferencia de precio</descripcion>
+      <cantidad>1.00</cantidad>
+      <precioUnitario>50.00</precioUnitario>
+      <descuento>0.00</descuento>
+      <precioTotalSinImpuesto>50.00</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>4</codigoPorcentaje>
+          <tarifa>15.00</tarifa>
+          <baseImponible>50.00</baseImponible>
+          <valor>7.50</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+  </detalles>
+</notaDebito>

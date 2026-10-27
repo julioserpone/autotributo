@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fb8a6a7a422e48ae11769adbb5a9c79f",
+    "content-hash": "b4cdd9729f4da08db0aa671695de77ec",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -1444,16 +1444,16 @@
         },
         {
             "name": "julioserpone/sri-comprobantes-php",
-            "version": "v0.1.2",
+            "version": "v0.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/julioserpone/sri-comprobantes-php.git",
-                "reference": "1852c4e92c3b43bf7429c01d696d8044d9457026"
+                "reference": "481304c3115fe5f2d7c81eeb35bc5beeda5f6124"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/julioserpone/sri-comprobantes-php/zipball/1852c4e92c3b43bf7429c01d696d8044d9457026",
-                "reference": "1852c4e92c3b43bf7429c01d696d8044d9457026",
+                "url": "https://api.github.com/repos/julioserpone/sri-comprobantes-php/zipball/481304c3115fe5f2d7c81eeb35bc5beeda5f6124",
+                "reference": "481304c3115fe5f2d7c81eeb35bc5beeda5f6124",
                 "shasum": ""
             },
             "require": {
@@ -1468,6 +1468,9 @@
                 "phpstan/phpstan": "^2.1",
                 "phpunit/phpunit": "^11.4"
             },
+            "suggest": {
+                "aws/aws-sdk-php": "Permite usar AwsLambdaInvoker con un cliente AWS Lambda real."
+            },
             "type": "library",
             "extra": {
                 "branch-alias": {
@@ -1479,27 +1482,7 @@
                     "JulioSerpone\\SriComprobantes\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "JulioSerpone\\SriComprobantes\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "phpunit"
-                ],
-                "analyse": [
-                    "phpstan analyse --no-progress"
-                ],
-                "cs": [
-                    "php-cs-fixer fix --dry-run --diff"
-                ],
-                "check": [
-                    "@cs",
-                    "@analyse",
-                    "@test"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1521,7 +1504,7 @@
                 "issues": "https://github.com/julioserpone/sri-comprobantes-php/issues",
                 "source": "https://github.com/julioserpone/sri-comprobantes-php"
             },
-            "time": "2026-10-20T20:01:52+00:00"
+            "time": "2026-10-27T01:31:12+00:00"
         },
         {
             "name": "laravel/framework",
@@ -11404,5 +11387,5 @@
         "ext-sodium": "*"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }

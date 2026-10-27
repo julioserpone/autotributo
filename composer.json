@@ -3,13 +3,18 @@
     "name": "autotributo/app",
     "type": "project",
     "description": "Autotributo — automatización contable y declaraciones SRI para Ecuador.",
-    "keywords": ["laravel", "sri", "accounting", "ecuador"],
+    "keywords": [
+        "laravel",
+        "sri",
+        "accounting",
+        "ecuador"
+    ],
     "license": "proprietary",
     "require": {
         "php": "^8.5",
         "ext-sodium": "*",
         "aws/aws-sdk-php": "^3.0",
-        "julioserpone/sri-comprobantes-php": "^0.1",
+        "julioserpone/sri-comprobantes-php": "^0.2",
         "laravel/framework": "^13.17",
         "laravel/reverb": "^1.12",
         "laravel/tinker": "^3.0",
@@ -106,12 +111,5 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true,
-    "repositories": [
-        {
-            "name": "sri-comprobantes",
-            "type": "vcs",
-            "url": "https://github.com/julioserpone/sri-comprobantes-php.git"
-        }
-    ]
+    "prefer-stable": true
 }

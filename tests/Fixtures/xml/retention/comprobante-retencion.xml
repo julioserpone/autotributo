@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<comprobanteRetencion id="comprobante" version="2.0.0">
+  <infoTributaria>
+    <ambiente>2</ambiente>
+    <tipoEmision>1</tipoEmision>
+    <razonSocial>CLIENTE DE PRUEBA CIA. LTDA.</razonSocial>
+    <ruc>1790012345001</ruc>
+    <claveAcceso>{{CLAVE}}</claveAcceso>
+    <codDoc>07</codDoc>
+    <estab>001</estab>
+    <ptoEmi>004</ptoEmi>
+    <secuencial>000000128</secuencial>
+  </infoTributaria>
+  <infoCompRetencion>
+    <fechaEmision>20/09/2026</fechaEmision>
+    <razonSocialComprador>CLIENTE DE PRUEBA CIA. LTDA.</razonSocialComprador>
+    <identificacionComprador>1790012345001</identificacionComprador>
+    <moneda>USD</moneda>
+  </infoCompRetencion>
+  <impuestos>
+    <impuesto>
+      <codigo>1</codigo>
+      <codigoRetencion>303</codigoRetencion>
+      <baseImponible>100.00</baseImponible>
+      <porcentajeRetener>2.00</porcentajeRetener>
+      <valorRetenido>2.00</valorRetenido>
+      <codDocSustento>01</codDocSustento>
+      <numDocSustento>001001000000123</numDocSustento>
+      <fechaEmisionDocSustento>15/09/2026</fechaEmisionDocSustento>
+    </impuesto>
+    <impuesto>
+      <codigo>2</codigo>
+      <codigoRetencion>9</codigoRetencion>
+      <baseImponible>90.00</baseImponible>
+      <porcentajeRetener>30.00</porcentajeRetener>
+      <valorRetenido>27.00</valorRetenido>
+      <codDocSustento>01</codDocSustento>
+      <numDocSustento>001001000000123</numDocSustento>
+      <fechaEmisionDocSustento>15/09/2026</fechaEmisionDocSustento>
+    </impuesto>
+  </impuestos>
+</comprobanteRetencion>
