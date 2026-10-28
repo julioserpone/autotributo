@@ -102,6 +102,8 @@ services:
       HOME: /tmp
       CHOKIDAR_USEPOLLING: "true"
       VITE_PORT: ${VITE_PORT:-5173}
+      # URL pública del túnel; si está vacía, los assets apuntan a localhost.
+      VITE_TUNNEL_URL: ${VITE_TUNNEL_URL:-}
     ports:
       - "${VITE_PORT:-5173}:${VITE_PORT:-5173}"
     networks:
