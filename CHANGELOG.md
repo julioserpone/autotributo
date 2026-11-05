@@ -11,6 +11,11 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - F2-03: orquestación de `SriSyncRun` con estados, transiciones idempotentes y dispatch al robot.
 - F2-04: callback firmado del robot en `POST /api/v1/webhooks/sri-robot` (HMAC-SHA256 sobre `timestamp.cuerpo`, ventana ±300 s, límite de 256 KB y dedupe por `event_id`); `event_id`/`callback_url` en la invocación, `callback_event_id` en el run y transición a `downloading`/`failed`.
 - F2-05: reconciliación de runs activos contra el manifiesto S3, validación de TXT/claves y transición a `parsing`.
+- F2-06: parseo de comprobantes con `sri-comprobantes-php` v0.2.0 (`01`, `03`, `04`, `05`, `06`, `07`, `PR`), centavos sin `float`, detección de totales inconsistentes y retenciones.
+- F2-07: interpretación del manifiesto y del TXT de claves (`SriAccessKey`, `AccessKeyListParser`, `PeriodBatchBuilder`, `ParseSriRun`).
+- F2-08: persistencia idempotente de comprobantes (`invoices`, `invoice_items`, `invoice_taxes`, `retention_lines`) con `upsert` por `(tenant, company, access_key)` y huella `xml_sha256`.
+- Lectura de XML desde el bucket S3 del robot con verificación de ambiente/RUC/período, `sri:recover-run` para runs sin callback y consulta al SRI solo dentro de la ventana de 45 días.
+- F2-11: límites de sincronización con un run activo por empresa, bloqueo de caché, cuota configurable por RUC y ventana máxima por invocación.
 - Comando `sri:reconcile-runs` y scheduler cada 10 minutos.
 - Archivos de comunidad y gobierno: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `SUPPORT.md`, `CHANGELOG.md`, `LICENSE`.
 - Templates de issues, PR y `CODEOWNERS`.

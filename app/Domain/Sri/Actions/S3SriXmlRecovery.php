@@ -110,21 +110,6 @@ final readonly class S3SriXmlRecovery implements SriXmlRecovery
         return $keys;
     }
 
-    /**
-     * Registra un XML publicado en S3 y devuelve su ubicación. Lo usa la
-     * recuperación de runs antiguos, cuyo lote todavía no registraba XML.
-     */
-    public function publish(SriSyncRun $run, SriDocumentType $type, string $period, string $accessKey): ?SriXmlLocation
-    {
-        $this->recordIfExists($run, $this->path($this->ruc($run), $period)->xml($type, $accessKey), $type);
-
-        $file = $run->files()
-            ->where('s3_key', $this->path($this->ruc($run), $period)->xml($type, $accessKey))
-            ->first();
-
-        return $file === null ? null : $this->find($run, $file);
-    }
-
     public function find(SriSyncRun $run, SriSyncRunFile $file): ?SriXmlLocation
     {
         $key = $file->s3_key;

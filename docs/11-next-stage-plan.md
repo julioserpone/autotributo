@@ -5,6 +5,12 @@
 
 **Fecha:** 2026-10-27 · **Rama:** `feat/F2-07-parser-manifiesto-txt`
 
+> **Actualización 2026-11-05:** F2-06, F2-07, F2-08 y F2-11 están cerradas, y
+> la recuperación desde S3 (`3053abd`) ya permite importar sin callback. El
+> siguiente tramo es **F2-10** (pipeline en cola, lotes y runs huérfanos),
+> después **F1-08 + F2-09** (Reverb y progreso) y **F2-12** (observabilidad).
+> El avance real vive en `docs/09-progress.md`.
+
 ## 1. Diagnóstico del estado actual
 
 Al cerrar F2-05 el pipeline funciona hasta aquí:
@@ -24,7 +30,7 @@ la tabla `invoices`. En la práctica:
 | F2-07 Parser de manifiesto/TXT | **Sí, directamente** | Es el insumo inmediato de la reconciliación; no depende de nada pendiente. |
 | F2-08 Persistencia idempotente | No todavía | Requiere el parser de F2-06/F2-07. |
 | F2-09 Progreso en vivo | Bloqueada | F1-08 (Reverb) está pendiente. |
-| F2-10/F2-11/F2-12 Resiliencia, cuotas, observabilidad | Dependen de F2-08 para medir correctamente. | |
+| F2-10/F2-12 Resiliencia y observabilidad | Dependen de F2-08 para medir correctamente. | |
 | F1-03…F1-11 Identidad, autorización, empresas, credenciales | Independiente de F2 | Alternativa válida para paralelizar con otra persona. |
 | F3 Motor fiscal + IA | No | Necesita comprobantes persistidos. |
 
@@ -105,7 +111,10 @@ traducción al modelo y sirve de contrato contra la versión instalada.
 
 ## 5. Consejo de secuencia
 
+- **Siguiente:** F2-10, en tres PRs: cola (`ProcessSriRunJob`), lotes con fallo
+  por comprobante y runs huérfanos.
 - **Si hay una segunda persona:** F1-03/F1-04 pueden avanzar en paralelo sin
   tocar este código.
-- **Antes de F2-09** hay que cerrar F1-08 (Reverb).
-- **F2-08** conviene escribirlo en cuanto F2-06a esté aprobado: es lo que desbloquea F3.
+- **Antes de F2-09** hay que cerrar F1-08 (Reverb) y una rebanada mínima de
+  identidad para autorizar canales privados.
+- **F2-12** después de F2-10 para medir sobre el pipeline definitivo.
