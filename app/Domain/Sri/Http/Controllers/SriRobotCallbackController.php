@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Sri\Http\Controllers;
 
+use App\Domain\Sri\Actions\RecoverSriRunFromS3;
 use App\Domain\Sri\Data\SriRobotCallback;
 use App\Domain\Sri\Enums\SriSyncRunStatus;
 use App\Domain\Sri\Http\Middleware\VerifySriRobotCallback;
@@ -22,9 +23,16 @@ use Illuminate\Support\Facades\Log;
  * El middleware ya verificó firma, ventana temporal y tamaño. Aquí se hace la
  * deduplicación por `event_id` y se correlaciona el evento con el run que lo
  * originó, sin depender del tenant: el `event_id` es un ULID global.
+ *
+ * El callback solo acelera el flujo: cuando llega, se verifica en S3 el
+ * período reportado y, si el robot ya publicó el lote, el run pasa a
+ * `parsing` sin esperar a la reconciliación periódica. Correlacionar por
+ * `event_id` es válido aunque el túnel cambie de host entre invocaciones.
  */
 final class SriRobotCallbackController extends Controller
 {
+    public function __construct(private RecoverSriRunFromS3 $recovery) {}
+
     public function __invoke(Request $request): JsonResponse
     {
         $callback = $request->attributes->get(VerifySriRobotCallback::ATRIBUTO);
@@ -75,8 +83,8 @@ final class SriRobotCallbackController extends Controller
      * Refleja el resultado del robot en el run, sin reabrir estados finales.
      *
      * Un `failed` del robot cierra el run: la reconciliación ya no encontrará
-     * archivos. `completed` y `partial` dejan el run en `downloading` para que
-     * `sri:reconcile-runs` valide el manifiesto y lo pase a `parsing`.
+     * archivos. `completed` y `partial` dejan el run en `downloading`; si el
+     * período está verificado en S3, pasa de una vez a `parsing`.
      */
     private function avanzar(SriSyncRun $run, SriRobotCallback $callback): void
     {
@@ -92,6 +100,15 @@ final class SriRobotCallbackController extends Controller
 
         if ($run->status === SriSyncRunStatus::Invoking) {
             $run->transitionTo(SriSyncRunStatus::Downloading);
+        }
+
+        // Si el paquete ya está en S3, el run queda listo para importar sin
+        // depender de que el callback vuelva a llegar ni de la próxima pasada
+        // del scheduler.
+        try {
+            $this->recovery->handle($run);
+        } catch (\Throwable $exception) {
+            report($exception);
         }
     }
 }

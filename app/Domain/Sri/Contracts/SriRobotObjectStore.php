@@ -17,4 +17,11 @@ interface SriRobotObjectStore
     public function read(string $key): string;
 
     public function sha256(string $key): string;
+
+    /**
+     * Lista las claves de un prefijo (sin incluir el prefijo del disco).
+     *
+     * @return list<string>
+     */
+    public function keys(string $prefix): array;
 }

@@ -7,23 +7,37 @@ namespace App\Domain\Sri\Actions;
 use App\Domain\Companies\Models\Company;
 use App\Domain\Sri\Contracts\SriAuthorizationGateway;
 use App\Domain\Sri\Contracts\SriInvoiceParser;
+use App\Domain\Sri\Contracts\SriXmlRecovery;
 use App\Domain\Sri\Data\AuthorizationQuery;
+use App\Domain\Sri\Data\SriAccessKey;
 use App\Domain\Sri\Data\SriImportResult;
 use App\Domain\Sri\Data\SriPeriodBatch;
 use App\Domain\Sri\Data\SriRunImportReport;
+use App\Domain\Sri\Data\SriXmlLocation;
+use App\Domain\Sri\Enums\SriDocumentType;
 use App\Domain\Sri\Enums\SriImportOutcome;
 use App\Domain\Sri\Enums\SriSyncRunStatus;
 use App\Domain\Sri\Exceptions\SriGatewayException;
 use App\Domain\Sri\Exceptions\SriXmlException;
 use App\Domain\Sri\Models\SriSyncRun;
+use App\Domain\Sri\Models\SriSyncRunFile;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 use Throwable;
 
 /**
  * Importa los comprobantes de un run en `parsing`.
  *
- * Por cada clave del lote: consulta el XML al SRI (`SriAuthorizationGateway`),
- * lo interpreta (`SriInvoiceParser`) y lo persiste
+ * Por cada clave del lote el XML se obtiene, en este orden:
+ *
+ * 1. **Repositorio S3 del robot**: si el run ya publicó sus comprobantes en
+ *    el bucket, se leen de `{periodo}/{tipo}-recibidas-{periodo}-xml/`. Esta
+ *    es la vía principal porque no depende del SRI ni del callback.
+ * 2. **Consulta al SRI** (`SriAuthorizationGateway`): respaldo cuando el robot
+ *    no guardó ese comprobante. Se puede desactivar con
+ *    `sri.authorization.fallback_to_sri=false`.
+ *
+ * El XML se interpreta (`SriInvoiceParser`) y se persiste
  * (`PersistSriInvoice`). Los fallos de una clave no detienen el run.
  *
  * | Resultado | Estado del run |
@@ -31,37 +45,56 @@ use Throwable;
  * | Todas las claves guardadas o saltadas | `completed` |
  * | Algunas sí y otras no | `partial` |
  * | Ninguna guardada | `failed` con `error_code=import_failed` |
+ * | El robot no tiene comprobantes del período | `completed` con `found=0` |
  *
  * Nunca registra claves completas ni el XML: solo el run, el tipo y conteos.
  */
 final readonly class ImportSriRun
 {
+    private bool $fallbackToSri;
+
+    private int $sriWindowDays;
+
     public function __construct(
         private SriAuthorizationGateway $gateway,
         private SriInvoiceParser $parser,
         private PersistSriInvoice $persist,
         private ParseSriRun $parse,
-    ) {}
+        private SriXmlRecovery $recovery,
+        bool $fallbackToSri = true,
+        int $sriWindowDays = 45,
+    ) {
+        $this->fallbackToSri = $fallbackToSri;
+        $this->sriWindowDays = $sriWindowDays;
+    }
 
     /**
-     * @return array{run: SriSyncRun, report: SriRunImportReport}
+     * @return array{run: SriSyncRun, report: SriRunImportReport, sources: array{from_s3: int, from_sri: int}}
      */
     public function handle(SriSyncRun $run): array
     {
-        if (! in_array($run->status, [SriSyncRunStatus::Parsing, SriSyncRunStatus::Downloading], true)) {
-            return ['run' => $run, 'report' => $this->emptyReport($run)];
+        if (! in_array($run->status, [SriSyncRunStatus::Parsing, SriSyncRunStatus::Downloading, SriSyncRunStatus::Invoking], true)) {
+            return [
+                'run' => $run,
+                'report' => $this->emptyReport($run),
+                'sources' => $this->emptySources(),
+            ];
         }
 
         $parsed = $this->parse->handle($run);
         $run = $parsed['run'];
 
         if ($run->status !== SriSyncRunStatus::Parsing) {
-            return ['run' => $run, 'report' => $this->emptyReport($run)];
+            return [
+                'run' => $run,
+                'report' => $this->emptyReport($run),
+                'sources' => $this->emptySources(),
+            ];
         }
 
-        [$report, $errors] = $this->import($run, $parsed['batches']);
+        [$report, $errors, $sources] = $this->import($run, $parsed['batches']);
 
-        $run->totals = $report->toTotals();
+        $run->totals = [...$report->toTotals(), ...$sources];
 
         if ($errors !== []) {
             $run->error_message = sprintf(
@@ -81,12 +114,24 @@ final readonly class ImportSriRun
         $run->transitionTo($report->status);
         $run->save();
 
-        return ['run' => $run->refresh(), 'report' => $report];
+        return [
+            'run' => $run->refresh(),
+            'report' => $report,
+            'sources' => ['from_s3' => $sources['from_s3'], 'from_sri' => $sources['from_sri']],
+        ];
+    }
+
+    /**
+     * @return array{from_s3: int, from_sri: int}
+     */
+    private function emptySources(): array
+    {
+        return ['from_s3' => 0, 'from_sri' => 0];
     }
 
     /**
      * @param  list<SriPeriodBatch>  $batches
-     * @return array{SriRunImportReport, list<string>}
+     * @return array{SriRunImportReport, list<string>, array{from_s3: int, from_sri: int}}
      */
     private function import(SriSyncRun $run, array $batches): array
     {
@@ -96,6 +141,8 @@ final readonly class ImportSriRun
         $updated = 0;
         $skipped = 0;
         $failed = 0;
+        $fromS3 = 0;
+        $fromSri = 0;
         $errors = [];
 
         foreach ($batches as $batch) {
@@ -103,7 +150,8 @@ final readonly class ImportSriRun
                 $found++;
 
                 try {
-                    $result = $this->importKey($run, $company, $key->value);
+                    [$result, $source] = $this->importKey($run, $company, $batch->documentType, $key->value);
+                    $source === 's3' ? $fromS3++ : $fromSri++;
 
                     match ($result->outcome) {
                         SriImportOutcome::Created => $imported++,
@@ -133,6 +181,8 @@ final readonly class ImportSriRun
             'updated' => $updated,
             'skipped' => $skipped,
             'failed' => $failed,
+            'from_s3' => $fromS3,
+            'from_sri' => $fromSri,
         ]);
 
         $status = match (true) {
@@ -144,10 +194,127 @@ final readonly class ImportSriRun
         return [
             new SriRunImportReport($found, $imported, $updated, $skipped, $failed, $status),
             $errors,
+            ['from_s3' => $fromS3, 'from_sri' => $fromSri],
         ];
     }
 
-    private function importKey(SriSyncRun $run, Company $company, string $accessKey): SriImportResult
+    /**
+     * El endpoint de autorizaciones del SRI responde bien solo para
+     * comprobantes recientes (observado: hasta 50 días). Dentro de la ventana
+     * se consulta primero al SRI; fuera de ella, o si el SRI falla, se usa S3.
+     *
+     * @return array{SriImportResult, 's3'|'sri'}
+     */
+    private function importKey(
+        SriSyncRun $run,
+        Company $company,
+        SriDocumentType $type,
+        string $accessKey,
+    ): array {
+        $file = $this->fileFor($run, $type, $accessKey);
+        $location = null;
+
+        if ($this->fallbackToSri && $this->insideSriWindow($accessKey)) {
+            try {
+                $xml = $this->querySri($accessKey);
+                $source = 'sri';
+            } catch (SriGatewayException|SriXmlException $exception) {
+                report($exception);
+                [$xml, $location] = $this->fromS3($run, $file, $accessKey);
+                $source = 's3';
+            }
+        } else {
+            [$xml, $location] = $this->fromS3($run, $file, $accessKey);
+            $source = 's3';
+        }
+
+        $data = $this->parser->parse($xml);
+        $result = $this->persist->handle($company, $data, $xml, $run);
+
+        if ($location !== null && $file !== null) {
+            $this->recovery->mark($run, $file, $location, $run->totals ?? []);
+        }
+
+        return [$result, $source];
+    }
+
+    /**
+     * XML desde el repositorio del robot. Si no existe, el motivo es seguro:
+     * la clave no está publicada, el período no está verificado o el respaldo
+     * al SRI está desactivado.
+     *
+     * @return array{string, SriXmlLocation|null}
+     */
+    private function fromS3(SriSyncRun $run, ?SriSyncRunFile $file, string $accessKey): array
+    {
+        // Si el XML está en S3 se usa siempre: es la misma fuente que prepara
+        // el robot, y así una clave que el SRI falla no bloquea la corrida.
+        // Si el XML está en S3 se usa siempre: es la misma fuente que prepara
+        // el robot, y así una clave que el SRI falla no bloquea la corrida.
+        $location = $file === null || ! $file->document_type instanceof SriDocumentType
+            ? null
+            : $this->location($run, $file->document_type, $accessKey);
+
+        if ($location !== null) {
+            return [$this->recovery->contents($location), $location];
+        }
+
+        throw SriXmlException::unreadable();
+    }
+
+    /**
+     * ¿La fecha de emisión de la clave está dentro de la ventana en la que el
+     * endpoint del SRI devuelve el XML? Fechas inválidas o futuras se tratan
+     * como fuera de la ventana y se resuelven desde S3.
+     */
+    private function insideSriWindow(string $accessKey): bool
+    {
+        try {
+            $issuedAt = (new SriAccessKey($accessKey))->issuedAt;
+        } catch (InvalidArgumentException) {
+            return false;
+        }
+
+        $today = now()->startOfDay();
+        $days = $today->greaterThanOrEqualTo($issuedAt)
+            ? (int) $issuedAt->diff($today)->days
+            : -1;
+
+        return $days >= 0 && $days <= $this->sriWindowDays;
+    }
+
+    /**
+     * Busca el XML en el repositorio del robot, si el período está verificado.
+     */
+    private function location(SriSyncRun $run, SriDocumentType $type, string $accessKey): ?SriXmlLocation
+    {
+        $file = $this->fileFor($run, $type, $accessKey);
+
+        if ($file === null) {
+            return null;
+        }
+
+        try {
+            $location = $this->recovery->find($run, $file);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return null;
+        }
+
+        return $location;
+    }
+
+    private function fileFor(SriSyncRun $run, SriDocumentType $type, string $accessKey): ?SriSyncRunFile
+    {
+        return $run->files()
+            ->where('document_type', $type)
+            ->where('s3_key', 'like', '%-xml/%')
+            ->where('file_name', $accessKey.'.xml')
+            ->first();
+    }
+
+    private function querySri(string $accessKey): string
     {
         $authorization = $this->gateway->query(new AuthorizationQuery($accessKey));
 
@@ -155,10 +322,7 @@ final readonly class ImportSriRun
             throw SriXmlException::unreadable();
         }
 
-        $xml = (string) $authorization->xml;
-        $data = $this->parser->parse($xml);
-
-        return $this->persist->handle($company, $data, $xml, $run);
+        return (string) $authorization->xml;
     }
 
     private function emptyReport(SriSyncRun $run): SriRunImportReport

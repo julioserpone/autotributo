@@ -14,9 +14,9 @@ use Throwable;
  * Interpreta los archivos de un run sin esperar al scheduler.
  *
  * Acepta un run en `parsing` (lo normal tras `sri:reconcile-runs`) o en
- * `downloading` (el callback llegó y los archivos ya están en S3). Repetirlo
- * no duplica nada: los archivos ya procesados no se vuelven a leer y un run
- * final no se mueve.
+ * `downloading` e `invoking` (el archivo ya está en S3 aunque el callback no
+ * haya llegado). Repetirlo no duplica nada: los archivos ya procesados no se
+ * vuelven a leer y un run final no se mueve.
  */
 final class ParseSriRunCommand extends Command
 {
@@ -42,8 +42,8 @@ final class ParseSriRunCommand extends Command
 
             $status = $run->status->value;
 
-            if (! in_array($status, ['parsing', 'downloading'], true)) {
-                $this->warn("El run está en {$status}; solo se procesan runs en parsing o downloading.");
+            if (! in_array($status, ['parsing', 'downloading', 'invoking'], true)) {
+                $this->warn("El run está en {$status}; solo se procesan runs en parsing, downloading o invoking.");
 
                 return self::FAILURE;
             }

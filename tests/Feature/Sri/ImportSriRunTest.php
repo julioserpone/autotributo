@@ -15,6 +15,7 @@ use App\Domain\Sri\Models\SriSyncRun;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
 use App\Integrations\Sri\FakeSriAuthorizationGateway;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\Sri\AccessKeyFactory;
@@ -40,6 +41,9 @@ function runInParsing(Company $company): SriSyncRun
 }
 
 beforeEach(function (): void {
+    // Las claves de prueba se emiten el 15/09/2026: la ventana del endpoint
+    // del SRI se mide contra la fecha de hoy.
+    $this->travelTo(CarbonImmutable::parse('2026-10-01 12:00:00'));
     Storage::fake('sri');
     config(['sri.robot.environment' => 'dev']);
 

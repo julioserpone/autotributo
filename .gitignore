@@ -52,3 +52,6 @@ docker/data/
 .php-cs-fixer.cache
 rector.php.bak
 *.cache
+
+# Respuestas reales del SRI (contienen datos fiscales de terceros)
+tests/Fixtures/response.xml

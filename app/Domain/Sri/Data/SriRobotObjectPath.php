@@ -10,9 +10,11 @@ use InvalidArgumentException;
 /**
  * Claves lógicas de los objetos que escribe `sri-txt-robot` en S3.
  *
- * El robot usa la jerarquía `{ambiente}/{ruc}/{periodo}`. El prefijo opcional
- * del bucket se configura en el disco `sri` de Laravel, no en esta clase, para
- * que las claves persistidas sean estables y legibles.
+ * El robot usa la jerarquía `{ambiente}/{ruc}/{periodo}` y, desde la descarga
+ * de XML por fila, deja cada comprobante en
+ * `{ambiente}/{ruc}/{periodo}/{tipo}-recibidas-{periodo}-xml/{clave}.xml`.
+ * El prefijo opcional del bucket se configura en el disco `sri` de Laravel, no
+ * en esta clase, para que las claves persistidas sean estables y legibles.
  */
 final readonly class SriRobotObjectPath
 {
@@ -63,6 +65,25 @@ final readonly class SriRobotObjectPath
     public function accessKeys(SriDocumentType $type): string
     {
         return "{$this->directory()}/{$type->slug()}-recibidas-{$this->period}-claves.json";
+    }
+
+    /**
+     * Carpeta donde el robot deja el XML de cada comprobante, con el
+     * nombre `{clave de acceso}.xml`. Con el prefijo `*` se obtiene el patrón
+     * de listado `...-xml/*.xml`.
+     */
+    public function xmlDirectory(SriDocumentType $type): string
+    {
+        return "{$this->directory()}/{$type->slug()}-recibidas-{$this->period}-xml";
+    }
+
+    public function xml(SriDocumentType $type, string $accessKey): string
+    {
+        if (preg_match('/^\d{49}$/', $accessKey) !== 1) {
+            throw new InvalidArgumentException('Clave de acceso inválida.');
+        }
+
+        return "{$this->xmlDirectory($type)}/{$accessKey}.xml";
     }
 
     public function manifest(): string
