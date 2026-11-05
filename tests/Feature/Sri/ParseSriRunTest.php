@@ -194,10 +194,29 @@ it('falla el comando con un run inexistente', function (): void {
 });
 
 it('se niega a procesar un run que no está listo', function (): void {
-    $run = ReconcileFixtures::run($this->company, status: SriSyncRunStatus::Invoking);
+    $run = ReconcileFixtures::run($this->company, status: SriSyncRunStatus::Queued);
 
     $this->artisan('sri:parse-run', ['run' => (string) $run->id])
         ->assertFailed();
 
-    expect($run->refresh()->status)->toBe(SriSyncRunStatus::Invoking);
+    expect($run->refresh()->status)->toBe(SriSyncRunStatus::Queued);
+});
+
+it('recupera desde S3 un run en invoking cuando el callback no llegó', function (): void {
+    publishPeriod($this->company, '2026-09');
+    $run = ReconcileFixtures::run($this->company, status: SriSyncRunStatus::Invoking);
+
+    $result = $this->action->handle($run);
+
+    expect($result['run']->status)->toBe(SriSyncRunStatus::Parsing)
+        ->and($result['batches'])->toHaveCount(1);
+});
+
+it('no pasa a downloading un run en invoking cuyo período no está en S3', function (): void {
+    $run = ReconcileFixtures::run($this->company, status: SriSyncRunStatus::Invoking);
+
+    $result = $this->action->handle($run);
+
+    expect($result['run']->status)->toBe(SriSyncRunStatus::Invoking)
+        ->and($result['batches'])->toBeEmpty();
 });

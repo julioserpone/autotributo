@@ -43,4 +43,22 @@ final readonly class FilesystemSriRobotObjectStore implements SriRobotObjectStor
     {
         return hash('sha256', $this->read($key));
     }
+
+    /**
+     * @return list<string>
+     */
+    public function keys(string $prefix): array
+    {
+        $keys = [];
+
+        foreach ($this->disk->listContents($prefix, true) as $item) {
+            if ($item->isFile()) {
+                $keys[] = $item->path();
+            }
+        }
+
+        sort($keys);
+
+        return $keys;
+    }
 }

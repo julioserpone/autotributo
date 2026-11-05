@@ -14,8 +14,9 @@ use Throwable;
  * Importa los comprobantes de un run sin esperar al scheduler.
  *
  * Acepta un run en `parsing` (lo normal tras `sri:parse-run`) o en
- * `downloading` (el callback llegó y los archivos ya están en S3). Repetirlo
- * no duplica comprobantes: el mismo XML se reporta como `skipped`.
+ * `downloading` e `invoking` (el callback no llegó, pero el robot ya publicó
+ * el lote en S3: `ParseSriRun` verifica el período y recupera los archivos).
+ * Repetirlo no duplica comprobantes: el mismo XML se reporta como `skipped`.
  */
 final class ImportSriRunCommand extends Command
 {
@@ -39,8 +40,8 @@ final class ImportSriRunCommand extends Command
                 return self::FAILURE;
             }
 
-            if (! in_array($run->status->value, ['parsing', 'downloading'], true)) {
-                $this->warn("El run está en {$run->status->value}; solo se importan runs en parsing o downloading.");
+            if (! in_array($run->status->value, ['parsing', 'downloading', 'invoking'], true)) {
+                $this->warn("El run está en {$run->status->value}; solo se importan runs en parsing, downloading o invoking.");
 
                 return self::FAILURE;
             }

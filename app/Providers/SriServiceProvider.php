@@ -8,10 +8,13 @@ use App\Domain\Sri\Actions\ImportSriRun;
 use App\Domain\Sri\Actions\ParseSriRun;
 use App\Domain\Sri\Actions\PersistSriInvoice;
 use App\Domain\Sri\Actions\ReconcileSriRun;
+use App\Domain\Sri\Actions\RecoverSriRunFromS3;
+use App\Domain\Sri\Actions\S3SriXmlRecovery;
 use App\Domain\Sri\Contracts\SriAuthorizationGateway;
 use App\Domain\Sri\Contracts\SriInvoiceParser;
 use App\Domain\Sri\Contracts\SriRobotGateway;
 use App\Domain\Sri\Contracts\SriRobotObjectStore;
+use App\Domain\Sri\Contracts\SriXmlRecovery;
 use App\Domain\Sri\Parsers\PeriodBatchBuilder;
 use App\Integrations\Sri\FakeSriAuthorizationGateway;
 use App\Integrations\Sri\FakeSriRobotGateway;
@@ -107,6 +110,22 @@ final class SriServiceProvider extends ServiceProvider
             );
         });
 
+        $this->app->singleton(SriXmlRecovery::class, function (Application $app): SriXmlRecovery {
+            return new S3SriXmlRecovery(
+                $app->make(SriRobotObjectStore::class),
+                (string) config('sri.robot.environment', 'dev'),
+            );
+        });
+
+        $this->app->singleton(RecoverSriRunFromS3::class, function (Application $app): RecoverSriRunFromS3 {
+            return new RecoverSriRunFromS3(
+                $app->make(SriRobotObjectStore::class),
+                $app->make(SriXmlRecovery::class),
+                $app->make(ReconcileSriRun::class),
+                (string) config('sri.robot.environment', 'dev'),
+            );
+        });
+
         $this->app->singleton(PersistSriInvoice::class, fn (): PersistSriInvoice => new PersistSriInvoice);
 
         $this->app->singleton(ImportSriRun::class, function (Application $app): ImportSriRun {
@@ -115,6 +134,9 @@ final class SriServiceProvider extends ServiceProvider
                 $app->make(SriInvoiceParser::class),
                 $app->make(PersistSriInvoice::class),
                 $app->make(ParseSriRun::class),
+                $app->make(SriXmlRecovery::class),
+                (bool) config('sri.authorization.fallback_to_sri', true),
+                (int) config('sri.authorization.window_days', 45),
             );
         });
 
@@ -122,8 +144,8 @@ final class SriServiceProvider extends ServiceProvider
             return new ParseSriRun(
                 $app->make(SriRobotObjectStore::class),
                 new PeriodBatchBuilder,
-                $app->make(ReconcileSriRun::class),
                 (string) config('sri.robot.environment', 'dev'),
+                $app->make(RecoverSriRunFromS3::class),
             );
         });
     }
