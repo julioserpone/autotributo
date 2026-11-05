@@ -45,12 +45,6 @@ final class RecoverSriRunCommand extends Command
                 return self::FAILURE;
             }
 
-            /*if ($run->status->isFinal()) {
-                $this->warn("El run ya terminó en {$run->status->value}.");
-
-                return self::FAILURE;
-            }*/
-
             $run = $recovery->handle($run);
             $this->info(sprintf('Run %s: %s', $run->public_id, $run->status->value));
 

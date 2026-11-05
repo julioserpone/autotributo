@@ -247,10 +247,8 @@ final readonly class ImportSriRun
      */
     private function fromS3(SriSyncRun $run, ?SriSyncRunFile $file, string $accessKey): array
     {
-        // Si el XML está en S3 se usa siempre: es la misma fuente que prepara
-        // el robot, y así una clave que el SRI falla no bloquea la corrida.
-        // Si el XML está en S3 se usa siempre: es la misma fuente que prepara
-        // el robot, y así una clave que el SRI falla no bloquea la corrida.
+        // Si el XML ya está publicado en S3 esta ruta lo devuelve; el llamador
+        // decide el orden entre SRI y S3 según la ventana de 45 días.
         $location = $file === null || ! $file->document_type instanceof SriDocumentType
             ? null
             : $this->location($run, $file->document_type, $accessKey);

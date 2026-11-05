@@ -10,6 +10,7 @@ use App\Domain\Sri\Actions\PersistSriInvoice;
 use App\Domain\Sri\Actions\ReconcileSriRun;
 use App\Domain\Sri\Actions\RecoverSriRunFromS3;
 use App\Domain\Sri\Actions\S3SriXmlRecovery;
+use App\Domain\Sri\Actions\StartSriSync;
 use App\Domain\Sri\Contracts\SriAuthorizationGateway;
 use App\Domain\Sri\Contracts\SriInvoiceParser;
 use App\Domain\Sri\Contracts\SriRobotGateway;
@@ -100,6 +101,14 @@ final class SriServiceProvider extends ServiceProvider
         $this->app->singleton(SriRobotObjectStore::class, function (Application $app): SriRobotObjectStore {
             return new FilesystemSriRobotObjectStore(
                 Storage::disk((string) config('sri.robot.output_disk', 'sri')),
+            );
+        });
+
+        $this->app->bind(StartSriSync::class, function (Application $app): StartSriSync {
+            return new StartSriSync(
+                $app->make(SriRobotGateway::class),
+                (int) config('sri.sync.max_days_per_run', 93),
+                (int) config('sri.sync.max_calls_per_minute', 6),
             );
         });
 

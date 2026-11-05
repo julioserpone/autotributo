@@ -1,11 +1,11 @@
 # 10 — Integración SRI
 
-> Alcance: F2-01 a F2-07 y F2-06 (factura, NC y ND). El paquete consulta el
-> XML por clave de acceso, el robot descarga los reportes, la app lee su bucket
-> S3, orquesta los runs con idempotencia, recibe el callback firmado del robot,
-> reconcilia cada run contra el manifiesto e interpreta el TXT de claves. La
-> persistencia de comprobantes (F2-08) sigue pendiente, y el parseo de
-> liquidaciones de compra y retenciones es la segunda parte de F2-06.
+> Alcance: F2-01 a F2-08 y F2-11. El paquete consulta el XML por clave de
+> acceso, el robot descarga los reportes, la app lee su bucket S3, orquesta los
+> runs con idempotencia y cuotas, recibe el callback firmado del robot,
+> reconcilia cada run contra el manifiesto, interpreta el TXT de claves y
+> persiste los comprobantes. El parseo de liquidaciones de compra y
+> retenciones es la segunda parte de F2-06.
 
 ## 0. Decisión: dónde vive el parseo
 
@@ -394,8 +394,10 @@ Reglas:
   caliente con `SRI_AUTHORIZATION_WINDOW_DAYS`.
 - El respaldo a S3 ocurre ante `SriGatewayException` o XML inutilizable, sin
   abortar el run.
-- Si el XML ya está en S3 se usa directamente (es la misma fuente que prepara
-  el robot), por lo que una clave que el SRI no entrega no bloquea la corrida.
+- Con `SRI_AUTHORIZATION_FALLBACK_TO_SRI=false` el SRI no se consulta nunca:
+  todo XML se lee de S3.
+- El orden es **SRI primero y S3 como respaldo dentro de la ventana**; fuera de
+  ella, o con el respaldo desactivado, **S3 es la única fuente**.
 - `ImportSriRun` guarda `totals.from_sri` y `totals.from_s3` para auditar el
   origen de cada corrida.
 
@@ -440,10 +442,12 @@ El adaptador `PackageSriInvoiceParser` traduce al modelo de la app y aporta:
 `ImportSriRun` recorre los lotes de `ParseSriRun` y, por cada clave, obtiene el
 XML en este orden:
 
-1. **S3 del robot** (`SriXmlRecovery`): el archivo registrado por la
-   recuperación, solo si el período está verificado.
-2. **SRI** (`SriAuthorizationGateway`): respaldo para las claves que el robot no
-   guardó. Se desactiva con `SRI_AUTHORIZATION_FALLBACK_TO_SRI=false`.
+1. **SRI** (`SriAuthorizationGateway`), solo si la fecha de emisión está dentro
+   de `SRI_AUTHORIZATION_WINDOW_DAYS` y `SRI_AUTHORIZATION_FALLBACK_TO_SRI`
+   está activo.
+2. **S3 del robot** (`SriXmlRecovery`): fuente única fuera de la ventana o con
+   el respaldo desactivado, y respaldo cuando el SRI falla o no entrega el XML.
+   Solo usa el archivo registrado si el período está verificado.
 
 Luego lo interpreta y lo guarda con `PersistSriInvoice`. El run guarda
 `totals.from_s3` y `totals.from_sri` para auditar el origen de cada corrida:
@@ -472,11 +476,33 @@ Reglas:
 - **`ParseSriRun` deja el run en `parsing`**: el veredicto final lo da la
   importación, que es la que sabe cuántos comprobantes quedaron guardados.
 
-## 5. Variables de entorno
+## 5. Límites y cuotas (F2-11)
+
+`StartSriSync` aplica tres controles antes de tocar la Lambda:
+
+| Control | Clave | Comportamiento |
+|---|---|---|
+| Serialización por empresa | Bloqueo de caché `sri:start:{companyId}` | Dos solicitudes simultáneas de la misma empresa se ejecutan en serie; si no se obtiene el bloqueo en 5 s → `SriSyncAlreadyRunning` |
+| Un run activo por empresa | Consulta a `sri_sync_runs` | Si existe un run en `queued`, `invoking`, `downloading` o `parsing` con otra clave de idempotencia → `SriSyncAlreadyRunning` (incluye el `public_id` del run) |
+| Cuota por RUC | `RateLimiter` con clave `sri:sync:{ruc}` y ventana de 60 s | Reserva una llamada por cada run nuevo; al superar `sri.sync.max_calls_per_minute` → `SriRateLimitExceeded` con `retryAfterSeconds` |
+
+Reglas:
+
+- Los reintentos con la misma clave de idempotencia **no consumen cuota** y
+  devuelven los runs existentes sin invocar la Lambda.
+- La cuota es por RUC, no por empresa ni por tenant: protege la cuenta del
+  contribuyente en el portal del SRI.
+- No se usa un índice único parcial en la base de datos porque una sola
+  solicitud puede crear varios runs legítimos cuando el rango supera
+  `max_days_per_run`; la exclusión se hace por conjunto de claves.
+- `SriRateLimitExceeded` y `SriSyncAlreadyRunning` son excepciones de dominio:
+  la capa HTTP puede mapearlas a `429` y `409` respectivamente.
+
+## 6. Variables de entorno
 
 ```dotenv
 SRI_AUTHORIZATION_DRIVER=package   # package | fake
-SRI_AUTHORIZATION_FALLBACK_TO_SRI=true   # consulta al SRI si el XML no está en S3
+SRI_AUTHORIZATION_FALLBACK_TO_SRI=true   # dentro de la ventana: SRI primero y S3 como respaldo
 SRI_AUTHORIZATION_WINDOW_DAYS=45         # días desde la emisión en que el SRI responde bien
 SRI_ENVIRONMENT=1                  # 1 pruebas, 2 producción
 SRI_CONNECTION_TIMEOUT=10
@@ -484,6 +510,9 @@ SRI_TIMEOUT=30
 SRI_RETRY_ATTEMPTS=3
 SRI_RETRY_BASE_DELAY_MS=250
 SRI_RETRY_MAX_DELAY_MS=5000
+
+SRI_SYNC_MAX_DAYS_PER_RUN=93       # días máximos por invocación del robot
+SRI_SYNC_MAX_CALLS_PER_MINUTE=6    # invocaciones por RUC en una ventana de 60 s
 
 SRI_ROBOT_DRIVER=fake              # fake | lambda
 SRI_ROBOT_FUNCTION=sri-txt-robot
@@ -508,7 +537,7 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 `SRI_ROBOT_DRIVER=fake` evita AWS. En staging/producción se usa `package` y
 `lambda`.
 
-## 6. Pruebas
+## 7. Pruebas
 
 | Archivo | Qué prueba |
 |---|---|
@@ -519,7 +548,7 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 | `tests/Unit/Sri/SriRobotObjectPathTest.php` | Layout real, slugs, períodos diarios y validaciones |
 | `tests/Unit/Sri/SriSyncWindowTest.php` | Agrupación, corte exacto de 93 días y rangos sin huecos |
 | `tests/Unit/Sri/SriSyncRunStatusTest.php` | Transiciones permitidas, estados terminales y saltos inválidos |
-| `tests/Feature/Sri/StartSriSyncTest.php` | Creación, idempotencia, división, fallo y cancelación |
+| `tests/Feature/Sri/StartSriSyncTest.php` | Creación, idempotencia, división, fallo, cancelación, run solapado, límite por minuto, cuota por RUC y ventana configurable |
 | `tests/Feature/Sri/ReconcileSriRunTest.php` | Manifiesto/TXT/claves, faltantes, JSON inválido, bytes, identidad, idempotencia, multiperíodo, comando y tenant por defecto |
 | `tests/Feature/Sri/SriRobotObjectStoreTest.php` | Lectura, existencia, SHA-256 y objeto ausente en el disco `sri` |
 | `tests/Feature/Sri/SriServiceProviderTest.php` | Selección de adaptadores por configuración |
@@ -534,7 +563,7 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 No hay red en la suite: el transporte SOAP y el cliente Lambda se sustituyen
 por dobles.
 
-## 7. Prueba end-to-end en local
+## 8. Prueba end-to-end en local
 
 Para validar el callback contra la Lambda real sin desplegar la app:
 
@@ -575,19 +604,18 @@ Resultado esperado de una corrida válida: callback `202` (guardado en
 `sri_robot_callbacks`), correlación por `event_id` y el run pasando de
 `invoking` a `downloading` para que `sri:reconcile-runs` valide el manifiesto.
 
-## 8. Siguientes pasos
+## 9. Siguientes pasos
 
-1. **F2-06 (b):** liquidaciones de compra (`03`) y comprobantes de retención
-   (`07`). La lectura del XML es desde S3 con respaldo en
-   `SriAuthorizationGateway`.
-2. **F2-08:** persistencia idempotente en `invoices`/`invoice_items` con
-   `upsert` por `access_key`.
-3. **F1-05/F1-06:** CRUD de empresas y almacenamiento cifrado de credenciales.
-4. **F2-09:** progreso en vivo y cancelación de la invocación asíncrona.
-5. **Rendimiento:** medir 5.000 XML con `ComprobanteReader` (benchmark de
-   F2-08) y, si hace falta, paralelizar por lotes.
+1. **F2-10:** pipeline asíncrono en cola, lotes de comprobantes, reintentos y
+   finalización de runs huérfanos.
+2. **F2-09:** progreso en vivo y cancelación de la invocación asíncrona, después
+   de F1-08 y de la rebanada mínima de identidad (F1-03).
+3. **F2-12:** eventos `sri_run_events`, logs estructurados y métricas.
+4. **F1-05/F1-06:** CRUD de empresas y almacenamiento cifrado de credenciales.
+5. **Rendimiento:** medir 5.000 XML con `ComprobanteReader` y, si hace falta,
+   paralelizar por lotes.
 
-## 9. Seguridad
+## 10. Seguridad
 
 - No registrar XML completos, credenciales ni claves de acceso completas.
 - Las credenciales del portal se sellan con `sodium_crypto_box_seal` antes de

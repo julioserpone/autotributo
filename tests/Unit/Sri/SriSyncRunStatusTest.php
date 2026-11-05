@@ -37,3 +37,12 @@ it('rechaza saltos de estado no permitidos', function (): void {
         ->and(SriSyncRunStatus::Invoking->canTransitionTo(SriSyncRunStatus::Parsing))->toBeFalse()
         ->and(SriSyncRunStatus::Downloading->canTransitionTo(SriSyncRunStatus::Completed))->toBeFalse();
 });
+
+it('expone solo los estados activos para las consultas de concurrencia', function (): void {
+    expect(SriSyncRunStatus::activeValues())->toBe([
+        'queued',
+        'invoking',
+        'downloading',
+        'parsing',
+    ]);
+});
