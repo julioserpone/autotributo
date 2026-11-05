@@ -36,6 +36,20 @@ enum SriSyncRunStatus: string
         return ! $this->isFinal();
     }
 
+    /**
+     * Estados que mantienen un run en curso. Las consultas de concurrencia
+     * usan esta lista para impedir dos runs activos de la misma empresa.
+     *
+     * @return list<string>
+     */
+    public static function activeValues(): array
+    {
+        return array_values(array_map(
+            static fn (self $status): string => $status->value,
+            array_filter(self::cases(), static fn (self $status): bool => $status->isActive()),
+        ));
+    }
+
     public function canTransitionTo(self $next): bool
     {
         if ($this === $next) {

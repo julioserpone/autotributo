@@ -47,6 +47,22 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Límites de sincronización
+    |--------------------------------------------------------------------------
+    |
+    | `max_days_per_run` corta un rango en varias invocaciones del robot.
+    | `max_calls_per_minute` protege la cuenta del contribuyente en el portal
+    | del SRI: se aplica por RUC y antes de invocar la Lambda.
+    |
+    */
+
+    'sync' => [
+        'max_days_per_run' => (int) env('SRI_SYNC_MAX_DAYS_PER_RUN', 93),
+        'max_calls_per_minute' => (int) env('SRI_SYNC_MAX_CALLS_PER_MINUTE', 6),
+    ],
+
     'robot' => [
         'driver' => env('SRI_ROBOT_DRIVER', 'fake'),
         'function' => env('SRI_ROBOT_FUNCTION', 'sri-txt-robot'),
