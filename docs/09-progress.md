@@ -45,7 +45,7 @@
 | F2-07 | Parser de manifiesto/TXT | Completado | `SriAccessKey` (verificador delegado a `AccessKeyGenerator` del paquete), `AccessKeyListParser`, `PeriodBatchBuilder`, `ParseSriRun` y `sri:parse-run` · run `completed`/`partial`/`failed` e idempotencia |
 | F2-08 | Persistencia idempotente | Completado | `invoices`, `invoice_items`, `invoice_taxes`, `retention_lines` · `PersistSriInvoice` con `upsert` por `(tenant, company, access_key)` y huella `xml_sha256` · `ImportSriRun` + `sri:import-run` · fallos parciales sin tumbar el run · 15 tests nuevos |
 | F2-09 | Progreso en vivo | Pendiente | — |
-| F2-10 | Resiliencia | Pendiente | — |
+| F2-10 | Resiliencia | En curso | `ProcessSriRunJob` en cola `sri`, tenant-aware y único por run; callback y scheduler encolan la importación; reintentos 30/120/300 s y cierre `import_failed` al agotarse · faltan lotes y runs huérfanos |
 | F2-11 | Límites y cuotas | Completado | `StartSriSync` serializa por empresa (bloqueo de caché), rechaza runs solapados con `SriSyncAlreadyRunning`, reserva cuota por RUC con `RateLimiter` (`sri.sync.max_calls_per_minute`) y divide por `sri.sync.max_days_per_run` · los reintentos idempotentes no consumen cuota · 7 tests nuevos |
 | F2-12 | Observabilidad | Pendiente | — |
 

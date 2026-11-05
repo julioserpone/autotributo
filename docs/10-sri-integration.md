@@ -476,7 +476,24 @@ Reglas:
 - **`ParseSriRun` deja el run en `parsing`**: el veredicto final lo da la
   importación, que es la que sabe cuántos comprobantes quedaron guardados.
 
-## 5. Límites y cuotas (F2-11)
+## 5. Ejecución en cola (F2-10)
+
+Cuando un run queda en `parsing`, la importación se encola con
+`ProcessSriRunJob` en la cola `sri`:
+
+- El callback firmado encola el job después del commit, con el tenant del run.
+- `sri:reconcile-runs` encola un job por cada run que la reconciliación deja
+  en `parsing`.
+- `ShouldBeUnique` por `run_id` evita duplicados entre callback, scheduler y
+  reintentos. El job no hace nada si el run ya no está en `parsing`.
+- `TenantAware` reactiva el tenant en el worker y el `TenantScope` impide leer
+  un run de otro tenant.
+- Reintentos: `SRI_SYNC_IMPORT_TRIES` (3), backoff 30/120/300 s. Al agotarse,
+  el run se cierra como `failed` con `error_code=import_failed`.
+- `sri:import-run` sigue disponible para ejecutar la importación de forma
+  manual y síncrona.
+
+## 6. Límites y cuotas (F2-11)
 
 `StartSriSync` aplica tres controles antes de tocar la Lambda:
 
@@ -498,7 +515,7 @@ Reglas:
 - `SriRateLimitExceeded` y `SriSyncAlreadyRunning` son excepciones de dominio:
   la capa HTTP puede mapearlas a `429` y `409` respectivamente.
 
-## 6. Variables de entorno
+## 7. Variables de entorno
 
 ```dotenv
 SRI_AUTHORIZATION_DRIVER=package   # package | fake
@@ -513,6 +530,10 @@ SRI_RETRY_MAX_DELAY_MS=5000
 
 SRI_SYNC_MAX_DAYS_PER_RUN=93       # días máximos por invocación del robot
 SRI_SYNC_MAX_CALLS_PER_MINUTE=6    # invocaciones por RUC en una ventana de 60 s
+SRI_SYNC_IMPORT_QUEUE=sri          # cola del job de importación
+SRI_SYNC_IMPORT_TRIES=3            # reintentos antes de cerrar el run como failed
+SRI_SYNC_IMPORT_TIMEOUT=90         # segundos por intento
+REDIS_QUEUE_RETRY_AFTER=180        # debe superar el timeout del job
 
 SRI_ROBOT_DRIVER=fake              # fake | lambda
 SRI_ROBOT_FUNCTION=sri-txt-robot
@@ -537,7 +558,7 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 `SRI_ROBOT_DRIVER=fake` evita AWS. En staging/producción se usa `package` y
 `lambda`.
 
-## 7. Pruebas
+## 8. Pruebas
 
 | Archivo | Qué prueba |
 |---|---|
@@ -558,12 +579,13 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 | `tests/Unit/Sri/ComprobanteReaderIntegrationTest.php` | Los seis tipos por el adaptador: totales, ítems, impuestos, retenciones, XXE, tamaño y XML malformado |
 | `tests/Feature/Sri/PersistSriInvoiceTest.php` | Creación, hijos, idempotencia, actualización, aislamiento por empresa y retenciones |
 | `tests/Feature/Sri/ImportSriRunTest.php` | Importación completa, reimportación sin duplicados, `partial`, `failed`, XML corrupto y comando |
+| `tests/Feature/Sri/ProcessSriRunJobTest.php` | Importación en cola, run fuera de `parsing`, run inexistente, unicidad y cierre tras agotar reintentos |
 | `tests/Feature/Sri/ImportSriRunFromS3Test.php` | XML desde S3 sin consultar el SRI, respaldo por clave, `fallback_to_sri=false`, período ajeno, RUC ajeno, `missing`, período vacío, ventana de 45 días y `sri:recover-run` |
 
 No hay red en la suite: el transporte SOAP y el cliente Lambda se sustituyen
 por dobles.
 
-## 8. Prueba end-to-end en local
+## 9. Prueba end-to-end en local
 
 Para validar el callback contra la Lambda real sin desplegar la app:
 
@@ -604,7 +626,7 @@ Resultado esperado de una corrida válida: callback `202` (guardado en
 `sri_robot_callbacks`), correlación por `event_id` y el run pasando de
 `invoking` a `downloading` para que `sri:reconcile-runs` valide el manifiesto.
 
-## 9. Siguientes pasos
+## 10. Siguientes pasos
 
 1. **F2-10:** pipeline asíncrono en cola, lotes de comprobantes, reintentos y
    finalización de runs huérfanos.
@@ -615,7 +637,7 @@ Resultado esperado de una corrida válida: callback `202` (guardado en
 5. **Rendimiento:** medir 5.000 XML con `ComprobanteReader` y, si hace falta,
    paralelizar por lotes.
 
-## 10. Seguridad
+## 11. Seguridad
 
 - No registrar XML completos, credenciales ni claves de acceso completas.
 - Las credenciales del portal se sellan con `sodium_crypto_box_seal` antes de

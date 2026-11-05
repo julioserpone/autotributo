@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 use App\Domain\Companies\Models\Company;
 use App\Domain\Sri\Enums\SriSyncRunStatus;
+use App\Domain\Sri\Jobs\ProcessSriRunJob;
 use App\Domain\Sri\Models\SriRobotCallback;
 use App\Domain\Sri\Models\SriSyncRun;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Tests\Support\Sri\ReconcileFixtures;
@@ -159,12 +161,18 @@ it('marca el run como fallido cuando el robot informa failed', function (): void
 });
 
 it('deja el run en parsing cuando el callback llega y el paquete ya está en S3', function (): void {
+    Queue::fake();
     ReconcileFixtures::putPeriod($this->company, '2026-08');
 
     $response = enviarCallbackSri($this, sriCallbackBody(['ruc' => $this->company->ruc]));
 
     $response->assertStatus(202);
     expect($this->run->refresh()->status)->toBe(SriSyncRunStatus::Parsing);
+
+    Queue::assertPushed(
+        ProcessSriRunJob::class,
+        fn (ProcessSriRunJob $job): bool => $job->runId === $this->run->id,
+    );
 });
 
 it('se queda en downloading cuando el callback llega pero S3 todavía no tiene el paquete', function (): void {

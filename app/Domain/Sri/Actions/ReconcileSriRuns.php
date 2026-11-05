@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Sri\Actions;
 
 use App\Domain\Sri\Enums\SriSyncRunStatus;
+use App\Domain\Sri\Jobs\ProcessSriRunJob;
 use App\Domain\Sri\Models\SriSyncRun;
 use InvalidArgumentException;
 use Throwable;
@@ -43,7 +44,12 @@ final readonly class ReconcileSriRuns
 
         foreach ($runs as $run) {
             try {
-                $reconciled[] = $this->reconcile->handle($run);
+                $reconciledRun = $this->reconcile->handle($run);
+                $reconciled[] = $reconciledRun;
+
+                if ($reconciledRun->status === SriSyncRunStatus::Parsing) {
+                    ProcessSriRunJob::dispatch($reconciledRun->id);
+                }
             } catch (Throwable $exception) {
                 report($exception);
             }
