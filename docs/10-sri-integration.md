@@ -147,8 +147,13 @@ Salida esperada del robot en su bucket:
 ```text
 {ambiente}/{ruc}/{periodo}/facturas-recibidas-{periodo}.txt
 {ambiente}/{ruc}/{periodo}/facturas-recibidas-{periodo}-claves.json
+{ambiente}/{ruc}/{periodo}/facturas-recibidas-{periodo}-xml/{clave}.xml
 {ambiente}/{ruc}/{periodo}/manifest.json
 ```
+
+Desde el upgrade de `sri-txt-robot` que guarda el XML de cada comprobante, la
+carpeta `*-xml/` es la fuente principal de los XML: la aplicación ya no
+depende de la respuesta del SRI ni de que el callback llegue.
 
 `SriRobotObjectPath` construye estas claves en el dominio; el prefijo opcional
 del bucket lo aplica el disco `sri` de Laravel (`SRI_ROBOT_OUTPUT_PREFIX`). El
@@ -237,6 +242,47 @@ Efecto en el run:
 
 El receptor vive en `App\Domain\Sri\Http\Middleware\VerifySriRobotCallback` y
 `SriRobotCallbackController`; la ruta no usa sesión ni contexto de tenant.
+
+### Recuperación desde S3 (sin callback)
+
+La URL del callback (`https://mkcaihhbdd.sharedwithexpose.com/`) es un túnel y
+puede estar caída cuando el robot termina. Para que el flujo no dependa de ella,
+la aplicación verifica el bucket directamente:
+
+| Pieza | Responsabilidad |
+|---|---|
+| `SriRobotObjectPath::xml()` | Clave `{periodo}/{tipo}-recibidas-{periodo}-xml/{clave}.xml` |
+| `SriXmlRecovery` | Contrato: descubrir, localizar y leer XML del período |
+| `S3SriXmlRecovery` | Verifica ambiente/RUC/período y registra los XML en `sri_sync_run_files` |
+| `RecoverSriRunFromS3` | `invoking` → `downloading` → `parsing` cuando el período está verificado |
+
+Reglas de verificación (obligatorias antes de leer cualquier XML):
+
+1. El `manifest.json` del período coincide en `ambiente`, `ruc` y `periodo` con
+   el run, y el tipo figura entre sus descargas.
+2. Si el manifiesto aún no existe, basta con que exista el JSON de claves del
+   tipo para ese período.
+3. La clave buscada debe estar declarada en el JSON del lote
+   (`clavesAcceso`) o, en su defecto, aparecer en el listado de `*-xml/`.
+
+Sin verificación no se toca S3: un run de un período que el robot no descargó
+nunca lee comprobantes de otro mes, y un manifiesto de otro RUC se ignora.
+
+Si el robot terminó sin comprobantes (`descargas: []` en el manifiesto), el run
+se cierra en `failed` con `error_code=no_documents` y `found=0`: no es un fallo
+técnico, pero tampoco debe quedarse activo para siempre.
+
+Comandos:
+
+```text
+sri:recover-run {run|public_id}     # verifica S3, reconcilia e importa
+sri:recover-run {run} --no-import   # solo verifica y reconcilia
+```
+
+El callback sigue siendo atajo: al llegar, `SriRobotCallbackController` corre
+la misma recuperación y, si el lote ya está en S3, deja el run en `parsing`.
+La correlación es por `event_id`, así que cambiar el subdominio del túnel no
+rompe los eventos que ya estaban en vuelo.
 
 ### Reconciliación por S3 (F2-05)
 
@@ -327,6 +373,47 @@ Reglas:
 
 ### XML del comprobante
 
+#### Ventana del endpoint de autorizaciones
+
+Pruebas directas contra el portal muestran que el endpoint
+`autorizacionComprobante` devuelve el XML de forma fiable solo para
+comprobantes recientes (observado: hasta 50 días). Por eso `ImportSriRun`
+decide el origen **por clave**, con la fecha de emisión decodificada de la
+propia clave de acceso:
+
+| Fecha del comprobante | Origen del XML |
+|---|---|
+| Dentro de `SRI_AUTHORIZATION_WINDOW_DAYS` (45 por defecto) | SRI (`SriAuthorizationGateway`) |
+| Fuera de la ventana, fecha inválida o futura | S3 del robot (`SriXmlRecovery`) |
+| Dentro de la ventana pero el SRI falla, no responde o no tiene el XML | S3 del robot |
+| Dentro de la ventana y el SRI devuelve el XML | SRI |
+
+Reglas:
+
+- La ventana se mide en días calendario entre la emisión y hoy; se ajusta en
+  caliente con `SRI_AUTHORIZATION_WINDOW_DAYS`.
+- El respaldo a S3 ocurre ante `SriGatewayException` o XML inutilizable, sin
+  abortar el run.
+- Si el XML ya está en S3 se usa directamente (es la misma fuente que prepara
+  el robot), por lo que una clave que el SRI no entrega no bloquea la corrida.
+- `ImportSriRun` guarda `totals.from_sri` y `totals.from_s3` para auditar el
+  origen de cada corrida.
+
+#### Sobre SOAP de la respuesta
+
+El SRI envuelve la autorización en `soap:Envelope > soap:Body >
+ns2:autorizacionComprobanteResponse > RespuestaAutorizacionComprobante`. El
+paquete recibe el cuerpo ya desenvuelto; `PackageSriAuthorizationGateway`
+normaliza el caso en que llegue el sobre completo (o su texto) leyendo el cuerpo
+crudo de la última respuesta y extrayendo `RespuestaAutorizacionComprobante`:
+
+- XXE desactivado (`LIBXML_NONET`, sin `LIBXML_NOENT` ni DTD).
+- Los namespaces se descartan porque el DTO del paquete busca por nombre.
+- El campo `comprobante` (XML escapado) se devuelve tal cual, listo para
+  `ComprobanteReader`.
+- Si el cuerpo no es XML o no trae la respuesta, el resultado es
+  `SriGatewayException` y el flujo intenta S3.
+
 La lectura la hace `ComprobanteReader` del paquete (v0.2.0). Soportado:
 factura (`01`), liquidación de compra (`03`), nota de crédito (`04`), nota de
 débito (`05`), guía de remisión (`06`) y comprobante de retención (`07`).
@@ -350,8 +437,16 @@ El adaptador `PackageSriInvoiceParser` traduce al modelo de la app y aporta:
 
 ### Persistencia (F2-08)
 
-`ImportSriRun` recorre los lotes de `ParseSriRun`, consulta el XML con
-`SriAuthorizationGateway`, lo interpreta y lo guarda con `PersistSriInvoice`:
+`ImportSriRun` recorre los lotes de `ParseSriRun` y, por cada clave, obtiene el
+XML en este orden:
+
+1. **S3 del robot** (`SriXmlRecovery`): el archivo registrado por la
+   recuperación, solo si el período está verificado.
+2. **SRI** (`SriAuthorizationGateway`): respaldo para las claves que el robot no
+   guardó. Se desactiva con `SRI_AUTHORIZATION_FALLBACK_TO_SRI=false`.
+
+Luego lo interpreta y lo guarda con `PersistSriInvoice`. El run guarda
+`totals.from_s3` y `totals.from_sri` para auditar el origen de cada corrida:
 
 ```text
 sri:import-run {run|public_id}
@@ -381,6 +476,8 @@ Reglas:
 
 ```dotenv
 SRI_AUTHORIZATION_DRIVER=package   # package | fake
+SRI_AUTHORIZATION_FALLBACK_TO_SRI=true   # consulta al SRI si el XML no está en S3
+SRI_AUTHORIZATION_WINDOW_DAYS=45         # días desde la emisión en que el SRI responde bien
 SRI_ENVIRONMENT=1                  # 1 pruebas, 2 producción
 SRI_CONNECTION_TIMEOUT=10
 SRI_TIMEOUT=30
@@ -415,7 +512,7 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 
 | Archivo | Qué prueba |
 |---|---|
-| `tests/Unit/Sri/PackageSriAuthorizationGatewayTest.php` | Autorizado, rechazado, PPR, sin respuesta y fallo de transporte |
+| `tests/Unit/Sri/PackageSriAuthorizationGatewayTest.php` | Autorizado, rechazado, PPR, sin respuesta, fallo de transporte y sobre SOAP real (`tests/Fixtures/response.xml`) |
 | `tests/Unit/Sri/SriRobotRequestTest.php` | Payload exacto, deduplicación, validaciones y sobre sellado |
 | `tests/Unit/Sri/SriRobotCredentialsTest.php` | Contenido del sobre, `iat` y redacción de la contraseña |
 | `tests/Unit/Sri/LambdaSriRobotGatewayTest.php` | Payload de invocación, modo `Event`, `RequestId`, sellado y error AWS |
@@ -432,6 +529,7 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 | `tests/Unit/Sri/ComprobanteReaderIntegrationTest.php` | Los seis tipos por el adaptador: totales, ítems, impuestos, retenciones, XXE, tamaño y XML malformado |
 | `tests/Feature/Sri/PersistSriInvoiceTest.php` | Creación, hijos, idempotencia, actualización, aislamiento por empresa y retenciones |
 | `tests/Feature/Sri/ImportSriRunTest.php` | Importación completa, reimportación sin duplicados, `partial`, `failed`, XML corrupto y comando |
+| `tests/Feature/Sri/ImportSriRunFromS3Test.php` | XML desde S3 sin consultar el SRI, respaldo por clave, `fallback_to_sri=false`, período ajeno, RUC ajeno, `missing`, período vacío, ventana de 45 días y `sri:recover-run` |
 
 No hay red en la suite: el transporte SOAP y el cliente Lambda se sustituyen
 por dobles.
@@ -480,8 +578,8 @@ Resultado esperado de una corrida válida: callback `202` (guardado en
 ## 8. Siguientes pasos
 
 1. **F2-06 (b):** liquidaciones de compra (`03`) y comprobantes de retención
-   (`07`), y la consulta al SRI por clave de acceso
-   (`SriAuthorizationGateway`) dentro del flujo.
+   (`07`). La lectura del XML es desde S3 con respaldo en
+   `SriAuthorizationGateway`.
 2. **F2-08:** persistencia idempotente en `invoices`/`invoice_items` con
    `upsert` por `access_key`.
 3. **F1-05/F1-06:** CRUD de empresas y almacenamiento cifrado de credenciales.

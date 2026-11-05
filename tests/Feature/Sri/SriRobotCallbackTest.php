@@ -9,17 +9,21 @@ use App\Domain\Sri\Models\SriSyncRun;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
+use Tests\Support\Sri\ReconcileFixtures;
 
 uses(RefreshDatabase::class);
 
 const SRI_CALLBACK_SECRET = 'secreto-compartido-de-prueba';
 
 beforeEach(function (): void {
+    Storage::fake('sri');
     config([
         'sri.robot.callback_secret' => SRI_CALLBACK_SECRET,
         'sri.robot.callback_tolerance_seconds' => 300,
         'sri.robot.callback_max_bytes' => 262_144,
+        'sri.robot.environment' => 'dev',
     ]);
 
     $this->tenant = Tenant::factory()->create();
@@ -152,6 +156,22 @@ it('marca el run como fallido cuando el robot informa failed', function (): void
 
     expect($run->status)->toBe(SriSyncRunStatus::Failed)
         ->and($run->error_code)->toBe('robot_failed');
+});
+
+it('deja el run en parsing cuando el callback llega y el paquete ya está en S3', function (): void {
+    ReconcileFixtures::putPeriod($this->company, '2026-08');
+
+    $response = enviarCallbackSri($this, sriCallbackBody(['ruc' => $this->company->ruc]));
+
+    $response->assertStatus(202);
+    expect($this->run->refresh()->status)->toBe(SriSyncRunStatus::Parsing);
+});
+
+it('se queda en downloading cuando el callback llega pero S3 todavía no tiene el paquete', function (): void {
+    $response = enviarCallbackSri($this, sriCallbackBody(['ruc' => $this->company->ruc]));
+
+    $response->assertStatus(202);
+    expect($this->run->refresh()->status)->toBe(SriSyncRunStatus::Downloading);
 });
 
 it('acepta callbacks de eventos que no pertenecen a un run local', function (): void {

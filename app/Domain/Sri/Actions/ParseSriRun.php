@@ -38,8 +38,8 @@ final readonly class ParseSriRun
     public function __construct(
         private SriRobotObjectStore $store,
         private PeriodBatchBuilder $builder,
-        private ReconcileSriRun $reconcile,
         string $environment,
+        private RecoverSriRunFromS3 $recovery,
     ) {
         $this->environment = strtolower(trim($environment));
     }
@@ -53,13 +53,17 @@ final readonly class ParseSriRun
             return $this->parse($run);
         }
 
-        if ($run->status !== SriSyncRunStatus::Downloading) {
+        if (! in_array($run->status, [SriSyncRunStatus::Downloading, SriSyncRunStatus::Invoking], true)) {
             return ['run' => $run, 'batches' => []];
         }
 
-        $run = $this->reconcile->handle($run);
+        // La recuperación desde S3 verifica el período del run antes de leer
+        // nada. Cubre el caso en que el callback no llega (túnel caído) o el
+        // manifiesto aún no está escrito: si el robot ya dejó el lote en S3,
+        // la importación puede continuar igual.
+        $run = $this->recovery->handle($run);
 
-        return in_array($run->status, [SriSyncRunStatus::Parsing, SriSyncRunStatus::Downloading], true) && $run->files()->exists()
+        return $run->status === SriSyncRunStatus::Parsing && $run->files()->exists()
             ? $this->parse($run)
             : ['run' => $run, 'batches' => []];
     }

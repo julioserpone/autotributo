@@ -25,6 +25,14 @@ return [
             'base_delay_ms' => (int) env('SRI_RETRY_BASE_DELAY_MS', 250),
             'max_delay_ms' => (int) env('SRI_RETRY_MAX_DELAY_MS', 5000),
         ],
+        // Los XML se leen primero del bucket del robot. La consulta al SRI
+        // queda como respaldo; si la respuesta del SRI no es fiable en un
+        // entorno, se puede desactivar con false.
+        'fallback_to_sri' => (bool) env('SRI_AUTHORIZATION_FALLBACK_TO_SRI', true),
+        // Ventana (días desde la emisión) en la que el endpoint de
+        // autorizaciones devuelve el XML de forma fiable. Dentro de ella se
+        // consulta primero al SRI; fuera, o si falla, se lee del S3 del robot.
+        'window_days' => (int) env('SRI_AUTHORIZATION_WINDOW_DAYS', 45),
     ],
 
     /*

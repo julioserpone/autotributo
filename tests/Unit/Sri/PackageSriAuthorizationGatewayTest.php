@@ -123,3 +123,27 @@ it('envuelve un fallo de transporte en una excepción de dominio', function (): 
     expect(fn () => gatewayWith($transport)->query(new AuthorizationQuery(str_repeat('5', 49))))
         ->toThrow(SriGatewayException::class, 'No fue posible consultar');
 });
+
+it('desenvuelve el sobre SOAP real del SRI y devuelve el comprobante autorizado', function (): void {
+    $raw = (string) require __DIR__.'/../../Fixtures/sri-authorization-envelope.php';
+    $transport = (new FakeTransport(exception: new TransportException('SOAP caído')))->withRawResponse($raw);
+
+    $result = gatewayWith($transport)->query(
+        new AuthorizationQuery('1709202601179001234500120010090019603451234567812'),
+    );
+
+    expect($result->status)->toBe(AuthorizationStatus::Authorized)
+        ->and($result->hasXml())->toBeTrue()
+        ->and($result->authorizationNumber)->toBe('1709202601179001234500120010090019603451234567812')
+        ->and($result->sriStatus)->toBe('AUTORIZADO')
+        ->and($result->xml)->toStartWith('<?xml version="1.0" encoding="UTF-8"?>')
+        ->and($result->xml)->toContain('<ruc>1790012345001</ruc>');
+});
+
+it('falla de forma segura con una respuesta que no es XML', function (): void {
+    $transport = (new FakeTransport(exception: new TransportException('SOAP caído')))
+        ->withRawResponse('<html>502 Bad Gateway</html>');
+
+    expect(fn () => gatewayWith($transport)->query(new AuthorizationQuery(str_repeat('6', 49))))
+        ->toThrow(SriGatewayException::class);
+});

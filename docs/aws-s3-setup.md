@@ -132,7 +132,7 @@ Notas:
 
 - **No** configures expiración automática de los XML ni de versiones anteriores: la retención fiscal es ≥ 7 años y debe revisarse con el contador.
 - Los exports temporales se borran con un comando programado a los 7 días. No uses una regla de prefijo para borrarlos si viven bajo `tenants/`, porque podrías borrar documentos.
-- El bucket `-sri` usa la jerarquía `{ambiente}/{ruc}/{periodo}`. Como el bucket es por ambiente, aplica una regla sin filtro de prefijo para todo el bucket: transición a `STANDARD_IA` a los 90 días y aborto de multipart a los 7 días. Ejemplo `lifecycle-sri.json`:
+- El bucket `-sri` usa la jerarquía `{ambiente}/{ruc}/{periodo}` con los TXT, el JSON de claves, el manifiesto y la carpeta `{tipo}-recibidas-{periodo}-xml/` con el XML de cada comprobante. Como el bucket es por ambiente, aplica una regla sin filtro de prefijo para todo el bucket: transición a `STANDARD_IA` a los 90 días y aborto de multipart a los 7 días. Ejemplo `lifecycle-sri.json`:
 
 ```json
 {
@@ -237,7 +237,9 @@ aws iam put-user-policy \
 aws iam create-access-key --user-name autotributo-prod-app
 ```
 
-Reemplaza `ACCOUNT_ID` por el ID de tu cuenta AWS. Guarda `AccessKeyId`/`SecretAccessKey` en el gestor de secretos y configura el entorno de Laravel Cloud. No los pegues en el repositorio ni en capturas.
+El permiso `s3:ListBucket` se usa para enumerar `*-xml/` cuando el lote no
+declara una clave; basta con el prefijo del ambiente. Reemplaza `ACCOUNT_ID`
+por el ID de tu cuenta AWS. Guarda `AccessKeyId`/`SecretAccessKey` en el gestor de secretos y configura el entorno de Laravel Cloud. No los pegues en el repositorio ni en capturas.
 
 ### Rol del robot SRI
 

@@ -113,6 +113,16 @@ final class ReconcileFixtures
     }
 
     /**
+     * Publica el XML de un comprobante como lo deja el robot tras la descarga
+     * por fila: `{periodo}/{tipo}-recibidas-{periodo}-xml/{clave}.xml`.
+     */
+    public static function putXml(Company $company, string $period, string $accessKey, string $xml): void
+    {
+        $type = SriDocumentType::tryFrom(substr($accessKey, 8, 2)) ?? SriDocumentType::Invoice;
+        Storage::disk('sri')->put(self::path($company, $period)->xml($type, $accessKey), $xml);
+    }
+
+    /**
      * @param  list<string>|null  $keys
      */
     public static function putPeriod(
