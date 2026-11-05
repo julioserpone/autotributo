@@ -8,8 +8,10 @@ use App\Domain\Sri\Actions\RecoverSriRunFromS3;
 use App\Domain\Sri\Data\SriRobotCallback;
 use App\Domain\Sri\Enums\SriSyncRunStatus;
 use App\Domain\Sri\Http\Middleware\VerifySriRobotCallback;
+use App\Domain\Sri\Jobs\ProcessSriRunJob;
 use App\Domain\Sri\Models\SriRobotCallback as SriRobotCallbackEvent;
 use App\Domain\Sri\Models\SriSyncRun;
+use App\Domain\Tenancy\TenantContext;
 use App\Http\Controllers\Controller;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -42,7 +44,9 @@ final class SriRobotCallbackController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($callback): void {
+            $runToImport = null;
+
+            DB::transaction(function () use ($callback, &$runToImport): void {
                 $run = SriSyncRun::query()
                     ->withoutGlobalScopes()
                     ->where('callback_event_id', $callback->eventId)
@@ -62,12 +66,22 @@ final class SriRobotCallbackController extends Controller
 
                 if ($run !== null) {
                     $this->avanzar($run, $callback);
+
+                    if ($run->status === SriSyncRunStatus::Parsing) {
+                        $runToImport = $run;
+                    }
                 }
             });
         } catch (UniqueConstraintViolationException) {
             Log::info('callback del robot repetido', ['event_id' => $callback->eventId]);
 
             return response()->json(['status' => 'accepted'], 202);
+        }
+
+        // El job se encola fuera de la transacción para que el worker no vea
+        // el run antes del commit y para no alargar la respuesta al robot.
+        if ($runToImport instanceof SriSyncRun) {
+            $this->dispatchImport($runToImport);
         }
 
         Log::info('callback del robot recibido', [
@@ -110,5 +124,35 @@ final class SriRobotCallbackController extends Controller
         } catch (\Throwable $exception) {
             report($exception);
         }
+    }
+
+    /**
+     * Encola la importación con el tenant del run.
+     *
+     * El webhook no pasa por `tenant.context` (se autentica con HMAC), así que
+     * aquí se activa el tenant solo para que `QueueTenancyBootstrapper` lo
+     * transporte en el payload del job.
+     */
+    private function dispatchImport(SriSyncRun $run): void
+    {
+        $context = app(TenantContext::class);
+
+        if ($context->isInitialized()) {
+            ProcessSriRunJob::dispatch($run->id);
+
+            return;
+        }
+
+        $tenant = $run->tenant()->first();
+
+        if ($tenant === null) {
+            Log::warning('no se pudo encolar la importación: el run no tiene tenant', [
+                'run_id' => $run->id,
+            ]);
+
+            return;
+        }
+
+        $context->run($tenant, static fn () => ProcessSriRunJob::dispatch($run->id));
     }
 }

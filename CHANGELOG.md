@@ -16,6 +16,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - F2-08: persistencia idempotente de comprobantes (`invoices`, `invoice_items`, `invoice_taxes`, `retention_lines`) con `upsert` por `(tenant, company, access_key)` y huella `xml_sha256`.
 - Lectura de XML desde el bucket S3 del robot con verificación de ambiente/RUC/período, `sri:recover-run` para runs sin callback y consulta al SRI solo dentro de la ventana de 45 días.
 - F2-11: límites de sincronización con un run activo por empresa, bloqueo de caché, cuota configurable por RUC y ventana máxima por invocación.
+- F2-10 (a): importación en cola con `ProcessSriRunJob` en la cola `sri`, tenant-aware, único por run y con reintentos; callback y scheduler dejan de importar de forma síncrona.
 - Comando `sri:reconcile-runs` y scheduler cada 10 minutos.
 - Archivos de comunidad y gobierno: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `SUPPORT.md`, `CHANGELOG.md`, `LICENSE`.
 - Templates de issues, PR y `CODEOWNERS`.

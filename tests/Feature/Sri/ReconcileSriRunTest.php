@@ -8,9 +8,11 @@ use App\Domain\Sri\Actions\ReconcileSriRuns;
 use App\Domain\Sri\Enums\SriDocumentType;
 use App\Domain\Sri\Enums\SriSyncRunFileStatus;
 use App\Domain\Sri\Enums\SriSyncRunStatus;
+use App\Domain\Sri\Jobs\ProcessSriRunJob;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\Sri\ReconcileFixtures;
 
@@ -177,7 +179,8 @@ it('usa el rango de fechas como respaldo para runs antiguos sin períodos', func
         ->and($result->files()->count())->toBe(3);
 });
 
-it('reconcilia solo runs activos y respeta el límite', function (): void {
+it('reconcilia solo runs activos, respeta el límite y encola la importación', function (): void {
+    Queue::fake();
     $first = ReconcileFixtures::run($this->company, ['2026-08']);
     $second = ReconcileFixtures::run($this->company, ['2026-09']);
     ReconcileFixtures::run($this->company, ['2026-07'], status: SriSyncRunStatus::Completed);
@@ -192,13 +195,24 @@ it('reconcilia solo runs activos y respeta el límite', function (): void {
         ->and($limited[0]->id)->toBe($first->id)
         ->and($limited[0]->status)->toBe(SriSyncRunStatus::Parsing);
 
+    Queue::assertPushed(ProcessSriRunJob::class, 1);
+
     $all = $action->handle(10);
 
     expect($all)->toHaveCount(2)
         ->and($second->refresh()->status)->toBe(SriSyncRunStatus::Parsing);
+
+    // El primer run ya tiene un job pendiente: `ShouldBeUnique` evita el
+    // duplicado y solo se encola el segundo.
+    Queue::assertPushed(ProcessSriRunJob::class, 2);
+    Queue::assertPushed(
+        ProcessSriRunJob::class,
+        fn (ProcessSriRunJob $job): bool => $job->runId === $second->id,
+    );
 });
 
 it('ejecuta el comando de reconciliación con el tenant activo', function (): void {
+    Queue::fake();
     $run = ReconcileFixtures::run($this->company);
     ReconcileFixtures::putPeriod($this->company, '2026-09');
 
@@ -207,9 +221,12 @@ it('ejecuta el comando de reconciliación con el tenant activo', function (): vo
         ->assertSuccessful();
 
     expect($run->refresh()->status)->toBe(SriSyncRunStatus::Parsing);
+
+    Queue::assertPushed(ProcessSriRunJob::class, 1);
 });
 
 it('inicializa el tenant por defecto cuando el comando corre sin contexto', function (): void {
+    Queue::fake();
     $run = ReconcileFixtures::run($this->company);
     ReconcileFixtures::putPeriod($this->company, '2026-09');
     $this->tenant->update(['slug' => config('tenancy.default_slug')]);
@@ -218,4 +235,6 @@ it('inicializa el tenant por defecto cuando el comando corre sin contexto', func
     $this->artisan('sri:reconcile-runs')->assertSuccessful();
 
     expect($run->refresh()->status)->toBe(SriSyncRunStatus::Parsing);
+
+    Queue::assertPushed(ProcessSriRunJob::class, 1);
 });

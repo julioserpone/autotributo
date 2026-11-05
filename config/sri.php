@@ -61,6 +61,9 @@ return [
     'sync' => [
         'max_days_per_run' => (int) env('SRI_SYNC_MAX_DAYS_PER_RUN', 93),
         'max_calls_per_minute' => (int) env('SRI_SYNC_MAX_CALLS_PER_MINUTE', 6),
+        'import_queue' => env('SRI_SYNC_IMPORT_QUEUE', 'sri'),
+        'import_tries' => (int) env('SRI_SYNC_IMPORT_TRIES', 3),
+        'import_timeout' => (int) env('SRI_SYNC_IMPORT_TIMEOUT', 90),
     ],
 
     'robot' => [
