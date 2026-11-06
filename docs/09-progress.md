@@ -10,7 +10,7 @@
 |---|---|---|---|
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
 | F1 · Núcleo tenant-ready | En curso | 2/11 | F1-02 · Tenancy-ready y aislamiento por tenant |
-| F2 · Ingesta SRI | En curso | 10/12 | F2-10 · Resiliencia en cola y runs huérfanos |
+| F2 · Ingesta SRI | En curso | 11/12 | F2-12 · Observabilidad |
 | F3 · Motor fiscal + IA | Pendiente | 0/9 | — |
 | F4 · Frontend | Pendiente | 0/12 | — |
 | F5 · Declaraciones | Pendiente | 0/12 | — |
@@ -47,7 +47,7 @@
 | F2-09 | Progreso en vivo | Pendiente | — |
 | F2-10 | Resiliencia | Completado | `ProcessSriRunJob` en cola `sri`, tenant-aware y único por run; callback y scheduler encolan la importación; parseo + batch de `ImportSriChunkJob` (25 claves), fallo por documento en `sri_sync_run_files` y cierre idempotente con `FinalizeSriRunJob` (`partial_import`/`import_failed`); reintentos 30/120/300 s; runs huérfanos resueltos por `ResolveStaleSriRun` (`robot_timeout`/`import_timeout`) con alerta por umbral · 10 tests nuevos en F2-10c |
 | F2-11 | Límites y cuotas | Completado | `StartSriSync` serializa por empresa (bloqueo de caché), rechaza runs solapados con `SriSyncAlreadyRunning`, reserva cuota por RUC con `RateLimiter` (`sri.sync.max_calls_per_minute`) y divide por `sri.sync.max_days_per_run` · los reintentos idempotentes no consumen cuota · 7 tests nuevos |
-| F2-12 | Observabilidad | Pendiente | — |
+| F2-12 | Observabilidad | Completado | `SriRunMetrics` registra `sri.run.finished`/`partial`/`failed` con duración y volumen al cerrarse cada run; `sri:metrics` resume duración media/p95 y tasa de fallo por ventana · 7 tests nuevos |
 
 ## Cómo actualizar
 
