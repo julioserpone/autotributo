@@ -2,7 +2,7 @@
 
 > Tabla viva del proyecto. Se actualiza al cerrar cada tarea (una tarea = un commit/PR). La fuente de verdad del alcance sigue siendo `docs/02-implementation-plan.md`.
 
-**Última actualización:** 2026-11-05
+**Última actualización:** 2026-11-06
 
 ## Resumen por fase
 
@@ -10,7 +10,7 @@
 |---|---|---|---|
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
 | F1 · Núcleo tenant-ready | En curso | 2/11 | F1-02 · Tenancy-ready y aislamiento por tenant |
-| F2 · Ingesta SRI | En curso | 9/12 | F2-11 · Límites y cuotas |
+| F2 · Ingesta SRI | En curso | 9/12 | F2-10 · Pipeline por lotes |
 | F3 · Motor fiscal + IA | Pendiente | 0/9 | — |
 | F4 · Frontend | Pendiente | 0/12 | — |
 | F5 · Declaraciones | Pendiente | 0/12 | — |
@@ -45,7 +45,7 @@
 | F2-07 | Parser de manifiesto/TXT | Completado | `SriAccessKey` (verificador delegado a `AccessKeyGenerator` del paquete), `AccessKeyListParser`, `PeriodBatchBuilder`, `ParseSriRun` y `sri:parse-run` · run `completed`/`partial`/`failed` e idempotencia |
 | F2-08 | Persistencia idempotente | Completado | `invoices`, `invoice_items`, `invoice_taxes`, `retention_lines` · `PersistSriInvoice` con `upsert` por `(tenant, company, access_key)` y huella `xml_sha256` · `ImportSriRun` + `sri:import-run` · fallos parciales sin tumbar el run · 15 tests nuevos |
 | F2-09 | Progreso en vivo | Pendiente | — |
-| F2-10 | Resiliencia | En curso | `ProcessSriRunJob` en cola `sri`, tenant-aware y único por run; callback y scheduler encolan la importación; reintentos 30/120/300 s y cierre `import_failed` al agotarse · faltan lotes y runs huérfanos |
+| F2-10 | Resiliencia | En curso | `ProcessSriRunJob` en cola `sri`, tenant-aware y único por run; callback y scheduler encolan la importación; parseo + batch de `ImportSriChunkJob` (25 claves), fallo por documento en `sri_sync_run_files` y cierre idempotente con `FinalizeSriRunJob` (`partial_import`/`import_failed`); reintentos 30/120/300 s · faltan runs huérfanos (F2-10c) |
 | F2-11 | Límites y cuotas | Completado | `StartSriSync` serializa por empresa (bloqueo de caché), rechaza runs solapados con `SriSyncAlreadyRunning`, reserva cuota por RUC con `RateLimiter` (`sri.sync.max_calls_per_minute`) y divide por `sri.sync.max_days_per_run` · los reintentos idempotentes no consumen cuota · 7 tests nuevos |
 | F2-12 | Observabilidad | Pendiente | — |
 

@@ -64,6 +64,7 @@ return [
         'import_queue' => env('SRI_SYNC_IMPORT_QUEUE', 'sri'),
         'import_tries' => (int) env('SRI_SYNC_IMPORT_TRIES', 3),
         'import_timeout' => (int) env('SRI_SYNC_IMPORT_TIMEOUT', 90),
+        'chunk_size' => (int) env('SRI_SYNC_CHUNK_SIZE', 25),
     ],
 
     'robot' => [

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Sri\Models;
 
 use App\Domain\Sri\Enums\SriDocumentType;
+use App\Domain\Sri\Enums\SriImportOutcome;
 use App\Domain\Sri\Enums\SriSyncRunFileStatus;
 use App\Domain\Tenancy\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +27,9 @@ use Illuminate\Support\Carbon;
  * @property SriDocumentType|null $document_type
  * @property SriSyncRunFileStatus $status
  * @property string|null $error_message
+ * @property string|null $error_code
+ * @property SriImportOutcome|null $import_outcome
+ * @property string|null $source
  * @property Carbon|null $processed_at
  */
 final class SriSyncRunFile extends Model
@@ -41,6 +45,7 @@ final class SriSyncRunFile extends Model
     protected $casts = [
         'document_type' => SriDocumentType::class,
         'status' => SriSyncRunFileStatus::class,
+        'import_outcome' => SriImportOutcome::class,
         'processed_at' => 'datetime',
     ];
 

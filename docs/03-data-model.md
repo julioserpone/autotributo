@@ -247,10 +247,15 @@ Para documentos tipo `07`: `id`, `tenant_id`, `invoice_id`, `tax_type` (`IR`,`IV
 
 ### `sri_sync_run_files`
 `id`, `run_id`, `tenant_id`, `file_name`, `s3_key`, `checksum` (SHA-256 hex),
-`document_type`, `status`, `error_message`, `processed_at`. Unique
-`(run_id, s3_key)`; índice `(tenant_id, status)`. Estados:
+`document_type`, `status`, `error_message`, `error_code`, `import_outcome`,
+`source`, `processed_at`. Unique `(run_id, s3_key)`; índices
+`(tenant_id, status)` y `(run_id, import_outcome)`. Estados:
 `pending`, `available`, `missing`, `invalid`, `processed`. La reconciliación
 F2-05 registra manifiesto, TXT y JSON de claves; el parser F2-06 los consume.
+Tras la importación, cada XML guarda además su resultado: `import_outcome`
+(`created`, `updated`, `skipped`) y `source` (`s3`, `sri`). Los fallos usan
+`error_code` (`sri_unavailable`, `invalid_xml`, `unexpected_error`) con
+`status=missing` o `invalid`, sin mezclar PII.
 
 ### `sri_run_events`
 Log de progreso: `id`, `run_id`, `tenant_id`, `level`, `message`, `context jsonb`, `created_at`. Retención 90 días.

@@ -476,7 +476,7 @@ Reglas:
 - **`ParseSriRun` deja el run en `parsing`**: el veredicto final lo da la
   importación, que es la que sabe cuántos comprobantes quedaron guardados.
 
-## 5. Ejecución en cola (F2-10)
+## 5. Ejecución en cola y lotes (F2-10)
 
 Cuando un run queda en `parsing`, la importación se encola con
 `ProcessSriRunJob` en la cola `sri`:
@@ -488,10 +488,30 @@ Cuando un run queda en `parsing`, la importación se encola con
   reintentos. El job no hace nada si el run ya no está en `parsing`.
 - `TenantAware` reactiva el tenant en el worker y el `TenantScope` impide leer
   un run de otro tenant.
+
+`ProcessSriRunJob` no importa comprobantes: ejecuta `ParseSriRun` y reparte
+cada lote de período/tipo en bloques de `SRI_SYNC_CHUNK_SIZE` claves (25 por
+defecto). Cada bloque es un `ImportSriChunkJob`, de modo que ningún job
+concentra un período completo.
+
+- El batch usa `allowFailures()`: un fallo por comprobante no cancela el resto
+  de los bloques.
+- Un bloqueo `sri:import:{runId}` (TTL 1 h) impide que un callback tardío o la
+  reconciliación periódica abran un segundo batch mientras el run siga en
+  `parsing`; el finalizador lo libera.
+- Cada comprobante guarda su resultado en `sri_sync_run_files`:
+  `status` (`processed`, `missing`, `invalid`), `error_code`
+  (`sri_unavailable`, `invalid_xml`, `unexpected_error`), `import_outcome`
+  (`created`, `updated`, `skipped`) y `source` (`s3`, `sri`). Reintentar un
+  bloque es seguro porque la escritura es idempotente.
+- `FinalizeSriRunJob` cierra el run desde las filas persistidas, no desde la
+  memoria del proceso: `completed` si todo se guardó, `partial` con
+  `error_code=partial_import` si hubo fallos y algo se guardó, y `failed` con
+  `error_code=import_failed` si no se guardó nada. El cierre es idempotente.
 - Reintentos: `SRI_SYNC_IMPORT_TRIES` (3), backoff 30/120/300 s. Al agotarse,
   el run se cierra como `failed` con `error_code=import_failed`.
 - `sri:import-run` sigue disponible para ejecutar la importación de forma
-  manual y síncrona.
+  manual y síncrona, con los mismos bloques y el mismo cierre idempotente.
 
 ## 6. Límites y cuotas (F2-11)
 
@@ -533,6 +553,7 @@ SRI_SYNC_MAX_CALLS_PER_MINUTE=6    # invocaciones por RUC en una ventana de 60 s
 SRI_SYNC_IMPORT_QUEUE=sri          # cola del job de importación
 SRI_SYNC_IMPORT_TRIES=3            # reintentos antes de cerrar el run como failed
 SRI_SYNC_IMPORT_TIMEOUT=90         # segundos por intento
+SRI_SYNC_CHUNK_SIZE=25             # claves por lote de importación
 REDIS_QUEUE_RETRY_AFTER=180        # debe superar el timeout del job
 
 SRI_ROBOT_DRIVER=fake              # fake | lambda
@@ -579,7 +600,9 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 | `tests/Unit/Sri/ComprobanteReaderIntegrationTest.php` | Los seis tipos por el adaptador: totales, ítems, impuestos, retenciones, XXE, tamaño y XML malformado |
 | `tests/Feature/Sri/PersistSriInvoiceTest.php` | Creación, hijos, idempotencia, actualización, aislamiento por empresa y retenciones |
 | `tests/Feature/Sri/ImportSriRunTest.php` | Importación completa, reimportación sin duplicados, `partial`, `failed`, XML corrupto y comando |
-| `tests/Feature/Sri/ProcessSriRunJobTest.php` | Importación en cola, run fuera de `parsing`, run inexistente, unicidad y cierre tras agotar reintentos |
+| `tests/Feature/Sri/ProcessSriRunJobTest.php` | Reparto en lotes según `chunk_size`, importación en cola de extremo a extremo, run fuera de `parsing`, run inexistente, unicidad y cierre tras agotar reintentos |
+| `tests/Feature/Sri/ImportSriChunksTest.php` | Resultado por comprobante, fallos aislados (`invalid_xml`, `sri_unavailable`), lectura desde S3 y job de bloque |
+| `tests/Feature/Sri/FinalizeSriRunTest.php` | Cierre `completed`/`partial`/`failed` desde filas persistidas, limpieza de errores, idempotencia y job de cierre |
 | `tests/Feature/Sri/ImportSriRunFromS3Test.php` | XML desde S3 sin consultar el SRI, respaldo por clave, `fallback_to_sri=false`, período ajeno, RUC ajeno, `missing`, período vacío, ventana de 45 días y `sri:recover-run` |
 
 No hay red en la suite: el transporte SOAP y el cliente Lambda se sustituyen
