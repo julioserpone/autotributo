@@ -19,6 +19,8 @@
         "laravel/reverb": "^1.12",
         "laravel/tinker": "^3.0",
         "league/flysystem-aws-s3-v3": "^3.0",
+        "pragmarx/google2fa": "^8.0",
+        "spatie/laravel-permission": "^8.0",
         "stancl/tenancy": "^3.10"
     },
     "require-dev": {
