@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use App\Domain\Sri\Http\Controllers\SriRobotCallbackController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\PasswordResetController;
 use Illuminate\Support\Facades\Route;
 
 // El health check no exige tenant: sirve para liveness/readiness antes de
@@ -32,6 +34,18 @@ Route::middleware(['web', 'tenant.context', 'tenant.active'])
         Route::get('/me', [AuthController::class, 'me'])
             ->middleware('auth')
             ->name('api.v1.auth.me');
+
+        Route::post('/forgot-password', [PasswordResetController::class, 'forgot'])
+            ->name('api.v1.auth.forgot-password');
+        Route::post('/reset-password', [PasswordResetController::class, 'reset'])
+            ->name('api.v1.auth.reset-password');
+
+        Route::post('/email/verification-notification', [EmailVerificationController::class, 'send'])
+            ->middleware('auth')
+            ->name('api.v1.auth.verification.send');
+        Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+            ->middleware(['auth', 'signed', 'throttle:6,1'])
+            ->name('verification.verify');
     });
 
 // Rutas de negocio tenant-aware (F1-03+). El contexto se inicializa antes de

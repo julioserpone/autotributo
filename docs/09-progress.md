@@ -22,7 +22,7 @@
 |---|---|---|---|
 | F1-01 | Esqueleto Laravel 13 + SPA | Completado | `042d1bf` · Pest, PHPStan 8, Pint, Vitest, E2E y 100% cobertura |
 | F1-02 | Tenancy-ready | Completado | `bcf5896` · `stancl/tenancy` 3.10.1 sin DB por tenant · TenantContext, TenantScope, BelongsToTenant, TenantAware, caché/storage prefijados · 30 tests, 98.2% cobertura |
-| F1-03 | Identidad | En curso | Slice F1-03a: `memberships`, Argon2id, login/logout/me por sesión, `LoginPage` y store de auth · invitaciones, reset, verificación y 2FA pendientes |
+| F1-03 | Identidad | En curso | Slice F1-03a: `memberships`, Argon2id, login/logout/me por sesión, `LoginPage` y store de auth · Slice F1-03b: recuperación y verificación de correo (forgot/reset, `VerifyEmail`, páginas y tests) · invitaciones y 2FA pendientes |
 | F1-04 | Autorización | Pendiente | — |
 | F1-05 | Empresas | Pendiente | — |
 | F1-06 | Credenciales SRI | Pendiente | — |
