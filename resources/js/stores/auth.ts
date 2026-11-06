@@ -43,13 +43,23 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
-    async function login(payload: LoginPayload): Promise<void> {
+    async function login(payload: LoginPayload): Promise<{ two_factor_required: boolean }> {
         loading.value = true;
         error.value = null;
 
         try {
-            await postJson('/api/v1/auth/login', payload);
+            const response = await postJson<{ data: { two_factor_required?: boolean; id?: number } }>(
+                '/api/v1/auth/login',
+                payload,
+            );
+
+            if (response.data.two_factor_required) {
+                return { two_factor_required: true };
+            }
+
             await fetchMe();
+
+            return { two_factor_required: false };
         } catch (caught: unknown) {
             user.value = null;
             error.value = caught instanceof Error ? caught.message : 'No se pudo iniciar sesión.';
