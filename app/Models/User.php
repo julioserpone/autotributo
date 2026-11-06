@@ -21,7 +21,7 @@ use Throwable;
 /**
  * @property Carbon|null $two_factor_confirmed_at
  */
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'email_verified_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {

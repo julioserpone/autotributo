@@ -16,5 +16,9 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(DefaultTenantSeeder::class);
+
+        if (app()->environment(['local', 'testing'])) {
+            $this->call(AuthTestUsersSeeder::class);
+        }
     }
 }

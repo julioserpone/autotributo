@@ -22,7 +22,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - F2-12: observabilidad con `SriRunMetrics` (línea estructurada `sri.run.finished`/`partial`/`failed` con duración y volumen) emitida por un observer al cerrarse cada run, y comando `sri:metrics` con duración media/p95, volumen y tasa de fallo por ventana.
 - F1-03 (slice a): identidad base con Argon2id, tabla `memberships`, login/logout/me por sesión, `LoginPage` y store de auth.
 - F1-03 (slice b): recuperación y verificación de correo (forgot/reset con token, `MustVerifyEmail`, notificaciones, rutas firmadas y páginas `ForgotPassword`/`ResetPassword`).
-- F1-03 (slice c): Spatie Permission v8 con teams por tenant, 2FA TOTP opcional (enable/confirm/disable/challenge y códigos de recuperación) y página de desafío. Invitaciones y sesiones revocables quedan para siguientes slices.
+- F1-03 (slice c): Spatie Permission v8 con teams por tenant, 2FA TOTP opcional (enable/confirm/disable/challenge y códigos de recuperación) y página de desafío.
+- F1-03 (slice d): invitaciones con token hasheado, envío de correo, aceptación que crea usuario/membresía/rol y rechazo de invitaciones expiradas. Sesiones revocables quedan para el siguiente slice.
 - Comando `sri:reconcile-runs` y scheduler cada 10 minutos.
 - Archivos de comunidad y gobierno: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `SUPPORT.md`, `CHANGELOG.md`, `LICENSE`.
 - Templates de issues, PR y `CODEOWNERS`.

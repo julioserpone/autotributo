@@ -6,6 +6,7 @@ use App\Domain\Sri\Http\Controllers\SriRobotCallbackController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\InvitationController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\TwoFactorController;
 use Illuminate\Support\Facades\Route;
@@ -62,6 +63,12 @@ Route::middleware(['web', 'tenant.context', 'tenant.active'])
             ->name('api.v1.auth.two-factor.recovery-codes');
         Route::post('/two-factor/challenge', [TwoFactorController::class, 'challenge'])
             ->name('api.v1.auth.two-factor.challenge');
+
+        Route::post('/invitations', [InvitationController::class, 'store'])
+            ->middleware('auth')
+            ->name('api.v1.invitations.store');
+        Route::post('/invitations/accept', [InvitationController::class, 'accept'])
+            ->name('api.v1.invitations.accept');
     });
 
 // Rutas de negocio tenant-aware (F1-03+). El contexto se inicializa antes de
