@@ -22,12 +22,17 @@ async function submit(): Promise<void> {
     auth.error = null;
 
     try {
-        await auth.login({
+        const result = await auth.login({
             email: email.value,
             password: password.value,
             remember: remember.value,
         });
-        await router.push({ name: 'dashboard' });
+
+        if (result?.two_factor_required) {
+            await router.push({ name: 'two-factor-challenge' });
+        } else {
+            await router.push({ name: 'dashboard' });
+        }
     } catch {
         // El mensaje ya quedó en el store.
     } finally {

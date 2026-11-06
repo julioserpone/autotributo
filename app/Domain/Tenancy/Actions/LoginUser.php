@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domain\Tenancy\Actions;
 
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 final readonly class LoginUser
@@ -17,8 +16,6 @@ final readonly class LoginUser
         if (! $user instanceof User || ! Hash::check($password, (string) $user->password)) {
             return null;
         }
-
-        Auth::guard('web')->login($user, $remember);
 
         return $user;
     }

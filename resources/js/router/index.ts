@@ -6,6 +6,7 @@ import ForgotPasswordPage from '@/pages/ForgotPasswordPage.vue';
 import LoginPage from '@/pages/LoginPage.vue';
 import NotFoundPage from '@/pages/NotFoundPage.vue';
 import ResetPasswordPage from '@/pages/ResetPasswordPage.vue';
+import TwoFactorChallengePage from '@/pages/TwoFactorChallengePage.vue';
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -26,6 +27,12 @@ const router = createRouter({
             path: '/reset-password',
             name: 'reset-password',
             component: ResetPasswordPage,
+            meta: { public: true },
+        },
+        {
+            path: '/two-factor-challenge',
+            name: 'two-factor-challenge',
+            component: TwoFactorChallengePage,
             meta: { public: true },
         },
         {
