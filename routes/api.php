@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Sri\Http\Controllers\SriRobotCallbackController;
+use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\HealthController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,6 +18,21 @@ Route::prefix('v1')->group(function (): void {
         ->middleware('sri.callback')
         ->name('api.v1.webhooks.sri-robot');
 });
+
+// Autenticación por sesión (F1-03). `web` aporta la sesión y CSRF; el
+// contexto de tenant se inicializa para que los scopes globales funcionen.
+Route::middleware(['web', 'tenant.context', 'tenant.active'])
+    ->prefix('v1/auth')
+    ->group(function (): void {
+        Route::post('/login', [AuthController::class, 'login'])
+            ->name('api.v1.auth.login');
+        Route::post('/logout', [AuthController::class, 'logout'])
+            ->middleware('auth')
+            ->name('api.v1.auth.logout');
+        Route::get('/me', [AuthController::class, 'me'])
+            ->middleware('auth')
+            ->name('api.v1.auth.me');
+    });
 
 // Rutas de negocio tenant-aware (F1-03+). El contexto se inicializa antes de
 // autenticación y el scope global filtra cada consulta por tenant_id.
