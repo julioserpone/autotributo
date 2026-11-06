@@ -30,6 +30,17 @@ final class AuthController extends Controller
             ], 422);
         }
 
+        if ($user->hasTwoFactorEnabled()) {
+            $request->session()->put('auth.two_factor.user_id', $user->id);
+            $request->session()->put('auth.two_factor.remember', (bool) $request->boolean('remember'));
+
+            return response()->json([
+                'data' => ['two_factor_required' => true],
+            ], 202);
+        }
+
+        Auth::guard('web')->login($user, (bool) $request->boolean('remember'));
+
         $request->session()->regenerate();
 
         return response()->json([

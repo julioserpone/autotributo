@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
+use App\Http\Controllers\Api\V1\TwoFactorController;
 use Illuminate\Support\Facades\Route;
 
 // El health check no exige tenant: sirve para liveness/readiness antes de
@@ -46,6 +47,21 @@ Route::middleware(['web', 'tenant.context', 'tenant.active'])
         Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
             ->middleware(['auth', 'signed', 'throttle:6,1'])
             ->name('verification.verify');
+
+        Route::post('/two-factor/enable', [TwoFactorController::class, 'enable'])
+            ->middleware('auth')
+            ->name('api.v1.auth.two-factor.enable');
+        Route::post('/two-factor/confirm', [TwoFactorController::class, 'confirm'])
+            ->middleware('auth')
+            ->name('api.v1.auth.two-factor.confirm');
+        Route::post('/two-factor/disable', [TwoFactorController::class, 'disable'])
+            ->middleware('auth')
+            ->name('api.v1.auth.two-factor.disable');
+        Route::post('/two-factor/recovery-codes', [TwoFactorController::class, 'recoveryCodes'])
+            ->middleware('auth')
+            ->name('api.v1.auth.two-factor.recovery-codes');
+        Route::post('/two-factor/challenge', [TwoFactorController::class, 'challenge'])
+            ->name('api.v1.auth.two-factor.challenge');
     });
 
 // Rutas de negocio tenant-aware (F1-03+). El contexto se inicializa antes de
