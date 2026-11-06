@@ -1,7 +1,19 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router';
+
+import { useAuthStore } from '@/stores/auth';
+
 defineProps<{
     title: string;
 }>();
+
+const router = useRouter();
+const auth = useAuthStore();
+
+async function logout(): Promise<void> {
+    await auth.logout();
+    await router.push({ name: 'login' });
+}
 </script>
 
 <template>
@@ -21,7 +33,17 @@ defineProps<{
             </p>
           </div>
         </div>
-        <slot name="actions" />
+        <div class="flex items-center gap-2">
+          <slot name="actions" />
+          <button
+            v-if="auth.user"
+            type="button"
+            class="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm font-medium transition hover:bg-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            @click="logout"
+          >
+            Cerrar sesión
+          </button>
+        </div>
       </div>
     </header>
 
