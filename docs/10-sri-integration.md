@@ -627,6 +627,8 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 | `tests/Feature/Sri/ImportSriChunksTest.php` | Resultado por comprobante, fallos aislados (`invalid_xml`, `sri_unavailable`), lectura desde S3 y job de bloque |
 | `tests/Feature/Sri/FinalizeSriRunTest.php` | Cierre `completed`/`partial`/`failed` desde filas persistidas, limpieza de errores, idempotencia y job de cierre |
 | `tests/Feature/Sri/ResolveStaleSriRunTest.php` | Run sin avanzar, `robot_timeout` en `invoking`/`downloading`, reanudación desde S3, `import_timeout` en `parsing`, respeto del bloqueo de importación, alerta de huérfanos e integración con la reconciliación periódica |
+| `tests/Feature/Sri/SriRunMetricsTest.php` | Cálculo de duración y volumen desde filas persistidas, niveles de log por resultado y ausencia de duplicados al re-guardar un run cerrado |
+| `tests/Feature/Sri/SriMetricsCommandTest.php` | Agregación de runs por ventana, duración media/p95, volumen y tasa de fallo; salida vacía |
 | `tests/Feature/Sri/ImportSriRunFromS3Test.php` | XML desde S3 sin consultar el SRI, respaldo por clave, `fallback_to_sri=false`, período ajeno, RUC ajeno, `missing`, período vacío, ventana de 45 días y `sri:recover-run` |
 
 No hay red en la suite: el transporte SOAP y el cliente Lambda se sustituyen

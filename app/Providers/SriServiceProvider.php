@@ -20,6 +20,8 @@ use App\Domain\Sri\Contracts\SriInvoiceParser;
 use App\Domain\Sri\Contracts\SriRobotGateway;
 use App\Domain\Sri\Contracts\SriRobotObjectStore;
 use App\Domain\Sri\Contracts\SriXmlRecovery;
+use App\Domain\Sri\Models\SriSyncRun;
+use App\Domain\Sri\Observers\SriSyncRunObserver;
 use App\Domain\Sri\Parsers\PeriodBatchBuilder;
 use App\Integrations\Sri\FakeSriAuthorizationGateway;
 use App\Integrations\Sri\FakeSriRobotGateway;
@@ -187,5 +189,10 @@ final class SriServiceProvider extends ServiceProvider
                 $app->make(RecoverSriRunFromS3::class),
             );
         });
+    }
+
+    public function boot(): void
+    {
+        SriSyncRun::observe(SriSyncRunObserver::class);
     }
 }

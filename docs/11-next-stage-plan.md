@@ -5,10 +5,10 @@
 
 **Fecha:** 2026-10-27 · **Rama:** `feat/F2-07-parser-manifiesto-txt`
 
-> **Actualización 2026-11-06:** F2-06, F2-07, F2-08, F2-10 y F2-11 están
-> cerradas. El pipeline SRI ya corre en cola, por lotes y resuelve runs
-> huérfanos. El siguiente tramo es **F1-08 + F2-09** (Reverb y progreso) y
-> **F2-12** (observabilidad). El avance real vive en `docs/09-progress.md`.
+> **Actualización 2026-11-06:** F2-06, F2-07, F2-08, F2-10, F2-11 y F2-12
+> están cerradas. El pipeline SRI corre en cola, por lotes, resuelve runs
+> huérfanos y registra métricas. El siguiente tramo es **F1-08 + F2-09**
+> (Reverb y progreso en vivo). El avance real vive en `docs/09-progress.md`.
 
 ## 1. Diagnóstico del estado actual
 
@@ -110,8 +110,8 @@ traducción al modelo y sirve de contrato contra la versión instalada.
 
 ## 5. Consejo de secuencia
 
-- **Siguiente:** F1-08 + F2-09 (Reverb y progreso en vivo) y después F2-12
-  (observabilidad) sobre el pipeline definitivo.
+- **Siguiente:** F1-08 + F2-09 (Reverb y progreso en vivo) sobre el pipeline
+  definitivo. F2-12 ya está cerrada.
 - **Si hay una segunda persona:** F1-03/F1-04 pueden avanzar en paralelo sin
   tocar este código.
 - **Antes de F2-09** hay que cerrar F1-08 (Reverb) y una rebanada mínima de
