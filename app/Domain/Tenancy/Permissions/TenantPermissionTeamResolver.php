@@ -11,8 +11,16 @@ use Throwable;
 
 final class TenantPermissionTeamResolver implements PermissionsTeamResolver
 {
-    public function getPermissionsTeamId(): ?int
+    private bool $hasOverride = false;
+
+    private int|string|null $override = null;
+
+    public function getPermissionsTeamId(): int|string|null
     {
+        if ($this->hasOverride) {
+            return $this->override;
+        }
+
         try {
             return app(TenantContext::class)->id();
         } catch (Throwable) {
@@ -22,6 +30,7 @@ final class TenantPermissionTeamResolver implements PermissionsTeamResolver
 
     public function setPermissionsTeamId(Model|int|string|null $id): void
     {
-        // El tenant se resuelve desde el contexto activo; no se guarda estado.
+        $this->override = is_object($id) ? $id->getKey() : $id;
+        $this->hasOverride = true;
     }
 }
