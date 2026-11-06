@@ -7,6 +7,7 @@ namespace App\Domain\Sri\Actions;
 use App\Domain\Sri\Enums\SriSyncRunStatus;
 use App\Domain\Sri\Jobs\ProcessSriRunJob;
 use App\Domain\Sri\Models\SriSyncRun;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Throwable;
 
@@ -18,7 +19,15 @@ use Throwable;
  */
 final readonly class ReconcileSriRuns
 {
-    public function __construct(private ReconcileSriRun $reconcile) {}
+    public function __construct(
+        private ReconcileSriRun $reconcile,
+        private ResolveStaleSriRun $stale,
+        private int $orphanAlertThreshold = 3,
+    ) {
+        if ($this->orphanAlertThreshold < 1) {
+            throw new InvalidArgumentException('El umbral de alerta de runs huérfanos debe ser mayor que cero.');
+        }
+    }
 
     /**
      * @return list<SriSyncRun>
@@ -41,18 +50,30 @@ final readonly class ReconcileSriRuns
             ->get();
 
         $reconciled = [];
+        $orphans = [];
 
         foreach ($runs as $run) {
             try {
-                $reconciledRun = $this->reconcile->handle($run);
+                $reconciledRun = $this->stale->handle($this->reconcile->handle($run));
                 $reconciled[] = $reconciledRun;
 
                 if ($reconciledRun->status === SriSyncRunStatus::Parsing) {
                     ProcessSriRunJob::dispatch($reconciledRun->id);
                 }
+
+                if (in_array($reconciledRun->error_code, ['robot_timeout', 'import_timeout'], true)) {
+                    $orphans[] = $reconciledRun->id;
+                }
             } catch (Throwable $exception) {
                 report($exception);
             }
+        }
+
+        if (count($orphans) > $this->orphanAlertThreshold) {
+            Log::warning('varios runs SRI huérfanos en la última reconciliación', [
+                'count' => count($orphans),
+                'run_ids' => $orphans,
+            ]);
         }
 
         return $reconciled;

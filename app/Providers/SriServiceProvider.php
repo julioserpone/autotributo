@@ -10,7 +10,9 @@ use App\Domain\Sri\Actions\ImportSriRun;
 use App\Domain\Sri\Actions\ParseSriRun;
 use App\Domain\Sri\Actions\PersistSriInvoice;
 use App\Domain\Sri\Actions\ReconcileSriRun;
+use App\Domain\Sri\Actions\ReconcileSriRuns;
 use App\Domain\Sri\Actions\RecoverSriRunFromS3;
+use App\Domain\Sri\Actions\ResolveStaleSriRun;
 use App\Domain\Sri\Actions\S3SriXmlRecovery;
 use App\Domain\Sri\Actions\StartSriSync;
 use App\Domain\Sri\Contracts\SriAuthorizationGateway;
@@ -134,6 +136,22 @@ final class SriServiceProvider extends ServiceProvider
                 $app->make(SriXmlRecovery::class),
                 $app->make(ReconcileSriRun::class),
                 (string) config('sri.robot.environment', 'dev'),
+            );
+        });
+
+        $this->app->singleton(ResolveStaleSriRun::class, function (Application $app): ResolveStaleSriRun {
+            return new ResolveStaleSriRun(
+                $app->make(RecoverSriRunFromS3::class),
+                $app->make(FinalizeSriRun::class),
+                (int) config('sri.sync.stale_after_minutes', 30),
+            );
+        });
+
+        $this->app->singleton(ReconcileSriRuns::class, function (Application $app): ReconcileSriRuns {
+            return new ReconcileSriRuns(
+                $app->make(ReconcileSriRun::class),
+                $app->make(ResolveStaleSriRun::class),
+                (int) config('sri.sync.orphan_alert_threshold', 3),
             );
         });
 

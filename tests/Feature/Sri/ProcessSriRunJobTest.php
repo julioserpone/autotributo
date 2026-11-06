@@ -16,6 +16,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Bus\PendingBatch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\Sri\AccessKeyFactory;
 use Tests\Support\Sri\ReconcileFixtures;
@@ -72,6 +73,14 @@ it('importa en cola un run en parsing', function (): void {
         ->and($run->totals['imported'])->toBe(1)
         ->and($run->error_code)->toBeNull()
         ->and(Invoice::query()->count())->toBe(1);
+
+    // El finalizador libera el bloqueo del batch aunque lo haya tomado otro
+    // proceso: sin esto, un run posterior quedaría bloqueado durante 1 hora.
+    $lock = Cache::lock(ProcessSriRunJob::lockKeyFor($run->id), 60);
+
+    expect($lock->get())->toBeTrue();
+
+    $lock->release();
 });
 
 it('omite un run que ya no está en parsing', function (): void {

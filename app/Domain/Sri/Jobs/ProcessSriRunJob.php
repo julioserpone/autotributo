@@ -126,7 +126,24 @@ final class ProcessSriRunJob implements ShouldBeUnique, ShouldQueue
 
     public function lockKey(): string
     {
-        return 'sri:import:'.$this->runId;
+        return self::lockKeyFor($this->runId);
+    }
+
+    public static function lockKeyFor(int $runId): string
+    {
+        return 'sri:import:'.$runId;
+    }
+
+    /**
+     * Libera el bloqueo de importación aunque lo tenga otro proceso.
+     *
+     * `Cache::forget()` no sirve aquí: con la caché multi-tenant las claves
+     * normales llevan prefijo por tenant, pero los locks se guardan con el
+     * nombre literal. Por eso se usa `forceRelease()` sobre el mismo nombre.
+     */
+    public static function releaseLock(int $runId): void
+    {
+        Cache::lock(self::lockKeyFor($runId), 1)->forceRelease();
     }
 
     /**
@@ -197,7 +214,7 @@ final class ProcessSriRunJob implements ShouldBeUnique, ShouldQueue
 
         $run = SriSyncRun::query()->withoutGlobalScopes()->find($this->runId);
 
-        Cache::forget($this->lockKey());
+        self::releaseLock($this->runId);
 
         $run?->markFailed(
             'import_failed',

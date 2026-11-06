@@ -18,6 +18,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - F2-11: límites de sincronización con un run activo por empresa, bloqueo de caché, cuota configurable por RUC y ventana máxima por invocación.
 - F2-10 (a): importación en cola con `ProcessSriRunJob` en la cola `sri`, tenant-aware, único por run y con reintentos; callback y scheduler dejan de importar de forma síncrona.
 - F2-10 (b): importación por lotes con `ImportSriChunkJob` (`SRI_SYNC_CHUNK_SIZE`), resultado por comprobante en `sri_sync_run_files` (`error_code`, `import_outcome`, `source`) y cierre idempotente con `FinalizeSriRunJob`.
+- F2-10 (c): resolución de runs huérfanos o atascados con `ResolveStaleSriRun` (`robot_timeout`/`import_timeout`), respeto del bloqueo de importación y alerta cuando una reconciliación cierra más de `SRI_SYNC_ORPHAN_ALERT_THRESHOLD` runs.
 - Comando `sri:reconcile-runs` y scheduler cada 10 minutos.
 - Archivos de comunidad y gobierno: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `SUPPORT.md`, `CHANGELOG.md`, `LICENSE`.
 - Templates de issues, PR y `CODEOWNERS`.
