@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Sri\Actions\FinalizeSriRun;
+use App\Domain\Sri\Actions\ImportSriKeys;
 use App\Domain\Sri\Actions\ImportSriRun;
 use App\Domain\Sri\Actions\ParseSriRun;
 use App\Domain\Sri\Actions\PersistSriInvoice;
@@ -137,15 +139,25 @@ final class SriServiceProvider extends ServiceProvider
 
         $this->app->singleton(PersistSriInvoice::class, fn (): PersistSriInvoice => new PersistSriInvoice);
 
-        $this->app->singleton(ImportSriRun::class, function (Application $app): ImportSriRun {
-            return new ImportSriRun(
+        $this->app->singleton(ImportSriKeys::class, function (Application $app): ImportSriKeys {
+            return new ImportSriKeys(
                 $app->make(SriAuthorizationGateway::class),
                 $app->make(SriInvoiceParser::class),
                 $app->make(PersistSriInvoice::class),
-                $app->make(ParseSriRun::class),
                 $app->make(SriXmlRecovery::class),
+                (string) config('sri.robot.environment', 'dev'),
                 (bool) config('sri.authorization.fallback_to_sri', true),
                 (int) config('sri.authorization.window_days', 45),
+            );
+        });
+
+        $this->app->singleton(FinalizeSriRun::class, fn (): FinalizeSriRun => new FinalizeSriRun);
+
+        $this->app->singleton(ImportSriRun::class, function (Application $app): ImportSriRun {
+            return new ImportSriRun(
+                $app->make(ParseSriRun::class),
+                $app->make(ImportSriKeys::class),
+                $app->make(FinalizeSriRun::class),
             );
         });
 
