@@ -5,11 +5,10 @@
 
 **Fecha:** 2026-10-27 · **Rama:** `feat/F2-07-parser-manifiesto-txt`
 
-> **Actualización 2026-11-05:** F2-06, F2-07, F2-08 y F2-11 están cerradas, y
-> la recuperación desde S3 (`3053abd`) ya permite importar sin callback. El
-> siguiente tramo es **F2-10** (pipeline en cola, lotes y runs huérfanos),
-> después **F1-08 + F2-09** (Reverb y progreso) y **F2-12** (observabilidad).
-> El avance real vive en `docs/09-progress.md`.
+> **Actualización 2026-11-06:** F2-06, F2-07, F2-08, F2-10 y F2-11 están
+> cerradas. El pipeline SRI ya corre en cola, por lotes y resuelve runs
+> huérfanos. El siguiente tramo es **F1-08 + F2-09** (Reverb y progreso) y
+> **F2-12** (observabilidad). El avance real vive en `docs/09-progress.md`.
 
 ## 1. Diagnóstico del estado actual
 
@@ -111,10 +110,9 @@ traducción al modelo y sirve de contrato contra la versión instalada.
 
 ## 5. Consejo de secuencia
 
-- **Siguiente:** F2-10, en tres PRs: cola (`ProcessSriRunJob`), lotes con fallo
-  por comprobante y runs huérfanos.
+- **Siguiente:** F1-08 + F2-09 (Reverb y progreso en vivo) y después F2-12
+  (observabilidad) sobre el pipeline definitivo.
 - **Si hay una segunda persona:** F1-03/F1-04 pueden avanzar en paralelo sin
   tocar este código.
 - **Antes de F2-09** hay que cerrar F1-08 (Reverb) y una rebanada mínima de
   identidad para autorizar canales privados.
-- **F2-12** después de F2-10 para medir sobre el pipeline definitivo.

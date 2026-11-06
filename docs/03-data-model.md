@@ -239,7 +239,7 @@ Para documentos tipo `07`: `id`, `tenant_id`, `invoice_id`, `tax_type` (`IR`,`IV
 | lambda_request_id | varchar(128) null | |
 | s3_prefix | varchar(512) null | |
 | totals | jsonb | `{found, imported, skipped, failed}` |
-| error_code / error_message | | Sin PII |
+| error_code / error_message | | Sin PII. `robot_timeout`/`import_timeout` para runs atascados; `import_failed`/`partial_import` al cerrar la importación; `no_documents` si el robot no encontró comprobantes |
 | started_at / finished_at | timestamptz | |
 | timestamps | | |
 

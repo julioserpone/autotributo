@@ -14,8 +14,12 @@ use App\Domain\Sri\Models\SriSyncRun;
  */
 final readonly class FinalizeSriRun
 {
-    public function handle(SriSyncRun $run, ?SriChunkImportResult $result = null): SriSyncRun
-    {
+    public function handle(
+        SriSyncRun $run,
+        ?SriChunkImportResult $result = null,
+        string $failureCode = 'import_failed',
+        string $failureMessage = 'No fue posible importar ningún comprobante del run.',
+    ): SriSyncRun {
         if ($run->status->isFinal()) {
             return $run;
         }
@@ -50,8 +54,8 @@ final readonly class FinalizeSriRun
         $run->totals = $totals;
 
         if ($status === SriSyncRunStatus::Failed) {
-            $run->error_code = 'import_failed';
-            $run->error_message = 'No fue posible importar ningún comprobante del run.';
+            $run->error_code = $failureCode;
+            $run->error_message = $failureMessage;
         } elseif ($status === SriSyncRunStatus::Partial) {
             $run->error_code = 'partial_import';
             $run->error_message = sprintf(

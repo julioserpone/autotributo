@@ -513,6 +513,27 @@ concentra un período completo.
 - `sri:import-run` sigue disponible para ejecutar la importación de forma
   manual y síncrona, con los mismos bloques y el mismo cierre idempotente.
 
+### Runs huérfanos o atascados (F2-10c)
+
+`ReconcileSriRuns` cierra los runs activos que llevan más de
+`SRI_SYNC_STALE_AFTER_MINUTES` (30) sin avanzar. El latido es `updated_at`:
+se refresca con cada transición y con cada archivo recuperado desde S3.
+
+- `invoking` / `downloading`: se intenta `RecoverSriRunFromS3`. Si el robot ya
+  publicó el paquete, el run sigue a `parsing` y se encola la importación; si
+  no hay nada, se cierra como `failed` con `error_code=robot_timeout`.
+- `parsing`: se cierra desde las filas persistidas con `FinalizeSriRun`. Si no
+  hay ningún comprobante guardado, el run queda `failed` con
+  `error_code=import_timeout`. Si el bloqueo `sri:import:{runId}` sigue tomado,
+  el batch está en curso y el run no se toca.
+- Si una misma reconciliación cierra más de
+  `SRI_SYNC_ORPHAN_ALERT_THRESHOLD` (3) runs huérfanos, se registra un
+  `Log::warning` con los `run_ids` para disparar la alerta operativa.
+
+El bloqueo se comprueba intentando adquirirlo, no con `Cache::has()`: la caché
+multi-tenant prefija las claves normales por tenant, pero los locks se guardan
+con el nombre literal. El cierre usa `forceRelease()` por el mismo motivo.
+
 ## 6. Límites y cuotas (F2-11)
 
 `StartSriSync` aplica tres controles antes de tocar la Lambda:
@@ -554,6 +575,8 @@ SRI_SYNC_IMPORT_QUEUE=sri          # cola del job de importación
 SRI_SYNC_IMPORT_TRIES=3            # reintentos antes de cerrar el run como failed
 SRI_SYNC_IMPORT_TIMEOUT=90         # segundos por intento
 SRI_SYNC_CHUNK_SIZE=25             # claves por lote de importación
+SRI_SYNC_STALE_AFTER_MINUTES=30    # minutos sin avance antes de considerar huérfano un run
+SRI_SYNC_ORPHAN_ALERT_THRESHOLD=3  # runs huérfanos en una pasada que disparan alerta
 REDIS_QUEUE_RETRY_AFTER=180        # debe superar el timeout del job
 
 SRI_ROBOT_DRIVER=fake              # fake | lambda
@@ -603,6 +626,7 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 | `tests/Feature/Sri/ProcessSriRunJobTest.php` | Reparto en lotes según `chunk_size`, importación en cola de extremo a extremo, run fuera de `parsing`, run inexistente, unicidad y cierre tras agotar reintentos |
 | `tests/Feature/Sri/ImportSriChunksTest.php` | Resultado por comprobante, fallos aislados (`invalid_xml`, `sri_unavailable`), lectura desde S3 y job de bloque |
 | `tests/Feature/Sri/FinalizeSriRunTest.php` | Cierre `completed`/`partial`/`failed` desde filas persistidas, limpieza de errores, idempotencia y job de cierre |
+| `tests/Feature/Sri/ResolveStaleSriRunTest.php` | Run sin avanzar, `robot_timeout` en `invoking`/`downloading`, reanudación desde S3, `import_timeout` en `parsing`, respeto del bloqueo de importación, alerta de huérfanos e integración con la reconciliación periódica |
 | `tests/Feature/Sri/ImportSriRunFromS3Test.php` | XML desde S3 sin consultar el SRI, respaldo por clave, `fallback_to_sri=false`, período ajeno, RUC ajeno, `missing`, período vacío, ventana de 45 días y `sri:recover-run` |
 
 No hay red en la suite: el transporte SOAP y el cliente Lambda se sustituyen

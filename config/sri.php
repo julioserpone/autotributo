@@ -65,6 +65,10 @@ return [
         'import_tries' => (int) env('SRI_SYNC_IMPORT_TRIES', 3),
         'import_timeout' => (int) env('SRI_SYNC_IMPORT_TIMEOUT', 90),
         'chunk_size' => (int) env('SRI_SYNC_CHUNK_SIZE', 25),
+        // Minutos sin avance antes de considerar huérfano un run activo.
+        'stale_after_minutes' => (int) env('SRI_SYNC_STALE_AFTER_MINUTES', 30),
+        // Alerta cuando una reconciliación cierra más de N runs huérfanos.
+        'orphan_alert_threshold' => (int) env('SRI_SYNC_ORPHAN_ALERT_THRESHOLD', 3),
     ],
 
     'robot' => [

@@ -13,7 +13,6 @@ use App\Domain\Tenancy\TenantContext;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -86,7 +85,7 @@ final class FinalizeSriRunJob implements ShouldBeUnique, ShouldQueue
                 'tenant_id' => $context->id(),
             ]);
 
-            Cache::forget($this->lockKey());
+            ProcessSriRunJob::releaseLock($this->runId);
 
             return;
         }
@@ -96,13 +95,13 @@ final class FinalizeSriRunJob implements ShouldBeUnique, ShouldQueue
         } finally {
             // El batch ya terminó: se libera el bloqueo que tomó
             // `ProcessSriRunJob` para evitar batches duplicados.
-            Cache::forget($this->lockKey());
+            ProcessSriRunJob::releaseLock($this->runId);
         }
     }
 
     public function lockKey(): string
     {
-        return 'sri:import:'.$this->runId;
+        return ProcessSriRunJob::lockKeyFor($this->runId);
     }
 
     public function failed(?Throwable $exception): void
@@ -114,7 +113,7 @@ final class FinalizeSriRunJob implements ShouldBeUnique, ShouldQueue
 
         $run = SriSyncRun::query()->withoutGlobalScopes()->find($this->runId);
 
-        Cache::forget($this->lockKey());
+        ProcessSriRunJob::releaseLock($this->runId);
 
         if ($run instanceof SriSyncRun && $run->status === SriSyncRunStatus::Parsing) {
             $run->markFailed(
