@@ -69,12 +69,12 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | F1-03f | 2FA obligatorio para owner | 1 d | Token de alcance limitado si el owner no tiene 2FA confirmado, bloqueo tras 5 intentos por 15 min y registro del evento (`US-03`). **Nueva tarea derivada del backlog** |
 | F1-03g | Validaciones de invitación | 0,5 d | No invitar un email ya activo (409); revocar acceso invalida las sesiones del usuario en el tenant (`US-02`). **Nueva tarea derivada del backlog** |
 | F1-04 | Autorización | 1 d | Roles `owner/accountant/assistant/viewer` (spatie teams), policies por recurso, scoping por empresa. **Se ejecuta antes de F1-05/F1-06.** Completado 2026-11-09 (PR #46) |
-| F1-05 | Empresas | 1,5 d | CRUD, validador de RUC, perfil tributario (régimen, obligado a contabilidad, agente de retención), actividad económica, dirección |
+| F1-05 | Empresas | 1,5 d | CRUD, validador de RUC, perfil tributario (régimen, obligado a contabilidad, agente de retención), actividad económica, dirección. Completado 2026-11-09 (PR #48) |
 | F1-06 | Credenciales SRI | 1 d | Cifrado con `SRI_CREDENTIALS_KEY`, acceso auditado, rotación, borrado al eliminar empresa, nunca en logs. **Se entrega junto con F1-07** |
 | F1-07 | Auditoría base | 0,5 d | `audit_logs` + `owen-it/laravel-auditing` en modelos sensibles. **Se entrega junto con F1-06** |
 | F1-08 | Reverb | 0,5 d | Config, canales privados por tenant/empresa, autorización de canales, estado de conexión. **Habilita F2-09b** |
 | F1-09 | Convenciones de API | 1 d | `problem+json`, paginación, filtros, resources, generación OpenAPI (Scramble) |
-| F1-10 | Provisión inicial | 0,5 d | Comando idempotente `app:provision` (tenant por defecto, catálogos, owner e invitación). La primera empresa se crea desde la UI (US-06). Sin registro público en el MVP. **Se ejecuta antes de F1-11** |
+| F1-10 | Provisión inicial | 0,5 d | Comando idempotente `app:provision` (tenant por defecto, catálogos, owner e invitación). La primera empresa se crea desde la UI (US-06). Sin registro público en el MVP. **Se ejecuta antes de F1-11.** Completado 2026-11-09 (PR #47); catálogos en F3-01 |
 | F1-11 | Deploy a staging | 0,5 d | Recursos Cloud, variables, build/deploy commands, migraciones, dominio, scheduler |
 
 **Pruebas obligatorias**
@@ -356,8 +356,8 @@ Conciliación bancaria · emisión de comprobantes · integración con Contífic
 |---|---|---|
 | 1 | Merge PR #40 | **Hecho 2026-11-09**; evita conflictos con F4 |
 | 2 | F1-04 Autorización (policies) | **Hecho 2026-11-09 (PR #46)** |
-| 3 | F1-10 `app:provision` | Sin provisión no hay tenant/owner en staging |
-| 4 | F1-05 Empresas | Sin empresa no hay sync ni credenciales |
+| 3 | F1-10 `app:provision` | **Hecho 2026-11-09 (PR #47)** |
+| 4 | F1-05 Empresas | **Hecho 2026-11-09 (PR #48)** |
 | 5 | F1-06 + F1-07 Credenciales + auditoría | Sin credenciales no hay sync real; auditoría obligatoria |
 | 6 | F2-09a Estado + polling | Desbloquea la UI del monitor sin esperar Reverb |
 | 7 | F1-09 Convenciones API + OpenAPI | Contrato estable para frontend y pruebas |
@@ -373,4 +373,4 @@ F3-03/04 IA y gobierno · F3-05 revisión humana · F3-06 riesgos · F3-08/09 ev
 ### P3 — Cierre del MVP: declaraciones y lanzamiento
 F5-01…F5-08 (104, 103, 102/101, ciclo de vida, drill-down, exports, validación contable) y F6-01…F6-08 (hardening, beta, Go/No-Go).
 
-**Siguiente acción inmediata:** PR #40 mergeado; abrir `feat/F1-04-autorizacion`. El detalle operativo vive en `docs/09-progress.md`.
+**Siguiente acción inmediata:** F1-04, F1-05 y F1-10 completadas; abrir `feat/F1-06-credenciales` (junto con F1-07). El detalle operativo vive en `docs/09-progress.md`.
