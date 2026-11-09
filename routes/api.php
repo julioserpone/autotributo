@@ -97,12 +97,17 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth'])
         Route::delete('companies/{company}/credential', [SriCredentialController::class, 'destroy'])
             ->name('api.v1.companies.credential.destroy');
 
-        // Sincronización (F1-06 + F2-03): usa las credenciales guardadas y la
-        // clave de idempotencia del cliente para no duplicar runs.
+        // Sincronización (F1-06 + F2-03 + F2-09a): usa las credenciales guardadas
+        // y la clave de idempotencia del cliente para no duplicar runs. El
+        // monitor consulta el listado y los archivos por polling.
+        Route::get('sync-runs', [SyncRunController::class, 'index'])
+            ->name('api.v1.sync-runs.index');
         Route::post('sync-runs', [SyncRunController::class, 'store'])
             ->name('api.v1.sync-runs.store');
         Route::get('sync-runs/{run}', [SyncRunController::class, 'show'])
             ->name('api.v1.sync-runs.show');
+        Route::get('sync-runs/{run}/files', [SyncRunController::class, 'files'])
+            ->name('api.v1.sync-runs.files');
 
         // Historial de auditoría (F1-07), solo lectura y filtrado por tenant.
         Route::get('audit-logs', [AuditLogController::class, 'index'])
