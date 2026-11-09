@@ -79,6 +79,11 @@ final class Invoice extends Model
         });
     }
 
+    protected static function newFactory(): InvoiceFactory
+    {
+        return InvoiceFactory::new();
+    }
+
     /**
      * @return HasMany<InvoiceItem, $this>
      */
