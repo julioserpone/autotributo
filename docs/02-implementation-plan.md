@@ -74,7 +74,7 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | F1-07 | Auditoría base | 0,5 d | `audit_logs` + `owen-it/laravel-auditing` en modelos sensibles. **Se entrega junto con F1-06** |
 | F1-08 | Reverb | 0,5 d | Config, canales privados por tenant/empresa, autorización de canales, estado de conexión. **Habilita F2-09b** |
 | F1-09 | Convenciones de API | 1 d | `problem+json`, paginación, filtros, resources, generación OpenAPI (Scramble) |
-| F1-10 | Provisión inicial | 0,5 d | Comando idempotente `app:provision` (tenant por defecto, catálogos, owner e invitación). La primera empresa se crea desde la UI (US-06). Sin registro público en el MVP. **Se ejecuta antes de F1-11** |
+| F1-10 | Provisión inicial | 0,5 d | Comando idempotente `app:provision` (tenant por defecto, catálogos, owner e invitación). La primera empresa se crea desde la UI (US-06). Sin registro público en el MVP. **Se ejecuta antes de F1-11.** Completado 2026-11-09 (PR #47); catálogos en F3-01 |
 | F1-11 | Deploy a staging | 0,5 d | Recursos Cloud, variables, build/deploy commands, migraciones, dominio, scheduler |
 
 **Pruebas obligatorias**
@@ -356,7 +356,7 @@ Conciliación bancaria · emisión de comprobantes · integración con Contífic
 |---|---|---|
 | 1 | Merge PR #40 | **Hecho 2026-11-09**; evita conflictos con F4 |
 | 2 | F1-04 Autorización (policies) | **Hecho 2026-11-09 (PR #46)** |
-| 3 | F1-10 `app:provision` | Sin provisión no hay tenant/owner en staging |
+| 3 | F1-10 `app:provision` | **Hecho 2026-11-09 (PR #47)** |
 | 4 | F1-05 Empresas | Sin empresa no hay sync ni credenciales |
 | 5 | F1-06 + F1-07 Credenciales + auditoría | Sin credenciales no hay sync real; auditoría obligatoria |
 | 6 | F2-09a Estado + polling | Desbloquea la UI del monitor sin esperar Reverb |
