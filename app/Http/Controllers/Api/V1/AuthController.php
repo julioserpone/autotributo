@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Domain\Audit\Models\AuditLog;
 use App\Domain\Tenancy\Actions\ChangePassword;
 use App\Domain\Tenancy\Actions\LoginUser;
+use App\Domain\Tenancy\TenantContext;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
@@ -171,6 +172,7 @@ final class AuthController extends Controller
 
         $logs = AuditLog::query()
             ->where('user_id', $user->id)
+            ->where('tenant_id', app(TenantContext::class)->id())
             ->whereIn('event', ['login', 'login_failed', 'logout', 'password_changed'])
             ->orderByDesc('created_at')
             ->paginate($perPage);

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Audit\Models\AuditLog;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -97,4 +98,23 @@ it('devuelve el historial de inicios de sesión del usuario', function (): void 
     $response = $this->actingAs($user)->getJson('/api/v1/auth/login-history');
 
     $response->assertOk()->assertJsonStructure(['data', 'links', 'meta']);
+});
+
+it('no filtra el historial de inicios de otro tenant', function (): void {
+    $user = User::factory()->create();
+
+    $otherTenant = Tenant::factory()->create(['slug' => 'other']);
+
+    AuditLog::query()->create([
+        'tenant_id' => $otherTenant->id,
+        'user_id' => $user->id,
+        'event' => 'login',
+        'auditable_type' => 'user',
+        'auditable_id' => $user->id,
+    ]);
+
+    $response = $this->actingAs($user)->getJson('/api/v1/auth/login-history');
+
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(0);
 });
