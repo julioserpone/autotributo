@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Domain\Companies\Models\Company;
 use App\Domain\Companies\Policies\CompanyPolicy;
+use App\Domain\Companies\Policies\SriCredentialPolicy;
 use App\Domain\Invoicing\Models\Invoice;
 use App\Domain\Invoicing\Policies\InvoicePolicy;
 use App\Domain\Sri\Models\SriSyncRun;
@@ -47,5 +48,11 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(SriSyncRun::class, SriSyncRunPolicy::class);
         Gate::policy(Invoice::class, InvoicePolicy::class);
         Gate::policy(Membership::class, MembershipPolicy::class);
+
+        // Las credenciales se autorizan sobre la empresa, porque todavía pueden
+        // no existir cuando el contador las crea por primera vez.
+        Gate::define('credentials.view', [SriCredentialPolicy::class, 'view']);
+        Gate::define('credentials.update', [SriCredentialPolicy::class, 'update']);
+        Gate::define('credentials.delete', [SriCredentialPolicy::class, 'delete']);
     }
 }

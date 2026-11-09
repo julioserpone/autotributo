@@ -15,6 +15,21 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Credenciales del portal del contribuyente (F1-06)
+    |--------------------------------------------------------------------------
+    |
+    | `key` es una clave dedicada de 32 bytes en base64, distinta de APP_KEY:
+    | rotar APP_KEY no debe invalidar las credenciales. `key_version` permite
+    | introducir una clave nueva y migrar los blobs por lotes.
+    |
+    */
+    'credentials' => [
+        'key' => env('SRI_CREDENTIALS_KEY'),
+        'key_version' => (int) env('SRI_CREDENTIALS_KEY_VERSION', 1),
+    ],
+
     'authorization' => [
         'driver' => env('SRI_AUTHORIZATION_DRIVER', 'package'),
         'environment' => env('SRI_ENVIRONMENT', '1'),

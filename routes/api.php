@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
+use App\Http\Controllers\Api\V1\SriCredentialController;
+use App\Http\Controllers\Api\V1\SyncRunController;
 use App\Http\Controllers\Api\V1\TwoFactorController;
 use Illuminate\Support\Facades\Route;
 
@@ -80,4 +82,22 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth'])
     ->group(function (): void {
         Route::apiResource('companies', CompanyController::class)
             ->names('api.v1.companies');
+
+        // Credenciales del portal SRI (F1-06). El secreto nunca se devuelve y
+        // cada lectura o cambio queda auditado en `sri_credential_accesses`.
+        Route::get('companies/{company}/credential', [SriCredentialController::class, 'show'])
+            ->name('api.v1.companies.credential.show');
+        Route::put('companies/{company}/credential', [SriCredentialController::class, 'update'])
+            ->name('api.v1.companies.credential.update');
+        Route::post('companies/{company}/credential/rotate', [SriCredentialController::class, 'rotate'])
+            ->name('api.v1.companies.credential.rotate');
+        Route::delete('companies/{company}/credential', [SriCredentialController::class, 'destroy'])
+            ->name('api.v1.companies.credential.destroy');
+
+        // Sincronización (F1-06 + F2-03): usa las credenciales guardadas y la
+        // clave de idempotencia del cliente para no duplicar runs.
+        Route::post('sync-runs', [SyncRunController::class, 'store'])
+            ->name('api.v1.sync-runs.store');
+        Route::get('sync-runs/{run}', [SyncRunController::class, 'show'])
+            ->name('api.v1.sync-runs.show');
     });

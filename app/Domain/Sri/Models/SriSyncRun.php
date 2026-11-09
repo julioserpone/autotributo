@@ -40,6 +40,9 @@ use InvalidArgumentException;
  * @property string|null $error_message
  * @property Carbon|null $started_at
  * @property Carbon|null $finished_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Company|null $company
  */
 final class SriSyncRun extends Model
 {
@@ -69,6 +72,11 @@ final class SriSyncRun extends Model
                 $run->public_id = (string) Str::ulid();
             }
         });
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'public_id';
     }
 
     /**
