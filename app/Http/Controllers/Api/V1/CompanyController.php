@@ -34,13 +34,17 @@ final class CompanyController extends Controller
 
         $query = Company::query();
 
-        $status = trim((string) $request->query('status', ''));
+        // Convención de filtros declarativos (F1-09): `filter[...]`, con
+        // compatibilidad hacia atrás con los parámetros directos.
+        $filters = (array) $request->input('filter', []);
+
+        $status = trim((string) ($filters['status'] ?? $request->query('status', '')));
 
         if ($status !== '') {
             $query->where('status', $status);
         }
 
-        $search = trim((string) $request->query('search', ''));
+        $search = trim((string) ($filters['search'] ?? $request->query('search', '')));
 
         if ($search !== '') {
             $query->where(function (Builder $builder) use ($search): void {
