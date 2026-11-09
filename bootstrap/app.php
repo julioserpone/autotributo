@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Domain\Companies\Exceptions\SriCredentialsMissing;
+use App\Domain\Sri\Exceptions\SriRateLimitExceeded;
+use App\Domain\Sri\Exceptions\SriSyncAlreadyRunning;
 use App\Domain\Sri\Http\Middleware\VerifySriRobotCallback;
 use App\Domain\Tenancy\Http\Middleware\EnsureTenantIsActive;
 use App\Domain\Tenancy\Http\Middleware\InitializeTenantContext;
@@ -9,6 +12,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -53,4 +57,23 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // F1-06: errores de dominio con un status honesto. El cuerpo se
+        // normaliza a `problem+json` en F1-09.
+        $exceptions->render(function (SriCredentialsMissing $e): JsonResponse {
+            return response()->json(['message' => $e->getMessage()], 409);
+        });
+
+        $exceptions->render(function (SriRateLimitExceeded $e): JsonResponse {
+            return response()
+                ->json(['message' => $e->getMessage()], 429)
+                ->header('Retry-After', (string) $e->retryAfterSeconds);
+        });
+
+        $exceptions->render(function (SriSyncAlreadyRunning $e): JsonResponse {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'existing_run_id' => $e->runPublicId,
+            ], 409);
+        });
     })->create();

@@ -9,7 +9,7 @@
 | Fase | Estado | Avance | Último hito |
 |---|---|---|---|
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
-| F1 · Núcleo tenant-ready | En curso | 5/11 + F1-03 al 80 % | F1-05 · Empresas y validador de RUC (#48) |
+| F1 · Núcleo tenant-ready | En curso | 6/11 + F1-03 al 80 % | F1-06 · Credenciales SRI cifradas y sync real |
 | F2 · Ingesta SRI | En curso | 11/12 | F2-12 · Observabilidad (#35) · solo falta F2-09 |
 | F3 · Motor fiscal + IA | Pendiente | 0/9 | — |
 | F4 · Frontend | En curso | 0/11 + fundaciones/auth parciales | Login, reset, 2FA, invitación y layout mínimo (#36–#40) |
@@ -17,6 +17,8 @@
 | F6 · Hardening y beta | Pendiente | 0/8 | — |
 
 > El recuento usa las tareas de `docs/02-implementation-plan.md`. Las slices de F1-03 y las tareas nuevas (F1-03e/f/g, F2-13/14/15, F4-03b/12) se detallan abajo y no alteran el denominador de la fase.
+>
+> **Siguiente etapa (Sprint A, tramo final → Sprint B).** Ambos documentos maestros deben coincidir: `docs/02` §3 (tareas) y §9/§17 (orden y prioridad) y esta tabla. Orden acordado: **F1-06 → F1-07 → F1-08 → F1-09 → F2-09 (a+b) → F1-03e → F1-11**. Justificación, diseño y pruebas obligatorias de cada tarea viven en `docs/02` §3 y no en un documento aparte.
 
 ## Fase 1 · Núcleo tenant-ready, identidad y empresas
 
@@ -30,10 +32,10 @@
 | F1-03g | Validaciones de invitación (`US-02`) | Pendiente | P2 | Email ya activo → 409; revocación de acceso invalida sesiones del tenant |
 | F1-04 | Autorización | Completado | — | `Ability` + `RolePermissions` (matriz rol × acción) y policies `Company`, `SriSyncRun`, `Invoice`, `Membership`; defensa cross-tenant con `TenantContext` · 17 tests / 64 assertions (#46) |
 | F1-05 | Empresas | Completado | — | CRUD `v1/companies`, `Ruc` (natural/jurídica/pública, módulo 10/11 y secuencial extendido), `TaxRegime`, perfil tributario y archivo con soft delete; policies de F1-04 y aislamiento cross-tenant · 33 tests / 124 assertions (#48) |
-| F1-06 | Credenciales SRI | Pendiente | **P0** | Cifrado con `SRI_CREDENTIALS_KEY`, acceso auditado, rotación, borrado |
-| F1-07 | Auditoría base | Pendiente | **P0** | `audit_logs` + `owen-it/laravel-auditing` en modelos sensibles |
-| F1-08 | Reverb | Pendiente | P1 | Config, canales privados por tenant/empresa, autorización, estado de conexión |
-| F1-09 | Convenciones de API | Pendiente | **P0** | `problem+json`, paginación, filtros, resources, OpenAPI (Scramble) |
+| F1-06 | Credenciales SRI | Completado | — | `sri_credentials` + `sri_credential_accesses` · `SriCredentialCipher` (sodium secretbox, `SRI_CREDENTIALS_KEY` + `key_version`) · `Store/Rotate/Delete/Read/MarkCredentialStatus` · endpoints `GET/PUT/DELETE /companies/{company}/credential` y `rotate` · `BuildSriRobotRequest` + `POST /sync-runs` (`Idempotency-Key`) y `GET /sync-runs/{run}` · archivar empresa borra la credencial · 24 tests nuevos |
+| F1-07 | Auditoría base | Pendiente | **P0** | `audit_logs` + `owen-it/laravel-auditing` en modelos sensibles · se entrega junto con F1-06 |
+| F1-08 | Reverb | Pendiente | P1 | Config, canales privados por tenant/empresa, autorización, estado de conexión · habilita F2-09b |
+| F1-09 | Convenciones de API | Pendiente | **P0** | `problem+json`, paginación, filtros, resources, OpenAPI (Scramble) · base del contrato para F2-09 y F4 |
 | F1-10 | Provisión inicial | Completado | — | `app:provision` idempotente: tenant, cuatro roles por tenant, owner, membresía y enlace de contraseña; `--no-invite`/`--resend-invite`; valida slug en modo single · 6 tests / 27 assertions (#47) |
 | F1-11 | Deploy a staging | Pendiente | P1 | Recursos Cloud, variables, build/deploy, migraciones, dominio, scheduler |
 
@@ -49,7 +51,7 @@
 | F2-06 | Parser XML | Completado | — | Paquete `sri-comprobantes-php` **v0.2.0** (`ComprobanteReader`: 01, 03, 04, 05, 06, 07, PR #5) consumido vía `SriInvoiceParser` + `PackageSriInvoiceParser` · XXE-safe, centavos, `totalsMismatch` sin corregir, `SriRetentionData` · parser local eliminado · `3053abd` añade la lectura del XML desde S3 y el sobre SOAP |
 | F2-07 | Parser de manifiesto/TXT | Completado | — | `SriAccessKey` (verificador delegado a `AccessKeyGenerator` del paquete), `AccessKeyListParser`, `PeriodBatchBuilder`, `ParseSriRun` y `sri:parse-run` · run `completed`/`partial`/`failed` e idempotencia |
 | F2-08 | Persistencia idempotente | Completado | — | `invoices`, `invoice_items`, `invoice_taxes`, `retention_lines` · `PersistSriInvoice` con `upsert` por `(tenant, company, access_key)` y huella `xml_sha256` · `ImportSriRun` + `sri:import-run` · fallos parciales sin tumbar el run · 15 tests nuevos |
-| F2-09 | Progreso en vivo | Pendiente | **P0 / P1** | **F2-09a (P0):** endpoint de estado + polling cada 5 s, sin depender de Reverb. **F2-09b (P1):** eventos Reverb + canales privados. Cierra F2-09 cuando ambas partes estén verdes |
+| F2-09 | Progreso en vivo | Pendiente | **P0 / P1** | **F2-09a (P0):** `GET /sync-runs`, `/{run}` y `/{run}/files` con `progress` y `poll_after_ms`, sin depender de Reverb. **F2-09b (P1):** eventos Reverb + canales privados. Cierra F2-09 cuando ambas partes estén verdes |
 | F2-10 | Resiliencia | Completado | — | `ProcessSriRunJob` en cola `sri`, tenant-aware y único por run; callback y scheduler encolan la importación; parseo + batch de `ImportSriChunkJob` (25 claves), fallo por documento en `sri_sync_run_files` y cierre idempotente con `FinalizeSriRunJob` (`partial_import`/`import_failed`); reintentos 30/120/300 s; runs huérfanos resueltos por `ResolveStaleSriRun` (`robot_timeout`/`import_timeout`) con alerta por umbral · 10 tests nuevos en F2-10c (#33, #34) |
 | F2-11 | Límites y cuotas | Completado | — | `StartSriSync` serializa por empresa (bloqueo de caché), rechaza runs solapados con `SriSyncAlreadyRunning`, reserva cuota por RUC con `RateLimiter` (`sri.sync.max_calls_per_minute`) y divide por `sri.sync.max_days_per_run` · los reintentos idempotentes no consumen cuota · 7 tests nuevos |
 | F2-12 | Observabilidad | Completado | — | `SriRunMetrics` registra `sri.run.finished`/`partial`/`failed` con duración y volumen al cerrarse cada run; `sri:metrics` resume duración media/p95 y tasa de fallo por ventana · 7 tests nuevos (#35) |

@@ -106,6 +106,43 @@ Adaptadores de infraestructura:
 El dominio solo depende de los contratos. Ningún controlador o job debe
 importar clases de SOAP o del SDK de AWS.
 
+## 2.1 Credenciales del portal (F1-06)
+
+La contraseña del contribuyente se guarda cifrada y solo se descifra en el
+momento de invocar al robot.
+
+| Pieza | Rol |
+|---|---|
+| `sri_credentials` | Una fila por empresa (`unique(tenant_id, company_id)`): `username`, `password_ciphertext`, `key_version`, `status`, fechas de uso y `failure_count` |
+| `sri_credential_accesses` | Rastro de cada descifrado, rotación y borrado (`purpose`: `sync`, `rotation`, `support`) |
+| `SriCredentialCipher` | `sodium_crypto_secretbox` con `SRI_CREDENTIALS_KEY`; blob `v1:{key_version}:{nonce}:{ciphertext}` |
+| `ReadSriCredential` | Único punto de descifrado; registra el acceso **antes** de devolver el secreto |
+| `BuildSriRobotRequest` | Arma el `SriRobotRequest` con las credenciales persistidas; `StartSriSync` no cambia |
+
+Reglas:
+
+- `SRI_CREDENTIALS_KEY` es una clave dedicada de 32 bytes en base64, distinta de
+  `APP_KEY`. Si falta o es inválida, la app falla al resolver el cifrador (en
+  `testing` se genera una efímera).
+- `key_version` permite rotar la clave: una fila cifrada con otra versión falla
+  con un `409` accionable en lugar de devolver basura.
+- El secreto nunca aparece en `json_encode`, `dump`, logs ni en la respuesta
+  HTTP; `SriCredentialResource` solo expone `has_password: true`.
+- Tras tres fallos de autenticación la credencial pasa a `invalid` y el sync
+  responde `409` hasta que se actualice.
+- Archivar la empresa borra la credencial (retención de `docs/03` §13).
+
+Endpoints:
+
+| Método | Ruta | Permiso |
+|---|---|---|
+| `GET` | `/api/v1/companies/{company}/credential` | `credentials.view` |
+| `PUT` | `/api/v1/companies/{company}/credential` | `credentials.manage` |
+| `POST` | `/api/v1/companies/{company}/credential/rotate` | `credentials.manage` |
+| `DELETE` | `/api/v1/companies/{company}/credential` | `credentials.manage` |
+| `POST` | `/api/v1/sync-runs` (`Idempotency-Key` obligatoria) | `sync.start` |
+| `GET` | `/api/v1/sync-runs/{run}` | `sync.view` |
+
 ## 3. Contrato del robot
 
 Evento real del handler de `sri-txt-robot`:

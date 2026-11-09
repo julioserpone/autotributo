@@ -8,6 +8,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ### Added
 
+- F1-06: credenciales del portal SRI cifradas con `SRI_CREDENTIALS_KEY` (sodium secretbox + `key_version`), acceso auditado en `sri_credential_accesses`, rotación y borrado al archivar la empresa; endpoints `GET/PUT/DELETE /api/v1/companies/{company}/credential` y `POST .../credential/rotate`.
+- F1-06: `POST /api/v1/sync-runs` (con `Idempotency-Key`) arma la solicitud del robot con las credenciales persistidas y `GET /api/v1/sync-runs/{run}` expone el estado para el polling.
+- Docs: Sincronización de `docs/02-implementation-plan.md` y `docs/09-progress.md` con el orden de la siguiente etapa (F1-06 → F1-07 → F1-08 → F1-09 → F2-09 → F1-03e → F1-11); se elimina el documento de etapa redundante `docs/13-next-stage-plan.md`.
 - F2-03: orquestación de `SriSyncRun` con estados, transiciones idempotentes y dispatch al robot.
 - F2-04: callback firmado del robot en `POST /api/v1/webhooks/sri-robot` (HMAC-SHA256 sobre `timestamp.cuerpo`, ventana ±300 s, límite de 256 KB y dedupe por `event_id`); `event_id`/`callback_url` en la invocación, `callback_event_id` en el run y transición a `downloading`/`failed`.
 - F2-05: reconciliación de runs activos contra el manifiesto S3, validación de TXT/claves y transición a `parsing`.

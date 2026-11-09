@@ -70,10 +70,10 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | F1-03g | Validaciones de invitación | 0,5 d | No invitar un email ya activo (409); revocar acceso invalida las sesiones del usuario en el tenant (`US-02`). **Nueva tarea derivada del backlog** |
 | F1-04 | Autorización | 1 d | Roles `owner/accountant/assistant/viewer` (spatie teams), policies por recurso, scoping por empresa. **Se ejecuta antes de F1-05/F1-06.** Completado 2026-11-09 (PR #46) |
 | F1-05 | Empresas | 1,5 d | CRUD, validador de RUC, perfil tributario (régimen, obligado a contabilidad, agente de retención), actividad económica, dirección. Completado 2026-11-09 (PR #48) |
-| F1-06 | Credenciales SRI | 1 d | Cifrado con `SRI_CREDENTIALS_KEY`, acceso auditado, rotación, borrado al eliminar empresa, nunca en logs. **Se entrega junto con F1-07** |
-| F1-07 | Auditoría base | 0,5 d | `audit_logs` + `owen-it/laravel-auditing` en modelos sensibles. **Se entrega junto con F1-06** |
-| F1-08 | Reverb | 0,5 d | Config, canales privados por tenant/empresa, autorización de canales, estado de conexión. **Habilita F2-09b** |
-| F1-09 | Convenciones de API | 1 d | `problem+json`, paginación, filtros, resources, generación OpenAPI (Scramble) |
+| F1-06 | Credenciales SRI | 1 d | `sri_credentials` + `sri_credential_accesses`; cifrado AES-256-GCM (sodium secretbox) con `SRI_CREDENTIALS_KEY` y `key_version`; endpoints `GET/PUT/DELETE /companies/{company}/credential` y rotación; entrega de `SriRobotCredentials` a `StartSriSync` vía `ReadSriCredential` (auditado) y `POST /sync-runs` con `Idempotency-Key`; borrado al archivar empresa; nunca en logs. **Bloqueante de M2.** Completado 2026-11-09 |
+| F1-07 | Auditoría base | 0,5 d | `audit_logs` + `owen-it/laravel-auditing` en `Company`, `SriCredential`, `Membership`, `Invitation`; eventos explícitos de login y acceso a credencial; `GET /audit-logs` (`AuditView`); secretos redactados. **Se entrega junto con F1-06** |
+| F1-08 | Reverb | 0,5 d | Config, `routes/channels.php` con `private-tenant.{tenantId}.company.{companyId}`, autorización por membresía y empresa, estado de conexión. **Habilita F2-09b** |
+| F1-09 | Convenciones de API | 1 d | `problem+json` (RFC 9457) global, paginación cursor/offset uniforme, filtros declarativos, resources, OpenAPI con Scramble versionado en el repo y validado en CI. **Base de F2-09 y F4** |
 | F1-10 | Provisión inicial | 0,5 d | Comando idempotente `app:provision` (tenant por defecto, catálogos, owner e invitación). La primera empresa se crea desde la UI (US-06). Sin registro público en el MVP. **Se ejecuta antes de F1-11.** Completado 2026-11-09 (PR #47); catálogos en F3-01 |
 | F1-11 | Deploy a staging | 0,5 d | Recursos Cloud, variables, build/deploy commands, migraciones, dominio, scheduler |
 
@@ -241,8 +241,8 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 
 | Sprint | Semanas | Prioridad | Foco | Demo |
 |---|---|---|---|---|
-| A | 1–2 | **P0** | Merge #40 · F1-04 · F1-10 · F1-05 · F1-06+07 · F2-09a · F1-09 · F4-02/04 | **M1 + M2:** provisionar → login → empresa → credenciales → sync con progreso por polling |
-| B | 3–4 | **P0/P1** | F1-08 · F2-09b · F1-11 · F1-03e · F1-03f · F4-05/06 | **F1 y F2 cerradas** (11/11 y 12/12) |
+| A | 1–2 | **P0** | ~~Merge #40~~ · ~~F1-04~~ · ~~F1-10~~ · ~~F1-05~~ · **F1-06+07 · F1-08 · F1-09 · F2-09a** · F4-02/04 | **M1 + M2:** provisionar → login → empresa → credenciales → sync con progreso por polling |
+| B | 3–4 | **P0/P1** | F2-09b · F1-11 · F1-03e · F1-03f · F4-05/06 | **F1 y F2 cerradas** (11/11 y 12/12) |
 | C | 5–6 | **P1** | F3-01 · F3-02 · F3-07 · F2-13 · F2-14 · F4-07/08 | Catálogos firmados, reglas y proporcionalidad con golden tests |
 | D | 7–8 | **P2** | F3-03/04/05/06/08/09 · F4-10/11 | **M3:** clasificación automática ≥ 70 %, accuracy ≥ 92 % |
 | E | 9–10 | **P3** | F5-01…F5-08 · F4-09 | **M5:** 104/103/102 + exports + firma del contador |
@@ -251,6 +251,8 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 **Reglas de secuencia:**
 - F1-04 va antes de F1-05/F1-06 (sin policies no hay endpoints de negocio seguros).
 - F1-10 va antes de F1-11 (no se despliega staging sin provisión).
+- F1-06 va antes de todo lo que necesite un sync real (`POST /sync-runs`, F2-09a, M2) y antes de F1-11 (variable `SRI_CREDENTIALS_KEY`).
+- F1-09 va antes de F2-09a/F1-08: define `problem+json` y el formato de serialización sobre el que se construyen los endpoints de estado y los canales.
 - F2-09a (polling) se adelanta a F2-09b (Reverb) para no bloquear la UI.
 - F4-02/F4-04/F4-05/F4-06 se adelantan a P0 para que M1/M2 sean demostrables.
 - F3-01 necesita al contador asesor; agendar desde el Sprint A.
@@ -373,4 +375,16 @@ F3-03/04 IA y gobierno · F3-05 revisión humana · F3-06 riesgos · F3-08/09 ev
 ### P3 — Cierre del MVP: declaraciones y lanzamiento
 F5-01…F5-08 (104, 103, 102/101, ciclo de vida, drill-down, exports, validación contable) y F6-01…F6-08 (hardening, beta, Go/No-Go).
 
-**Siguiente acción inmediata:** F1-04, F1-05 y F1-10 completadas; abrir `feat/F1-06-credenciales` (junto con F1-07). El detalle operativo vive en `docs/09-progress.md`.
+**Siguiente acción inmediata:** F1-04, F1-05 y F1-10 completadas. Orden de la etapa (igual en `docs/09`):
+
+| # | Rama | Tarea |
+|---|---|---|
+| 1 | `feat/F1-06-credenciales-sri` | F1-06 (+ endpoints `companies/{company}/credential` y `POST /sync-runs`) |
+| 2 | `feat/F1-07-auditoria` | F1-07 |
+| 3 | `feat/F1-08-reverb` | F1-08 |
+| 4 | `feat/F1-09-convenciones-api` | F1-09 |
+| 5 | `feat/F2-09-progreso-en-vivo` | F2-09a + F2-09b |
+| 6 | `feat/F1-03e-sesiones-revocables` | F1-03e |
+| 7 | `chore/F1-11-staging` | F1-11 |
+
+El estado vivo de cada fila vive en `docs/09-progress.md`; no se mantienen documentos de etapa separados.
