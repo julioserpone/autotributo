@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Domain\Audit\Actions\RecordAudit;
 use App\Domain\Audit\Models\AuditLog;
+use App\Domain\Tenancy\Actions\ChangePassword;
 use App\Domain\Tenancy\Actions\LoginUser;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
@@ -19,11 +19,13 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 final class AuthController extends Controller
 {
-    public function __construct(private readonly LoginUser $login) {}
+    public function __construct(
+        private readonly LoginUser $login,
+        private readonly ChangePassword $changePassword,
+    ) {}
 
     public function login(LoginRequest $request): JsonResponse
     {
@@ -88,21 +90,18 @@ final class AuthController extends Controller
             abort(401);
         }
 
-        if (! Hash::check((string) $request->string('current_password'), (string) $user->password)) {
+        try {
+            $this->changePassword->handle(
+                $user,
+                (string) $request->string('current_password'),
+                (string) $request->string('password'),
+                $request->session()->getId(),
+            );
+        } catch (\InvalidArgumentException) {
             return response()->json([
                 'message' => 'La contraseña actual no es válida.',
             ], 422);
         }
-
-        $user->password = Hash::make((string) $request->string('password'));
-        $user->save();
-
-        DB::table('sessions')
-            ->where('user_id', $user->id)
-            ->where('id', '!=', $request->session()->getId())
-            ->delete();
-
-        app(RecordAudit::class)->handle('password_changed', $user, [], ['password' => '[redacted]']);
 
         return response()->json(['data' => ['password_changed' => true]]);
     }
