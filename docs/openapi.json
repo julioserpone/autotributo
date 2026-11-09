@@ -1884,7 +1884,10 @@
                         "type": "string"
                     },
                     "auditable_id": {
-                        "type": "integer"
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
                     },
                     "user_id": {
                         "type": [
