@@ -43,6 +43,19 @@ Route::middleware(['web', 'tenant.context', 'tenant.active'])
             ->middleware('auth')
             ->name('api.v1.auth.me');
 
+        Route::post('/password', [AuthController::class, 'changePassword'])
+            ->middleware('auth')
+            ->name('api.v1.auth.password');
+        Route::get('/sessions', [AuthController::class, 'sessions'])
+            ->middleware('auth')
+            ->name('api.v1.auth.sessions.index');
+        Route::delete('/sessions/{session}', [AuthController::class, 'revokeSession'])
+            ->middleware('auth')
+            ->name('api.v1.auth.sessions.destroy');
+        Route::get('/login-history', [AuthController::class, 'loginHistory'])
+            ->middleware('auth')
+            ->name('api.v1.auth.login-history');
+
         Route::post('/forgot-password', [PasswordResetController::class, 'forgot'])
             ->name('api.v1.auth.forgot-password');
         Route::post('/reset-password', [PasswordResetController::class, 'reset'])
