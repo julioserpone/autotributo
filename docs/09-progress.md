@@ -9,7 +9,7 @@
 | Fase | Estado | Avance | Último hito |
 |---|---|---|---|
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
-| F1 · Núcleo tenant-ready | En curso | 6/11 + F1-03 al 80 % | F1-06 · Credenciales SRI cifradas y sync real |
+| F1 · Núcleo tenant-ready | En curso | 7/11 + F1-03 al 80 % | F1-07 · Auditoría base |
 | F2 · Ingesta SRI | En curso | 11/12 | F2-12 · Observabilidad (#35) · solo falta F2-09 |
 | F3 · Motor fiscal + IA | Pendiente | 0/9 | — |
 | F4 · Frontend | En curso | 0/11 + fundaciones/auth parciales | Login, reset, 2FA, invitación y layout mínimo (#36–#40) |
@@ -33,7 +33,7 @@
 | F1-04 | Autorización | Completado | — | `Ability` + `RolePermissions` (matriz rol × acción) y policies `Company`, `SriSyncRun`, `Invoice`, `Membership`; defensa cross-tenant con `TenantContext` · 17 tests / 64 assertions (#46) |
 | F1-05 | Empresas | Completado | — | CRUD `v1/companies`, `Ruc` (natural/jurídica/pública, módulo 10/11 y secuencial extendido), `TaxRegime`, perfil tributario y archivo con soft delete; policies de F1-04 y aislamiento cross-tenant · 33 tests / 124 assertions (#48) |
 | F1-06 | Credenciales SRI | Completado | — | `sri_credentials` + `sri_credential_accesses` · `SriCredentialCipher` (sodium secretbox, `SRI_CREDENTIALS_KEY` + `key_version`) · `Store/Rotate/Delete/Read/MarkCredentialStatus` · endpoints `GET/PUT/DELETE /companies/{company}/credential` y `rotate` · `BuildSriRobotRequest` + `POST /sync-runs` (`Idempotency-Key`) y `GET /sync-runs/{run}` · archivar empresa borra la credencial · 24 tests nuevos |
-| F1-07 | Auditoría base | Pendiente | **P0** | `audit_logs` + `owen-it/laravel-auditing` en modelos sensibles · se entrega junto con F1-06 |
+| F1-07 | Auditoría base | Completado | — | `audit_logs` + `owen-it/laravel-auditing` ^14 con `AuditLog` propio (`tenant_id`, redacción de secretos) · trait `Auditable` en `Company`, `SriCredential`, `Membership`, `Invitation` · eventos `login`/`logout`/`login_failed` · `GET /audit-logs` (`audit.view`) filtrado por tenant · 6 tests nuevos |
 | F1-08 | Reverb | Pendiente | P1 | Config, canales privados por tenant/empresa, autorización, estado de conexión · habilita F2-09b |
 | F1-09 | Convenciones de API | Pendiente | **P0** | `problem+json`, paginación, filtros, resources, OpenAPI (Scramble) · base del contrato para F2-09 y F4 |
 | F1-10 | Provisión inicial | Completado | — | `app:provision` idempotente: tenant, cuatro roles por tenant, owner, membresía y enlace de contraseña; `--no-invite`/`--resend-invite`; valida slug en modo single · 6 tests / 27 assertions (#47) |

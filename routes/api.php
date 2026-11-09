@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Sri\Http\Controllers\SriRobotCallbackController;
+use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
@@ -100,4 +101,8 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth'])
             ->name('api.v1.sync-runs.store');
         Route::get('sync-runs/{run}', [SyncRunController::class, 'show'])
             ->name('api.v1.sync-runs.show');
+
+        // Historial de auditoría (F1-07), solo lectura y filtrado por tenant.
+        Route::get('audit-logs', [AuditLogController::class, 'index'])
+            ->name('api.v1.audit-logs.index');
     });

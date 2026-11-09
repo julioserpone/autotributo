@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Audit\Models\AuditLog;
+use App\Domain\Audit\Policies\AuditLogPolicy;
 use App\Domain\Companies\Models\Company;
 use App\Domain\Companies\Policies\CompanyPolicy;
 use App\Domain\Companies\Policies\SriCredentialPolicy;
@@ -45,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
         Model::shouldBeStrict(! $this->app->isProduction());
 
         Gate::policy(Company::class, CompanyPolicy::class);
+        Gate::policy(AuditLog::class, AuditLogPolicy::class);
         Gate::policy(SriSyncRun::class, SriSyncRunPolicy::class);
         Gate::policy(Invoice::class, InvoicePolicy::class);
         Gate::policy(Membership::class, MembershipPolicy::class);
