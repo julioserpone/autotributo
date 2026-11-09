@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domain\Sri\Http\Controllers\SriRobotCallbackController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationController;
@@ -71,10 +72,12 @@ Route::middleware(['web', 'tenant.context', 'tenant.active'])
             ->name('api.v1.invitations.accept');
     });
 
-// Rutas de negocio tenant-aware (F1-03+). El contexto se inicializa antes de
-// autenticación y el scope global filtra cada consulta por tenant_id.
-Route::middleware(['tenant.context', 'tenant.active'])
+// Rutas de negocio tenant-aware. `web` aporta la sesión y CSRF; el contexto
+// se inicializa antes de resolver el route model binding para que el scope
+// global aplique también a `{company}`.
+Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth'])
     ->prefix('v1')
     ->group(function (): void {
-        //
+        Route::apiResource('companies', CompanyController::class)
+            ->names('api.v1.companies');
     });

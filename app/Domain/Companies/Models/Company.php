@@ -4,25 +4,42 @@ declare(strict_types=1);
 
 namespace App\Domain\Companies\Models;
 
+use App\Domain\Companies\Enums\TaxRegime;
 use App\Domain\Tenancy\Models\Concerns\BelongsToTenant;
 use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
  * Contribuyente al que pertenecen las credenciales y los comprobantes.
  *
- * En esta fase se incorpora la tabla mínima que necesitan los runs de
- * sincronización; el CRUD completo y las validaciones de RUC llegan en F1-05.
+ * El RUC se valida en el FormRequest con el value object `Ruc`; este modelo
+ * persiste el perfil tributario y aplica el scoping por tenant.
  *
  * @property int $id
  * @property string $public_id
  * @property int $tenant_id
  * @property string $ruc
  * @property string $legal_name
+ * @property string|null $trade_name
+ * @property TaxRegime $regime
+ * @property bool $is_accounting_required
+ * @property bool $is_withholding_agent
+ * @property string|null $withholding_resolution
+ * @property string|null $economic_activity_code
+ * @property string|null $address
+ * @property string|null $email
+ * @property string|null $phone
+ * @property int $fiscal_year_start_month
  * @property string $status
+ * @property array<string, mixed>|null $settings
+ * @property int|null $created_by
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  */
 final class Company extends Model
 {
@@ -42,6 +59,7 @@ final class Company extends Model
 
     /** @var array<string, string> */
     protected $casts = [
+        'regime' => TaxRegime::class,
         'is_accounting_required' => 'boolean',
         'is_withholding_agent' => 'boolean',
         'fiscal_year_start_month' => 'integer',
@@ -60,6 +78,11 @@ final class Company extends Model
     protected static function newFactory(): CompanyFactory
     {
         return CompanyFactory::new();
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'public_id';
     }
 
     public function isActive(): bool
