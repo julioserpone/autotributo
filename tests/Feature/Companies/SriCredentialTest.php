@@ -236,7 +236,9 @@ it('responde 409 cuando la empresa no tiene credenciales', function (): void {
             'periods' => ['2026-08'],
         ])
         ->assertStatus(409)
-        ->assertJsonPath('message', fn (string $message): bool => str_contains($message, 'no tiene credenciales'));
+        ->assertHeader('Content-Type', 'application/problem+json')
+        ->assertJsonPath('type', 'https://autotributo.com/problems/sri-credentials-missing')
+        ->assertJsonPath('detail', fn (string $detail): bool => str_contains($detail, 'no tiene credenciales'));
 
     expect(SriSyncRun::query()->count())->toBe(0);
 });

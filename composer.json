@@ -14,6 +14,7 @@
         "php": "^8.5",
         "ext-sodium": "*",
         "aws/aws-sdk-php": "^3.0",
+        "dedoc/scramble": "^0.13.53",
         "julioserpone/sri-comprobantes-php": "^0.2",
         "laravel/framework": "^13.17",
         "laravel/reverb": "^1.12",

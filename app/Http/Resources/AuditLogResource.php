@@ -26,11 +26,11 @@ final class AuditLogResource extends JsonResource
         $log = $this->resource;
 
         return [
-            'id' => $log->id,
+            'id' => (int) $log->id,
             'event' => $log->event,
             'auditable_type' => class_basename($log->auditable_type),
-            'auditable_id' => $log->auditable_id,
-            'user_id' => $log->user_id,
+            'auditable_id' => $log->auditable_id !== null ? (int) $log->auditable_id : null,
+            'user_id' => $log->user_id !== null ? (int) $log->user_id : null,
             'old_values' => $log->old_values,
             'new_values' => $log->new_values,
             'ip_address' => $log->ip_address,

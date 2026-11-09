@@ -25,29 +25,31 @@ final class AuditLogController extends Controller
     {
         Gate::authorize('viewAny', AuditLog::class);
 
+        $filters = (array) $request->input('filter', []);
+
         $query = AuditLog::query()
             ->where('tenant_id', app(TenantContext::class)->id())
             ->orderByDesc('id');
 
-        $event = trim((string) $request->query('event', ''));
+        $event = trim((string) ($filters['event'] ?? $request->query('event', '')));
 
         if ($event !== '') {
             $query->where('event', $event);
         }
 
-        $type = trim((string) $request->query('auditable_type', ''));
+        $type = trim((string) ($filters['auditable_type'] ?? $request->query('auditable_type', '')));
 
         if ($type !== '') {
             $query->where('auditable_type', 'like', '%\\'.$type);
         }
 
-        $from = trim((string) $request->query('date_from', ''));
+        $from = trim((string) ($filters['date_from'] ?? $request->query('date_from', '')));
 
         if ($from !== '') {
             $query->where('created_at', '>=', $from);
         }
 
-        $to = trim((string) $request->query('date_to', ''));
+        $to = trim((string) ($filters['date_to'] ?? $request->query('date_to', '')));
 
         if ($to !== '') {
             $query->where('created_at', '<=', $to.' 23:59:59');

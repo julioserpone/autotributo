@@ -45,7 +45,7 @@ final class AuthController extends Controller
 
         return response()->json([
             'data' => [
-                'id' => $user->id,
+                'id' => (int) $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'memberships' => $user->memberships()->get(['tenant_id', 'role']),
@@ -63,7 +63,7 @@ final class AuthController extends Controller
 
         return response()->json([
             'data' => [
-                'id' => $user->id,
+                'id' => (int) $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'memberships' => $user->memberships()->get(['tenant_id', 'role']),
