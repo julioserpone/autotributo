@@ -10,8 +10,12 @@ use App\Domain\Sri\Actions\StartSriSync;
 use App\Domain\Sri\Models\SriSyncRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sri\StoreSyncRunRequest;
+use App\Http\Resources\SriSyncRunFileResource;
 use App\Http\Resources\SriSyncRunResource;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -27,6 +31,48 @@ final class SyncRunController extends Controller
         private readonly BuildSriRobotRequest $buildRequest,
         private readonly StartSriSync $startSync,
     ) {}
+
+    /**
+     * Listado paginado de runs para el monitor (F2-09a).
+     */
+    public function index(Request $request): AnonymousResourceCollection
+    {
+        Gate::authorize('viewAny', SriSyncRun::class);
+
+        $query = SriSyncRun::query()->with('company');
+
+        $filters = (array) $request->input('filter', []);
+
+        $companyId = trim((string) ($filters['company_id'] ?? $request->query('company_id', '')));
+
+        if ($companyId !== '') {
+            $query->whereHas('company', fn (Builder $builder) => $builder->where('public_id', $companyId));
+        }
+
+        $status = trim((string) ($filters['status'] ?? $request->query('status', '')));
+
+        if ($status !== '') {
+            $query->where('status', $status);
+        }
+
+        $perPage = max(1, min((int) $request->integer('per_page', 25), 100));
+
+        return SriSyncRunResource::collection(
+            $query->orderByDesc('created_at')->paginate($perPage),
+        );
+    }
+
+    /**
+     * Archivos asociados a un run, para el monitor (F2-09a).
+     */
+    public function files(SriSyncRun $run): AnonymousResourceCollection
+    {
+        Gate::authorize('view', $run);
+
+        return SriSyncRunFileResource::collection(
+            $run->files()->orderBy('id')->get(),
+        );
+    }
 
     public function store(StoreSyncRunRequest $request): JsonResponse
     {
