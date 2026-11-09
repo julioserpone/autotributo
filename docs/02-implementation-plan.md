@@ -65,13 +65,16 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | F1-01 | Esqueleto Laravel 13 + SPA | 1 d | `laravel new`, API + Vue/TS strict, Pint, PHPStan nivel 8, Pest, `.env.example`, `README` de arranque |
 | F1-02 | Tenancy-ready | 1,5 d | `stancl/tenancy` sin `DatabaseTenancyBootstrapper`; `Tenant`, `TenantContext`, `TenantScope`, `BelongsToTenant`, `TenantAware` para jobs, prefijos de caché/storage, `TENANCY_MODE=single` con tenant por defecto. `Domain`/`ResolveTenant` se dejan reservados para multi (ADR-0006) |
 | F1-03 | Identidad | 2 d | `users` global + `memberships` por tenant, invitaciones, reset, verificación de email, 2FA TOTP, Argon2id, sesiones revocables |
-| F1-04 | Autorización | 1 d | Roles `owner/accountant/assistant/viewer` (spatie teams), policies por recurso, scoping por empresa |
+| F1-03e | Sesiones revocables y seguridad de cuenta | 1,5 d | Cambio de contraseña con cierre del resto de sesiones, listado/revocación de sesiones activas e historial de inicios (`US-05`). **Nueva tarea derivada del backlog** |
+| F1-03f | 2FA obligatorio para owner | 1 d | Token de alcance limitado si el owner no tiene 2FA confirmado, bloqueo tras 5 intentos por 15 min y registro del evento (`US-03`). **Nueva tarea derivada del backlog** |
+| F1-03g | Validaciones de invitación | 0,5 d | No invitar un email ya activo (409); revocar acceso invalida las sesiones del usuario en el tenant (`US-02`). **Nueva tarea derivada del backlog** |
+| F1-04 | Autorización | 1 d | Roles `owner/accountant/assistant/viewer` (spatie teams), policies por recurso, scoping por empresa. **Se ejecuta antes de F1-05/F1-06.** Completado 2026-11-09 (PR #46) |
 | F1-05 | Empresas | 1,5 d | CRUD, validador de RUC, perfil tributario (régimen, obligado a contabilidad, agente de retención), actividad económica, dirección |
-| F1-06 | Credenciales SRI | 1 d | Cifrado con `SRI_CREDENTIALS_KEY`, acceso auditado, rotación, borrado al eliminar empresa, nunca en logs |
-| F1-07 | Auditoría base | 0,5 d | `audit_logs` + `owen-it/laravel-auditing` en modelos sensibles |
-| F1-08 | Reverb | 0,5 d | Config, canales privados por tenant/empresa, autorización de canales, estado de conexión |
+| F1-06 | Credenciales SRI | 1 d | Cifrado con `SRI_CREDENTIALS_KEY`, acceso auditado, rotación, borrado al eliminar empresa, nunca en logs. **Se entrega junto con F1-07** |
+| F1-07 | Auditoría base | 0,5 d | `audit_logs` + `owen-it/laravel-auditing` en modelos sensibles. **Se entrega junto con F1-06** |
+| F1-08 | Reverb | 0,5 d | Config, canales privados por tenant/empresa, autorización de canales, estado de conexión. **Habilita F2-09b** |
 | F1-09 | Convenciones de API | 1 d | `problem+json`, paginación, filtros, resources, generación OpenAPI (Scramble) |
-| F1-10 | Provisión inicial | 0,5 d | Comando idempotente `app:provision` (tenant por defecto, catálogos, owner e invitación). La primera empresa se crea desde la UI (US-06). Sin registro público en el MVP |
+| F1-10 | Provisión inicial | 0,5 d | Comando idempotente `app:provision` (tenant por defecto, catálogos, owner e invitación). La primera empresa se crea desde la UI (US-06). Sin registro público en el MVP. **Se ejecuta antes de F1-11** |
 | F1-11 | Deploy a staging | 0,5 d | Recursos Cloud, variables, build/deploy commands, migraciones, dominio, scheduler |
 
 **Pruebas obligatorias**
@@ -101,10 +104,13 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | F2-06 | Parser XML | 3 d | Factura, NC, ND, liquidación, retención; DTOs; validación de totales; XXE-safe; errores por documento |
 | F2-07 | Parser de manifiesto/TXT | 1 d | Índice del robot, rutas, codificación, archivos corruptos |
 | F2-08 | Persistencia idempotente | 2 d | `upsert` por `access_key`; ítems, impuestos, retenciones; deduplicación; `source` |
-| F2-09 | Progreso en vivo | 1 d | Eventos Reverb + endpoint de estado; polling de respaldo |
+| F2-09 | Progreso en vivo | 1 d | **F2-09a (P0):** endpoint de estado con contadores + polling cada 5 s; entrega valor sin depender de Reverb. **F2-09b (P1):** eventos Reverb + canales privados. La tarea se cierra cuando ambas partes están verdes |
 | F2-10 | Resiliencia | 1,5 d | Reintentos con backoff, fallos parciales, archivos inválidos, timeouts, run `partial` |
 | F2-11 | Límites y cuotas | 0,5 d | Concurrencia 1 por RUC, rate limit configurable, bloqueo de runs solapados |
 | F2-12 | Observabilidad | 0,5 d | Logs con `run_id`, métricas de duración/volumen, alerta de fallos |
+| F2-13 | Carga manual de XML (`US-14`) | 2 d | Upload de XML autorizado, validación de estructura/clave/totales, `source=manual_upload`, cuarentena si hay inconsistencias, límites XXE/zip bomb. **Nueva tarea derivada del backlog** |
+| F2-14 | Cancelación de run | 1 d | Endpoint idempotente → `cancelled`, detención de batches en curso y acción en el monitor. **Nueva tarea derivada de F2-03** |
+| F2-15 | Runbook de runs huérfanos | 0,5 d | Procedimiento de `sri:recover-run`, alerta por umbral y prueba de restauración. **Nueva tarea derivada de F2-10c** |
 
 **Pruebas obligatorias**
 - **Fixtures** por tipo de comprobante (anonimizados) + casos borde: NC que ajusta factura, ICE, propina, descuento global, tarifa 0 %, divisas extranjeras no soportadas, XML truncado, clave inválida, totales inconsistentes.
@@ -231,21 +237,25 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 
 ## 9. Calendario de sprints
 
-| Sprint | Semanas | Foco | Demo |
-|---|---|---|---|
-| S0 | 1 | F0 | Decisiones, spike Lambda, catálogo v0 |
-| S1 | 2 | F1 (a) | Tenant-ready + auth + empresas |
-| S2 | 3–4 | F1 (b) + deploy | Staging con login y empresa |
-| S3 | 5–6 | F2 (a) | Invocación + callback + parser factura |
-| S4 | 7–8 | F2 (b) + inicio F3 | Sync completo idempotente |
-| S5 | 9–10 | F3 | Clasificación + riesgos + revisión |
-| S6 | 11–12 | F4 (a) | Layout, bandeja, monitor |
-| S7 | 13–14 | F4 (b) | Revisión, dashboards, E2E |
-| S8 | 15–16 | F5 (a) | 104 con drill-down |
-| S9 | 17–18 | F5 (b) | 103/102 + exports + firma contador |
-| S10 | 19–20 | F6 | Beta, hardening, lanzamiento |
+> **Revisión 2026-11-09.** El calendario original (S0–S10) se mantiene como referencia histórica. A partir de esta fecha rige el calendario priorizado siguiente, que refleja el avance real: F0 cerrada, F2 al 11/12, F1-03 al 80 % y F3/F5/F6 aún sin empezar.
 
-Con 2 personas, F4 corre en paralelo desde S4 y el total baja a **≈16 semanas**.
+| Sprint | Semanas | Prioridad | Foco | Demo |
+|---|---|---|---|---|
+| A | 1–2 | **P0** | Merge #40 · F1-04 · F1-10 · F1-05 · F1-06+07 · F2-09a · F1-09 · F4-02/04 | **M1 + M2:** provisionar → login → empresa → credenciales → sync con progreso por polling |
+| B | 3–4 | **P0/P1** | F1-08 · F2-09b · F1-11 · F1-03e · F1-03f · F4-05/06 | **F1 y F2 cerradas** (11/11 y 12/12) |
+| C | 5–6 | **P1** | F3-01 · F3-02 · F3-07 · F2-13 · F2-14 · F4-07/08 | Catálogos firmados, reglas y proporcionalidad con golden tests |
+| D | 7–8 | **P2** | F3-03/04/05/06/08/09 · F4-10/11 | **M3:** clasificación automática ≥ 70 %, accuracy ≥ 92 % |
+| E | 9–10 | **P3** | F5-01…F5-08 · F4-09 | **M5:** 104/103/102 + exports + firma del contador |
+| F | 11–12 | **P3** | F6-01…F6-08 | **M6:** beta con 3–5 estudios y Go/No-Go |
+
+**Reglas de secuencia:**
+- F1-04 va antes de F1-05/F1-06 (sin policies no hay endpoints de negocio seguros).
+- F1-10 va antes de F1-11 (no se despliega staging sin provisión).
+- F2-09a (polling) se adelanta a F2-09b (Reverb) para no bloquear la UI.
+- F4-02/F4-04/F4-05/F4-06 se adelantan a P0 para que M1/M2 sean demostrables.
+- F3-01 necesita al contador asesor; agendar desde el Sprint A.
+
+Con 2 personas, el carril frontend (F4) corre en paralelo desde el Sprint A y el total se mantiene en **≈12–14 semanas** desde esta revisión.
 
 ## 10. Estrategia de pruebas por fase (resumen)
 
@@ -333,3 +343,34 @@ Conciliación bancaria · emisión de comprobantes · integración con Contífic
 | Horizon para colas | Colas administradas + monitoreo Cloud | Horizon no es compatible con las colas gestionadas de Laravel Cloud |
 | Descarga SRI dentro de Laravel | Lambda + S3 + callback firmado | Aislamiento del scraping, límites de 15 min y credenciales fuera de la app |
 | Sin plan de pruebas | Pirámide completa + golden files + aislamiento | La exactitud fiscal y la confidencialidad son requisitos de producto, no "calidad extra" |
+| F2-09 como una sola tarea | **F2-09a** endpoint + polling (P0) y **F2-09b** Reverb (P1) | No bloquear la UI del monitor por una dependencia de infraestructura |
+| F1-03 como una sola tarea | Slice a–g (identidad base, reset, roles/2FA, invitaciones, sesiones, 2FA owner, validaciones) | La identidad resultó más grande de lo estimado; permite PRs pequeños y revisables |
+| F4 después de F3 | Mínimo de F4 (design system, layout, bandeja, monitor) en P0; resto en P2 | Sin UI no se puede demostrar M1/M2 ni validar con usuarios |
+| Carga manual de XML fuera de F2 | Nueva **F2-13** (`US-14`, Must) | El backlog la exige como contingencia operativa del MVP |
+| Un solo calendario S0–S10 | Calendario revisado A–F desde 2026-11-09 | Refleja el avance real y las dependencias descubiertas |
+
+## 17. Prioridades actuales (revisión 2026-11-09)
+
+### P0 — Crítico: producto operable
+| Orden | Tarea | Motivo |
+|---|---|---|
+| 1 | Merge PR #40 | **Hecho 2026-11-09**; evita conflictos con F4 |
+| 2 | F1-04 Autorización (policies) | **Hecho 2026-11-09 (PR #46)** |
+| 3 | F1-10 `app:provision` | Sin provisión no hay tenant/owner en staging |
+| 4 | F1-05 Empresas | Sin empresa no hay sync ni credenciales |
+| 5 | F1-06 + F1-07 Credenciales + auditoría | Sin credenciales no hay sync real; auditoría obligatoria |
+| 6 | F2-09a Estado + polling | Desbloquea la UI del monitor sin esperar Reverb |
+| 7 | F1-09 Convenciones API + OpenAPI | Contrato estable para frontend y pruebas |
+| 8 | F4-02 + F4-04 Design system + layout | Base visual de la demo M2 |
+| 9 | F4-05 + F4-06 Bandeja + monitor (polling) | Hace visible “sincronizar y ver comprobantes” |
+
+### P1 — Alto: cerrar F1/F2 y arrancar F3
+F1-08 Reverb · F2-09b eventos · F1-11 staging · F1-03e sesiones revocables · F1-03f 2FA obligatorio owner · F2-13 carga manual XML · F3-01 catálogos · F3-02 reglas · F3-07 proporcionalidad · F4-07 revisión.
+
+### P2 — Medio: motor fiscal completo y UI de producto
+F3-03/04 IA y gobierno · F3-05 revisión humana · F3-06 riesgos · F3-08/09 evaluación y catálogos · F2-14 cancelación · F2-15 runbook · F4-08 dashboards · F4-10/11 calidad y pruebas · F4-03b onboarding/selector de empresa · F4-12 indicador Reverb · F1-03g validaciones de invitación.
+
+### P3 — Cierre del MVP: declaraciones y lanzamiento
+F5-01…F5-08 (104, 103, 102/101, ciclo de vida, drill-down, exports, validación contable) y F6-01…F6-08 (hardening, beta, Go/No-Go).
+
+**Siguiente acción inmediata:** PR #40 mergeado; abrir `feat/F1-04-autorizacion`. El detalle operativo vive en `docs/09-progress.md`.
