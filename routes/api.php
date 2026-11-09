@@ -5,11 +5,13 @@ declare(strict_types=1);
 use App\Domain\Sri\Http\Controllers\SriRobotCallbackController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\BroadcastingAuthController;
 use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
+use App\Http\Controllers\Api\V1\RealtimeStatusController;
 use App\Http\Controllers\Api\V1\SriCredentialController;
 use App\Http\Controllers\Api\V1\SyncRunController;
 use App\Http\Controllers\Api\V1\TwoFactorController;
@@ -105,4 +107,11 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth'])
         // Historial de auditoría (F1-07), solo lectura y filtrado por tenant.
         Route::get('audit-logs', [AuditLogController::class, 'index'])
             ->name('api.v1.audit-logs.index');
+
+        // Tiempo real (F1-08): autorización de canales privados y estado de la
+        // conexión. El polling de F2-09a sigue siendo la fuente de verdad.
+        Route::post('broadcasting/auth', BroadcastingAuthController::class)
+            ->name('api.v1.broadcasting.auth');
+        Route::get('realtime/status', RealtimeStatusController::class)
+            ->name('api.v1.realtime.status');
     });

@@ -8,6 +8,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ### Added
 
+- F1-08: canales privados de Reverb (`tenant.{tenantId}.company.{companyId}` y `tenant.{tenantId}.user.{userId}`) con autorización por membresía y empresa, `POST /api/v1/broadcasting/auth` y `GET /api/v1/realtime/status` (sin secretos).
 - F1-07: auditoría base con `owen-it/laravel-auditing` sobre `audit_logs` (`AuditLog` propio con `tenant_id` y redacción de secretos), trait `Auditable` en `Company`, `SriCredential`, `Membership` e `Invitation`, eventos `login`/`logout`/`login_failed` y `GET /api/v1/audit-logs` (`audit.view`, filtrado por tenant).
 - F1-06: credenciales del portal SRI cifradas con `SRI_CREDENTIALS_KEY` (sodium secretbox + `key_version`), acceso auditado en `sri_credential_accesses`, rotación y borrado al archivar la empresa; endpoints `GET/PUT/DELETE /api/v1/companies/{company}/credential` y `POST .../credential/rotate`.
 - F1-06: `POST /api/v1/sync-runs` (con `Idempotency-Key`) arma la solicitud del robot con las credenciales persistidas y `GET /api/v1/sync-runs/{run}` expone el estado para el polling.

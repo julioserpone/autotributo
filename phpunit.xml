@@ -20,6 +20,12 @@
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <!-- Driver de broadcasting fijo: los canales se cargan al bootear el
+             broadcaster y el driver por defecto ("null") no autoriza nada. -->
+        <env name="BROADCAST_CONNECTION" value="reverb"/>
+        <env name="REVERB_APP_ID" value="test-app"/>
+        <env name="REVERB_APP_KEY" value="test-key"/>
+        <env name="REVERB_APP_SECRET" value="test-secret"/>
         <!-- La suite corre en consola: la auditoría debe estar activa (F1-07). -->
         <env name="AUDITING_CONSOLE" value="true"/>
         <!-- Clave efímera: el provider genera una si falta (F1-06). -->
