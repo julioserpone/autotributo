@@ -45,34 +45,12 @@ final class SriSyncRunResource extends JsonResource
                 'skipped' => 0,
                 'failed' => 0,
             ],
-            'progress' => $this->progress($run),
+            'progress' => $run->progressPercentage(),
             'error_code' => $run->error_code,
             'error_message' => $run->error_message,
             'started_at' => $run->started_at?->toIso8601String(),
             'finished_at' => $run->finished_at?->toIso8601String(),
             'created_at' => $run->created_at?->toIso8601String(),
         ];
-    }
-
-    /**
-     * Porcentaje procesado sobre los documentos encontrados.
-     *
-     * `null` cuando el robot todavía no reportó cuántos documentos hay: un 0 %
-     * ahí sería una mentira para el monitor.
-     */
-    private function progress(SriSyncRun $run): ?float
-    {
-        $totals = $run->totals ?? [];
-        $found = (int) ($totals['found'] ?? 0);
-
-        if ($found <= 0) {
-            return null;
-        }
-
-        $processed = (int) ($totals['imported'] ?? 0)
-            + (int) ($totals['skipped'] ?? 0)
-            + (int) ($totals['failed'] ?? 0);
-
-        return round(min(100, ($processed / $found) * 100), 1);
     }
 }

@@ -6,6 +6,7 @@ namespace App\Domain\Sri\Models;
 
 use App\Domain\Companies\Models\Company;
 use App\Domain\Sri\Enums\SriSyncRunStatus;
+use App\Domain\Sri\Events\SriSyncProgressUpdated;
 use App\Domain\Tenancy\Models\Concerns\BelongsToTenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -72,6 +73,14 @@ final class SriSyncRun extends Model
                 $run->public_id = (string) Str::ulid();
             }
         });
+
+        self::saved(function (self $run): void {
+            if (app()->environment('testing')) {
+                return;
+            }
+
+            broadcast(new SriSyncProgressUpdated($run));
+        });
     }
 
     public function getRouteKeyName(): string
@@ -106,6 +115,27 @@ final class SriSyncRun extends Model
     public function isActive(): bool
     {
         return $this->status->isActive();
+    }
+
+    /**
+     * Porcentaje procesado sobre los documentos encontrados.
+     *
+     * `null` cuando el robot todavía no reportó cuántos documentos hay.
+     */
+    public function progressPercentage(): ?float
+    {
+        $totals = $this->totals ?? [];
+        $found = (int) ($totals['found'] ?? 0);
+
+        if ($found <= 0) {
+            return null;
+        }
+
+        $processed = (int) ($totals['imported'] ?? 0)
+            + (int) ($totals['skipped'] ?? 0)
+            + (int) ($totals['failed'] ?? 0);
+
+        return round(min(100, ($processed / $found) * 100), 1);
     }
 
     public function transitionTo(SriSyncRunStatus $next): void
