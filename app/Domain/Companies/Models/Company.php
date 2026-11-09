@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Companies\Models;
 
+use App\Domain\Audit\Concerns\Auditable;
 use App\Domain\Companies\Enums\TaxRegime;
 use App\Domain\Tenancy\Models\Concerns\BelongsToTenant;
 use Database\Factories\CompanyFactory;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 
 /**
  * Contribuyente al que pertenecen las credenciales y los comprobantes.
@@ -42,10 +44,17 @@ use Illuminate\Support\Str;
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  */
-final class Company extends Model
+final class Company extends Model implements AuditableContract
 {
     /** @use HasFactory<CompanyFactory> */
-    use BelongsToTenant, HasFactory, SoftDeletes;
+    use Auditable, BelongsToTenant, HasFactory, SoftDeletes;
+
+    /**
+     * Atributos que no aportan al historial o que se derivan de otros.
+     *
+     * @var list<string>
+     */
+    protected $auditExclude = ['settings'];
 
     public const STATUS_ACTIVE = 'active';
 

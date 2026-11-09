@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Domain\Tenancy\Models;
 
+use App\Domain\Audit\Concerns\Auditable;
 use App\Domain\Tenancy\Enums\MembershipRole;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 
-final class Membership extends Model
+final class Membership extends Model implements AuditableContract
 {
+    use Auditable;
+
     protected $table = 'memberships';
 
     protected $guarded = [];

@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Domain\Companies\Models;
 
+use App\Domain\Audit\Concerns\Auditable;
 use App\Domain\Tenancy\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 
 /**
  * Credencial del portal del SRI para un contribuyente.
@@ -35,9 +37,17 @@ use Illuminate\Support\Str;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-final class SriCredential extends Model
+final class SriCredential extends Model implements AuditableContract
 {
-    use BelongsToTenant;
+    use Auditable, BelongsToTenant;
+
+    /**
+     * El blob cifrado nunca entra al historial: la auditoría registra que la
+     * credencial cambió, no su contenido.
+     *
+     * @var list<string>
+     */
+    protected $auditExclude = ['password_ciphertext'];
 
     public const STATUS_ACTIVE = 'active';
 
