@@ -10,7 +10,7 @@
 |---|---|---|---|
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
 | F1 · Núcleo tenant-ready | En curso | 9/11 + F1-03 al 80 % | F1-09 · Convenciones de API (problem+json, filtros, OpenAPI) |
-| F2 · Ingesta SRI | En curso | 11/12 | F2-12 · Observabilidad (#35) · solo falta F2-09 |
+| F2 · Ingesta SRI | Completado | 12/12 | F2-09 · Progreso en vivo (polling + Reverb) |
 | F3 · Motor fiscal + IA | Pendiente | 0/9 | — |
 | F4 · Frontend | En curso | 0/11 + fundaciones/auth parciales | Login, reset, 2FA, invitación y layout mínimo (#36–#40) |
 | F5 · Declaraciones | Pendiente | 0/8 | — |
@@ -51,7 +51,7 @@
 | F2-06 | Parser XML | Completado | — | Paquete `sri-comprobantes-php` **v0.2.0** (`ComprobanteReader`: 01, 03, 04, 05, 06, 07, PR #5) consumido vía `SriInvoiceParser` + `PackageSriInvoiceParser` · XXE-safe, centavos, `totalsMismatch` sin corregir, `SriRetentionData` · parser local eliminado · `3053abd` añade la lectura del XML desde S3 y el sobre SOAP |
 | F2-07 | Parser de manifiesto/TXT | Completado | — | `SriAccessKey` (verificador delegado a `AccessKeyGenerator` del paquete), `AccessKeyListParser`, `PeriodBatchBuilder`, `ParseSriRun` y `sri:parse-run` · run `completed`/`partial`/`failed` e idempotencia |
 | F2-08 | Persistencia idempotente | Completado | — | `invoices`, `invoice_items`, `invoice_taxes`, `retention_lines` · `PersistSriInvoice` con `upsert` por `(tenant, company, access_key)` y huella `xml_sha256` · `ImportSriRun` + `sri:import-run` · fallos parciales sin tumbar el run · 15 tests nuevos |
-| F2-09 | Progreso en vivo | En curso | **P0 / P1** | **F2-09a (P0):** `GET /sync-runs`, `/{run}` y `/{run}/files` con `progress` y `poll_after_ms`, sin depender de Reverb — **completado** en esta PR. **F2-09b (P1):** eventos Reverb + canales privados — pendiente |
+| F2-09 | Progreso en vivo | Completado | **P0 / P1** | **F2-09a (P0):** polling con `GET /sync-runs`, `/{run}` y `/{run}/files`. **F2-09b (P1):** evento `SriSyncProgressUpdated` en canal privado de la empresa. Cierra F2-09. |
 | F2-10 | Resiliencia | Completado | — | `ProcessSriRunJob` en cola `sri`, tenant-aware y único por run; callback y scheduler encolan la importación; parseo + batch de `ImportSriChunkJob` (25 claves), fallo por documento en `sri_sync_run_files` y cierre idempotente con `FinalizeSriRunJob` (`partial_import`/`import_failed`); reintentos 30/120/300 s; runs huérfanos resueltos por `ResolveStaleSriRun` (`robot_timeout`/`import_timeout`) con alerta por umbral · 10 tests nuevos en F2-10c (#33, #34) |
 | F2-11 | Límites y cuotas | Completado | — | `StartSriSync` serializa por empresa (bloqueo de caché), rechaza runs solapados con `SriSyncAlreadyRunning`, reserva cuota por RUC con `RateLimiter` (`sri.sync.max_calls_per_minute`) y divide por `sri.sync.max_days_per_run` · los reintentos idempotentes no consumen cuota · 7 tests nuevos |
 | F2-12 | Observabilidad | Completado | — | `SriRunMetrics` registra `sri.run.finished`/`partial`/`failed` con duración y volumen al cerrarse cada run; `sri:metrics` resume duración media/p95 y tasa de fallo por ventana · 7 tests nuevos (#35) |
