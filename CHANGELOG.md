@@ -31,6 +31,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - Workflow de validación de títulos de PR con Conventional Commits.
 - Reglas de protección de `main` en `.github/rulesets/main-protection.json` y script de aplicación.
 - Hooks locales `pre-push` y `commit-msg`.
+- Documentación de IA (`AGENTS.md`, `docs/ai/01-04`): alineada con Laravel 13/PHP 8.5, tenancy de BD única con `tenant_id`, rutas reales `app/Domain`, convención `handle()`, montos en centavos enteros y plantilla oficial de PR.
 
 ### Changed
 
