@@ -9,7 +9,7 @@
 | Fase | Estado | Avance | Último hito |
 |---|---|---|---|
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
-| F1 · Núcleo tenant-ready | En curso | 3/11 + F1-03 al 80 % | F1-04 · Autorización por rol y tenant (#46) |
+| F1 · Núcleo tenant-ready | En curso | 4/11 + F1-03 al 80 % | F1-10 · Provisión inicial idempotente (#47) |
 | F2 · Ingesta SRI | En curso | 11/12 | F2-12 · Observabilidad (#35) · solo falta F2-09 |
 | F3 · Motor fiscal + IA | Pendiente | 0/9 | — |
 | F4 · Frontend | En curso | 0/11 + fundaciones/auth parciales | Login, reset, 2FA, invitación y layout mínimo (#36–#40) |
@@ -34,7 +34,7 @@
 | F1-07 | Auditoría base | Pendiente | **P0** | `audit_logs` + `owen-it/laravel-auditing` en modelos sensibles |
 | F1-08 | Reverb | Pendiente | P1 | Config, canales privados por tenant/empresa, autorización, estado de conexión |
 | F1-09 | Convenciones de API | Pendiente | **P0** | `problem+json`, paginación, filtros, resources, OpenAPI (Scramble) |
-| F1-10 | Provisión inicial | Pendiente | **P0** | Comando idempotente `app:provision` (tenant, catálogos, owner e invitación) |
+| F1-10 | Provisión inicial | Completado | — | `app:provision` idempotente: tenant, cuatro roles por tenant, owner, membresía y enlace de contraseña; `--no-invite`/`--resend-invite`; valida slug en modo single · 6 tests / 27 assertions (#47) |
 | F1-11 | Deploy a staging | Pendiente | P1 | Recursos Cloud, variables, build/deploy, migraciones, dominio, scheduler |
 
 ## Fase 2 · Ingesta SRI
@@ -80,6 +80,7 @@
 | #40 | Enlace de recuperación y logout en UI | F4-03 (parcial) · mergeado 2026-11-09 |
 | #45 | Actualización de prioridades y avance | Docs · mergeado 2026-11-09 |
 | #46 | Policies de autorización por rol y tenant | F1-04 |
+| #47 | Comando idempotente `app:provision` | F1-10 |
 
 ## Cómo actualizar
 
