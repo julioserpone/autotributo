@@ -68,7 +68,7 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | F1-03e | Sesiones revocables y seguridad de cuenta | 1,5 d | Cambio de contraseña con cierre del resto de sesiones, listado/revocación de sesiones activas e historial de inicios (`US-05`). **Nueva tarea derivada del backlog** |
 | F1-03f | 2FA obligatorio para owner | 1 d | Token de alcance limitado si el owner no tiene 2FA confirmado, bloqueo tras 5 intentos por 15 min y registro del evento (`US-03`). **Nueva tarea derivada del backlog** |
 | F1-03g | Validaciones de invitación | 0,5 d | No invitar un email ya activo (409); revocar acceso invalida las sesiones del usuario en el tenant (`US-02`). **Nueva tarea derivada del backlog** |
-| F1-04 | Autorización | 1 d | Roles `owner/accountant/assistant/viewer` (spatie teams), policies por recurso, scoping por empresa. **Se ejecuta antes de F1-05/F1-06** |
+| F1-04 | Autorización | 1 d | Roles `owner/accountant/assistant/viewer` (spatie teams), policies por recurso, scoping por empresa. **Se ejecuta antes de F1-05/F1-06.** Completado 2026-11-09 (PR #46) |
 | F1-05 | Empresas | 1,5 d | CRUD, validador de RUC, perfil tributario (régimen, obligado a contabilidad, agente de retención), actividad económica, dirección |
 | F1-06 | Credenciales SRI | 1 d | Cifrado con `SRI_CREDENTIALS_KEY`, acceso auditado, rotación, borrado al eliminar empresa, nunca en logs. **Se entrega junto con F1-07** |
 | F1-07 | Auditoría base | 0,5 d | `audit_logs` + `owen-it/laravel-auditing` en modelos sensibles. **Se entrega junto con F1-06** |
@@ -355,7 +355,7 @@ Conciliación bancaria · emisión de comprobantes · integración con Contífic
 | Orden | Tarea | Motivo |
 |---|---|---|
 | 1 | Merge PR #40 | **Hecho 2026-11-09**; evita conflictos con F4 |
-| 2 | F1-04 Autorización (policies) | Sin policies no hay endpoints de negocio seguros |
+| 2 | F1-04 Autorización (policies) | **Hecho 2026-11-09 (PR #46)** |
 | 3 | F1-10 `app:provision` | Sin provisión no hay tenant/owner en staging |
 | 4 | F1-05 Empresas | Sin empresa no hay sync ni credenciales |
 | 5 | F1-06 + F1-07 Credenciales + auditoría | Sin credenciales no hay sync real; auditoría obligatoria |

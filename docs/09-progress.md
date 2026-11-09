@@ -9,7 +9,7 @@
 | Fase | Estado | Avance | Último hito |
 |---|---|---|---|
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
-| F1 · Núcleo tenant-ready | En curso | 2/11 + F1-03 al 80 % | F1-03 · Identidad (slices a–d, PR #36–#39) |
+| F1 · Núcleo tenant-ready | En curso | 3/11 + F1-03 al 80 % | F1-04 · Autorización por rol y tenant (#46) |
 | F2 · Ingesta SRI | En curso | 11/12 | F2-12 · Observabilidad (#35) · solo falta F2-09 |
 | F3 · Motor fiscal + IA | Pendiente | 0/9 | — |
 | F4 · Frontend | En curso | 0/11 + fundaciones/auth parciales | Login, reset, 2FA, invitación y layout mínimo (#36–#40) |
@@ -28,7 +28,7 @@
 | F1-03e | Sesiones revocables y seguridad de cuenta (`US-05`) | Pendiente | P1 | Cambio de contraseña con cierre de otras sesiones; listado/revocación de sesiones; historial de inicios |
 | F1-03f | 2FA obligatorio para owner (`US-03`) | Pendiente | P1 | Token de alcance limitado sin 2FA confirmado; bloqueo tras 5 intentos; registro del evento |
 | F1-03g | Validaciones de invitación (`US-02`) | Pendiente | P2 | Email ya activo → 409; revocación de acceso invalida sesiones del tenant |
-| F1-04 | Autorización | Pendiente | **P0** | Policies por recurso + matriz rol×acción + scoping por empresa |
+| F1-04 | Autorización | Completado | — | `Ability` + `RolePermissions` (matriz rol × acción) y policies `Company`, `SriSyncRun`, `Invoice`, `Membership`; defensa cross-tenant con `TenantContext` · 17 tests / 64 assertions (#46) |
 | F1-05 | Empresas | Pendiente | **P0** | CRUD, validador `Ruc`, perfil tributario, archivo de empresa |
 | F1-06 | Credenciales SRI | Pendiente | **P0** | Cifrado con `SRI_CREDENTIALS_KEY`, acceso auditado, rotación, borrado |
 | F1-07 | Auditoría base | Pendiente | **P0** | `audit_logs` + `owen-it/laravel-auditing` en modelos sensibles |
@@ -78,6 +78,8 @@
 | #38 | Roles por tenant y 2FA TOTP opcional | F1-03c |
 | #39 | Invitaciones con roles | F1-03d |
 | #40 | Enlace de recuperación y logout en UI | F4-03 (parcial) · mergeado 2026-11-09 |
+| #45 | Actualización de prioridades y avance | Docs · mergeado 2026-11-09 |
+| #46 | Policies de autorización por rol y tenant | F1-04 |
 
 ## Cómo actualizar
 
