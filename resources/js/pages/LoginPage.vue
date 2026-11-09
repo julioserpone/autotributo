@@ -110,6 +110,15 @@ async function submit(): Promise<void> {
           {{ submitting ? 'Ingresando…' : 'Ingresar' }}
         </button>
       </form>
+
+      <p class="mt-4 text-center text-sm text-zinc-400">
+        <RouterLink
+          :to="{ name: 'forgot-password' }"
+          class="text-violet-400 underline-offset-4 hover:text-violet-300 hover:underline"
+        >
+          ¿Olvidaste tu contraseña?
+        </RouterLink>
+      </p>
     </section>
   </AppLayout>
 </template>
