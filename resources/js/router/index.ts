@@ -9,7 +9,7 @@ import ResetPasswordPage from '@/pages/ResetPasswordPage.vue';
 import TwoFactorChallengePage from '@/pages/TwoFactorChallengePage.vue';
 
 const router = createRouter({
-    history: createWebHistory(import.meta.env.BASE_URL),
+    history: createWebHistory('/'),
     routes: [
         {
             path: '/login',
