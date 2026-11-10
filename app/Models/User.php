@@ -69,4 +69,9 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->two_factor_secret !== null
             && $this->two_factor_confirmed_at !== null;
     }
+
+    public function isOwner(): bool
+    {
+        return $this->memberships()->where('role', 'owner')->exists();
+    }
 }

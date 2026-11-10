@@ -93,7 +93,7 @@ Route::middleware(['web', 'tenant.context', 'tenant.active'])
 // Rutas de negocio tenant-aware. `web` aporta la sesión y CSRF; el contexto
 // se inicializa antes de resolver el route model binding para que el scope
 // global aplique también a `{company}`.
-Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth'])
+Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'])
     ->prefix('v1')
     ->group(function (): void {
         Route::apiResource('companies', CompanyController::class)

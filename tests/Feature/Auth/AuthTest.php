@@ -20,7 +20,7 @@ beforeEach(function (): void {
     Membership::create([
         'tenant_id' => $this->tenant->id,
         'user_id' => $this->user->id,
-        'role' => 'owner',
+        'role' => 'assistant',
     ]);
 });
 

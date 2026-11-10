@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Audit\Actions\RecordAudit;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -51,11 +52,27 @@ final class TwoFactorController extends Controller
 
         $secret = (string) $user->two_factor_secret;
 
+        if ($this->isBlocked($user)) {
+            return response()->json([
+                'message' => 'Cuenta bloqueada temporalmente por intentos fallidos.',
+            ], 429)->header('Retry-After', (string) $this->retryAfter($user));
+        }
+
         if ($secret === '' || ! (new Google2FA)->verifyKey($secret, (string) $request->string('code'))) {
+            $this->registerFailedAttempt($user);
+
+            app(RecordAudit::class)->handle('two_factor_failed', $user);
+
+            if ($this->isBlocked($user)) {
+                app(RecordAudit::class)->handle('two_factor_blocked', $user);
+            }
+
             return response()->json([
                 'message' => 'El código de verificación no es válido.',
             ], 422);
         }
+
+        $this->clearAttempts($user);
 
         $recoveryCodes = collect(range(1, 8))
             ->map(static fn (): string => bin2hex(random_bytes(5)).'-'.bin2hex(random_bytes(5)))
@@ -64,6 +81,11 @@ final class TwoFactorController extends Controller
         $user->two_factor_confirmed_at = now();
         $user->two_factor_recovery_codes = (string) json_encode($recoveryCodes);
         $user->save();
+
+        // Al confirmar 2FA, el owner ya no queda en modo de configuración.
+        $request->session()->forget('auth.two_factor.setup_required');
+
+        app(RecordAudit::class)->handle('two_factor_enabled', $user);
 
         return response()->json([
             'data' => [
@@ -128,6 +150,12 @@ final class TwoFactorController extends Controller
             ], 422);
         }
 
+        if ($this->isBlocked($user)) {
+            return response()->json([
+                'message' => 'Cuenta bloqueada temporalmente por intentos fallidos.',
+            ], 429)->header('Retry-After', (string) $this->retryAfter($user));
+        }
+
         $google2fa = new Google2FA;
         $valid = false;
 
@@ -145,10 +173,20 @@ final class TwoFactorController extends Controller
         }
 
         if (! $valid) {
+            $this->registerFailedAttempt($user);
+
+            app(RecordAudit::class)->handle('two_factor_failed', $user);
+
+            if ($this->isBlocked($user)) {
+                app(RecordAudit::class)->handle('two_factor_blocked', $user);
+            }
+
             return response()->json([
                 'message' => 'El código de verificación no es válido.',
             ], 422);
         }
+
+        $this->clearAttempts($user);
 
         $remember = (bool) $request->session()->get('auth.two_factor.remember', false);
 
@@ -165,5 +203,43 @@ final class TwoFactorController extends Controller
                 'memberships' => $user->memberships()->get(['tenant_id', 'role']),
             ],
         ]);
+    }
+
+    private function isBlocked(User $user): bool
+    {
+        $blockedUntil = request()->session()->get('two_factor.blocked_until');
+
+        if (is_int($blockedUntil) && $blockedUntil > time()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function retryAfter(User $user): int
+    {
+        $blockedUntil = request()->session()->get('two_factor.blocked_until');
+
+        if (is_int($blockedUntil)) {
+            return max(1, $blockedUntil - time());
+        }
+
+        return 900;
+    }
+
+    private function registerFailedAttempt(User $user): void
+    {
+        $attempts = (int) request()->session()->get('two_factor.attempts', 0) + 1;
+
+        request()->session()->put('two_factor.attempts', $attempts);
+
+        if ($attempts >= 5) {
+            request()->session()->put('two_factor.blocked_until', now()->addMinutes(15)->getTimestamp());
+        }
+    }
+
+    private function clearAttempts(User $user): void
+    {
+        request()->session()->forget(['two_factor.attempts', 'two_factor.blocked_until']);
     }
 }

@@ -8,6 +8,7 @@ use App\Domain\Sri\Exceptions\SriRateLimitExceeded;
 use App\Domain\Sri\Exceptions\SriSyncAlreadyRunning;
 use App\Domain\Sri\Http\Middleware\VerifySriRobotCallback;
 use App\Domain\Tenancy\Http\Middleware\EnsureTenantIsActive;
+use App\Domain\Tenancy\Http\Middleware\EnsureTwoFactorSetupComplete;
 use App\Domain\Tenancy\Http\Middleware\InitializeTenantContext;
 use App\Support\Http\ProblemDetails;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -43,6 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant.context' => InitializeTenantContext::class,
             'tenant.active' => EnsureTenantIsActive::class,
+            '2fa.setup' => EnsureTwoFactorSetupComplete::class,
             'sri.callback' => VerifySriRobotCallback::class,
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,

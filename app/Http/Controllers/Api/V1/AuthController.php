@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Audit\Actions\RecordAudit;
 use App\Domain\Audit\Models\AuditLog;
 use App\Domain\Tenancy\Actions\ChangePassword;
 use App\Domain\Tenancy\Actions\LoginUser;
@@ -40,6 +41,19 @@ final class AuthController extends Controller
             return response()->json([
                 'message' => 'Las credenciales no son válidas.',
             ], 422);
+        }
+
+        if ($user->isOwner() && ! $user->hasTwoFactorEnabled()) {
+            Auth::guard('web')->login($user, (bool) $request->boolean('remember'));
+
+            $request->session()->regenerate();
+            $request->session()->put('auth.two_factor.setup_required', true);
+
+            app(RecordAudit::class)->handle('two_factor_setup_required', $user);
+
+            return response()->json([
+                'data' => ['two_factor_setup_required' => true],
+            ], 202);
         }
 
         if ($user->hasTwoFactorEnabled()) {
