@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { renderSVG } from 'uqr';
 
 import AppLayout from '@/layouts/AppLayout.vue';
 import { postJson } from '@/lib/api';
@@ -19,6 +20,25 @@ const starting = ref(false);
 const confirming = ref(false);
 const copied = ref(false);
 const error = ref<string | null>(null);
+
+/**
+ * QR generado en el cliente a partir del otpauth_url. Evita enviar el secreto
+ * a servicios externos de generación de imágenes.
+ */
+const qrSrc = computed((): string => {
+    if (!setup.value) {
+        return '';
+    }
+
+    const svg = renderSVG(setup.value.otpauth_url, {
+        ecc: 'M',
+        border: 2,
+        blackColor: '#000000',
+        whiteColor: '#ffffff',
+    });
+
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+});
 
 async function start(): Promise<void> {
     if (starting.value) {
@@ -109,10 +129,20 @@ async function goToDashboard(): Promise<void> {
 
       <template v-else-if="setup">
         <p class="text-sm text-zinc-400">
-          Abre tu aplicación de autenticación y añade una cuenta con esta clave:
+          Escanea este código con Google Authenticator, Authy u otra aplicación TOTP:
         </p>
 
-        <div class="mt-4 flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-3">
+        <img
+          :src="qrSrc"
+          alt="Código QR para configurar la verificación en dos pasos"
+          class="mx-auto mt-4 size-52 rounded-xl bg-white p-3"
+        >
+
+        <p class="mt-4 text-center text-xs text-zinc-500">
+          ¿No puedes escanearlo? Añade la cuenta manualmente con esta clave:
+        </p>
+
+        <div class="mt-2 flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-3">
           <code class="flex-1 break-all font-mono text-sm text-violet-300">{{ setup.secret }}</code>
           <button
             type="button"
