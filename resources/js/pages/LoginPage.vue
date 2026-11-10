@@ -30,6 +30,8 @@ async function submit(): Promise<void> {
 
         if (result?.two_factor_required) {
             await router.push({ name: 'two-factor-challenge' });
+        } else if (result?.two_factor_setup_required) {
+            await router.push({ name: 'two-factor-setup' });
         } else {
             await router.push({ name: 'dashboard' });
         }

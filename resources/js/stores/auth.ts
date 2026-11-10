@@ -22,6 +22,11 @@ interface LoginPayload {
     remember?: boolean;
 }
 
+export interface LoginResult {
+    two_factor_required: boolean;
+    two_factor_setup_required: boolean;
+}
+
 export const useAuthStore = defineStore('auth', () => {
     const user = ref<AuthUser | null>(null);
     const loading = ref(false);
@@ -43,23 +48,33 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
-    async function login(payload: LoginPayload): Promise<{ two_factor_required: boolean }> {
+    async function login(payload: LoginPayload): Promise<LoginResult> {
         loading.value = true;
         error.value = null;
 
         try {
-            const response = await postJson<{ data: { two_factor_required?: boolean; id?: number } }>(
-                '/api/v1/auth/login',
-                payload,
-            );
+            const response = await postJson<{
+                data: {
+                    two_factor_required?: boolean;
+                    two_factor_setup_required?: boolean;
+                    id?: number;
+                };
+            }>('/api/v1/auth/login', payload);
+
+            if (response.data.two_factor_setup_required) {
+                // La sesión ya está creada, pero limitada a configurar el 2FA.
+                await fetchMe();
+
+                return { two_factor_required: false, two_factor_setup_required: true };
+            }
 
             if (response.data.two_factor_required) {
-                return { two_factor_required: true };
+                return { two_factor_required: true, two_factor_setup_required: false };
             }
 
             await fetchMe();
 
-            return { two_factor_required: false };
+            return { two_factor_required: false, two_factor_setup_required: false };
         } catch (caught: unknown) {
             user.value = null;
             error.value = caught instanceof Error ? caught.message : 'No se pudo iniciar sesión.';

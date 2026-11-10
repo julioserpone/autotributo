@@ -75,5 +75,20 @@ onMounted(() => {
         Reintentar
       </button>
     </section>
+
+    <section class="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-2xl shadow-black/20">
+      <h2 class="text-lg font-semibold">
+        Seguridad
+      </h2>
+      <p class="mt-1 max-w-2xl text-sm text-zinc-400">
+        Los owners deben configurar la verificación en dos pasos. Puedes activarla aquí con tu aplicación de autenticación.
+      </p>
+      <RouterLink
+        :to="{ name: 'two-factor-setup' }"
+        class="mt-4 inline-block rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium transition hover:bg-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+      >
+        Configurar verificación en dos pasos
+      </RouterLink>
+    </section>
   </AppLayout>
 </template>
