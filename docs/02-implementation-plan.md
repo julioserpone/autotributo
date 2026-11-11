@@ -9,7 +9,7 @@
 | Equipo | 1 backend senior + 1 frontend (a tiempo parcial) + contador asesor (2–4 h/semana) |
 | Duración MVP | **16–18 semanas** con 2 personas; **20–23 semanas** con 1 persona |
 | Modalidad | Sprints de 2 semanas, trunk-based, PRs pequeños |
-| Entorno | Docker local; Laravel Cloud staging + production desde Fase 1 |
+| Entorno | Docker local; staging temporal en AWS (ADR-0008) y production en Laravel Cloud |
 | Volumen objetivo | MVP: 1 estudio con N contribuyentes; diseño preparado para 100 tenants, 1.000 usuarios y 1 M comprobantes/año |
 | Dependencia externa crítica | Acceso al repo/despliegue de `julioserpone/sri-txt-robot` y a una cuenta AWS |
 | Zona horaria | Persistencia UTC, presentación `America/Guayaquil` |
@@ -75,7 +75,7 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | F1-08 | Reverb | 0,5 d | Config, `routes/channels.php` con `private-tenant.{tenantId}.company.{companyId}`, autorización por membresía y empresa, estado de conexión. **Habilita F2-09b.** Completado 2026-11-09 |
 | F1-09 | Convenciones de API | 1 d | `problem+json` (RFC 9457) global, paginación cursor/offset uniforme, filtros declarativos, resources, OpenAPI con Scramble versionado en el repo y validado en CI. **Base de F2-09 y F4** |
 | F1-10 | Provisión inicial | 0,5 d | Comando idempotente `app:provision` (tenant por defecto, catálogos, owner e invitación). La primera empresa se crea desde la UI (US-06). Sin registro público en el MVP. **Se ejecuta antes de F1-11.** Completado 2026-11-09 (PR #47); catálogos en F3-01 |
-| F1-11 | Deploy a staging | 0,5 d | Recursos Cloud, variables, build/deploy commands, migraciones, dominio, scheduler |
+| F1-11 | Deploy a staging | 1 d | Staging temporal en una EC2 `t3.micro` con Docker Compose, Neon y DuckDNS/TLS (ADR-0008); `docker-compose.staging.yml`, Caddy, entrypoint, deploy por script y workflow manual. Producción sigue en Cloud. Runbook: `docs/13-aws-staging-deployment.md` |
 
 **Pruebas obligatorias**
 - **Aislamiento:** suite `Isolation` con dos tenants (aunque la UI solo cree uno); todo endpoint `show/update/delete` devuelve 404 para recursos ajenos.

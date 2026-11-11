@@ -1,0 +1,42 @@
+# =============================================================================
+# Caddy para staging (ADR-0008)
+#
+# - TLS automático (Let's Encrypt) para STAGING_HOSTNAME. El hostname debe
+#   resolver a la IP pública actual de la EC2 (DuckDNS la actualiza).
+# - PHP-FPM en `app:9000`.
+# - Reverb en `reverb:8080`: /app/* y /apps/* (HTTP + WebSocket).
+# - Solo se sirve el contenido de /var/www/html/public (bind mount de ./public).
+#
+# Variables esperadas (env_file .env):
+#   STAGING_HOSTNAME  autotributo-staging.duckdns.org
+#   ACME_EMAIL        correo para Let's Encrypt
+# =============================================================================
+
+{
+	email {$ACME_EMAIL}
+	admin off
+}
+
+{$STAGING_HOSTNAME} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Laravel Reverb: handshake y WebSocket en /app/*, API de canales en /apps/*.
+	@reverb path /app/* /apps/*
+	reverse_proxy @reverb reverb:8080
+
+	# Assets compilados por Vite: hash en el nombre, caché inmutable.
+	@assets path /build/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	root * /var/www/html/public
+	php_fastcgi app:9000
+	file_server
+}

@@ -1,0 +1,146 @@
+# =============================================================================
+# Autotributo — staging en una sola EC2 (ADR-0008)
+#
+# Uso:
+#   docker compose -f docker-compose.staging.yml config --quiet
+#   ./scripts/staging/deploy.sh
+#
+# Diferencias con docker-compose.yml (local):
+#   - Sin Postgres ni Valkey: Neon + `database` para caché/sesiones/colas.
+#   - Sin Vite ni Mailpit: los assets se compilan en el host (`npm run build`).
+#   - `app`, `queue`, `scheduler` y `reverb` usan la imagen `staging`.
+#   - Caddy termina TLS (Let's Encrypt) y sirve `./public`.
+#   - Puertos publicados: solo 80 y 443. Nunca 8080 ni 5432.
+# =============================================================================
+name: autotributo-staging
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile
+    target: staging
+    args:
+      UID: ${UID:-1000}
+      GID: ${GID:-1000}
+  image: autotributo/php:staging
+  working_dir: /var/www/html
+  user: "${UID:-1000}:${GID:-1000}"
+  env_file:
+    - .env
+  environment:
+    HOME: /tmp
+    COMPOSER_HOME: /tmp/composer
+  volumes:
+    # Persistente y compartido: logs, sesiones, caché, vistas y adjuntos.
+    # El usuario del contenedor (UID 1000) es el mismo que el usuario ubuntu.
+    - ./storage:/var/www/html/storage
+    # Assets de Vite y enlace de storage creados en el host. Laravel lee
+    # public/build/manifest.json desde el contenedor `app`.
+    - ./public:/var/www/html/public
+  networks:
+    - autotributo
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  app:
+    <<: *app
+    container_name: autotributo-staging-app
+    command: ["php-fpm"]
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 9000) ? 0 : 1);'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  web:
+    image: caddy:2-alpine
+    container_name: autotributo-staging-web
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    env_file:
+      - .env
+    volumes:
+      # Misma ruta que en el contenedor `app`: php_fastcgi envía
+      # SCRIPT_FILENAME=/var/www/html/public/index.php.
+      - ./public:/var/www/html/public:ro
+      - ./storage:/var/www/html/storage:ro
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+      reverb:
+        condition: service_healthy
+    networks:
+      - autotributo
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 443 || nc -z 127.0.0.1 80"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  queue:
+    <<: *app
+    container_name: autotributo-staging-queue
+    command:
+      - php
+      - artisan
+      - queue:work
+      - --queue=sri,ai,reports,default
+      - --tries=3
+      - --backoff=10
+      - --timeout=120
+      - --max-time=3600
+      - --sleep=3
+      - --verbose
+    mem_limit: 256m
+    depends_on:
+      app:
+        condition: service_healthy
+
+  scheduler:
+    <<: *app
+    container_name: autotributo-staging-scheduler
+    command: ["php", "artisan", "schedule:work", "--verbose"]
+    mem_limit: 128m
+    depends_on:
+      app:
+        condition: service_healthy
+
+  reverb:
+    <<: *app
+    container_name: autotributo-staging-reverb
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    mem_limit: 192m
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 8080) ? 0 : 1);'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  autotributo:
+    driver: bridge

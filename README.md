@@ -34,7 +34,8 @@ Orientado a estudios contables y contadores independientes. El MVP es **single-t
 | [`docs/03-data-model.md`](docs/03-data-model.md) | Tablas, columnas, índices, invariantes y migraciones |
 | [`docs/04-testing-strategy.md`](docs/04-testing-strategy.md) | Pirámide de pruebas, casos obligatorios, fixtures y gates de cobertura |
 | [`docs/05-local-docker-environment.md`](docs/05-local-docker-environment.md) | Docker Compose, Makefile, troubleshooting |
-| [`docs/06-laravel-cloud-deployment.md`](docs/06-laravel-cloud-deployment.md) | Build/deploy, variables, colas, storage, backups, runbooks |
+| [`docs/06-laravel-cloud-deployment.md`](docs/06-laravel-cloud-deployment.md) | Build/deploy a Laravel Cloud (producción), variables, colas, storage, backups, runbooks |
+| [`docs/13-aws-staging-deployment.md`](docs/13-aws-staging-deployment.md) | Staging temporal en AWS: EC2 + Docker Compose, Neon, DuckDNS/TLS, deploy y operación |
 | [`docs/07-governance-and-best-practices.md`](docs/07-governance-and-best-practices.md) | Git, revisión, estándares de código, ADRs, seguridad |
 | [`docs/08-mvp-backlog.md`](docs/08-mvp-backlog.md) | Historias de usuario y criterios de aceptación (Gherkin) |
 | [`docs/09-progress.md`](docs/09-progress.md) | Tabla viva de avance por fase y tarea |
