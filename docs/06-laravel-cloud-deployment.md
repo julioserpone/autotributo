@@ -1,5 +1,13 @@
 # 06 — Despliegue en Laravel Cloud
 
+> **Staging temporal en AWS (2026-11-10).** Mientras Laravel Cloud no esté
+> disponible por coste, `staging` corre en una sola EC2 con Docker Compose,
+> RDS (PostgreSQL) y DuckDNS. La decisión está en el
+> [ADR-0008](adr/0008-aws-staging-single-instance.md) y el runbook en
+> [`13-aws-staging-deployment.md`](13-aws-staging-deployment.md). Este documento
+> sigue siendo la referencia para **producción** y para la migración posterior
+> de staging a Cloud.
+
 ## 1. Topología de entornos
 
 | Entorno | Propósito | Datos | Deploy |

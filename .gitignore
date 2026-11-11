@@ -13,6 +13,7 @@
 .env.*
 !.env.example
 !.env.testing.example
+!.env.staging.example
 # Docker Compose overrides with local UID/GID (see CONTRIBUTING.md)
 !.env.compose.example
 docker-compose.override.yml
