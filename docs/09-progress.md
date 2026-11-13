@@ -11,7 +11,7 @@
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
 | F1 · Núcleo tenant-ready | Completado | 11/11 | F1-11 · Staging en AWS (EC2, RDS, DuckDNS, TLS, deploy, smoke tests) |
 | F2 · Ingesta SRI | Completado | 12/12 + F2-13 | F2-13 · Carga manual de XML (`US-14`) |
-| F3 · Motor fiscal + IA | Pendiente | 0/9 | — |
+| F3 · Motor fiscal + IA | En curso | 1/9 | F3-01 · Catálogos fiscales versionados |
 | F4 · Frontend | En curso | 0/11 + fundaciones/auth parciales | Login, reset, 2FA, invitación y layout mínimo (#36–#40) |
 | F5 · Declaraciones | Pendiente | 0/8 | — |
 | F6 · Hardening y beta | Pendiente | 0/8 | — |
@@ -56,15 +56,20 @@
 | F2-11 | Límites y cuotas | Completado | — | `StartSriSync` serializa por empresa (bloqueo de caché), rechaza runs solapados con `SriSyncAlreadyRunning`, reserva cuota por RUC con `RateLimiter` (`sri.sync.max_calls_per_minute`) y divide por `sri.sync.max_days_per_run` · los reintentos idempotentes no consumen cuota · 7 tests nuevos |
 | F2-12 | Observabilidad | Completado | — | `SriRunMetrics` registra `sri.run.finished`/`partial`/`failed` con duración y volumen al cerrarse cada run; `sri:metrics` resume duración media/p95 y tasa de fallo por ventana · 7 tests nuevos (#35) |
 | F2-13 | Carga manual de XML (`US-14`) | Completado | P1 | `POST /api/v1/companies/{company}/invoices/manual` (multipart): valida XML, clave de acceso y totales; importa con `source=manual_upload`, marca `totals_mismatch` sin corregir, rechaza XXE y archivos > 2 MB; idempotente por `(tenant, company, access_key)` · 9 tests / 37 assertions (#59) |
-| F2-13 | Carga manual de XML (`US-14`) | Pendiente | P1 | Upload validado (estructura, clave, totales), `source=manual_upload`, cuarentena y límites XXE |
 | F2-14 | Cancelación de run | Pendiente | P2 | Endpoint idempotente → `cancelled`, detención de batches, UI en monitor |
 | F2-15 | Runbook de runs huérfanos | Pendiente | P2 | Procedimiento de `sri:recover-run`, alerta por umbral y prueba de restauración |
+
+## Fase 3 · Motor fiscal + IA
+
+| ID | Tarea | Estado | Prioridad | Evidencia |
+|---|---|---|---|---|
+| F3-01 | Catálogos versionados | Completado | P1 | `tax_rates`, `retention_rates`, `form_lines` y `personal_expense_caps` con `valid_from/valid_to`, `source`, `published_at` y `checksum`; `SyncFiscalCatalogs` idempotente, seeder, integración con `app:provision` y comando `catalogs:validate`; IVA 0/5/12/14/15 %, retenciones IR/IVA 2026 y topes 2026 (CBF enero = USD 821,80) · 7 tests / 35 assertions. **Pendiente de firma del contador** (`docs/fiscal-signoff.md`) |
 
 ## Fases 3–6 · Estado resumido
 
 | Fase | Tareas | Estado | Prioridad actual |
 |---|---|---|---|
-| F3 · Motor fiscal + IA | F3-01…F3-09 | Pendiente | P1 (catálogos y reglas) / P2 (IA, riesgos, revisión) |
+| F3 · Motor fiscal + IA | F3-01…F3-09 | En curso (1/9) | P1 (catálogos y reglas) / P2 (IA, riesgos, revisión) |
 | F4 · Frontend | F4-01…F4-11 | Parcial: fundaciones, auth y layout mínimo | **P0** (design system, layout, bandeja, monitor) / P2 (resto) |
 | F5 · Declaraciones | F5-01…F5-08 | Pendiente | P3 (después de F3) |
 | F6 · Hardening y beta | F6-01…F6-08 | Pendiente | P3 (lanzamiento) |
