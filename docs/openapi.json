@@ -1342,6 +1342,59 @@
                 }
             }
         },
+        "/v1/companies/{company}/invoices/manual": {
+            "post": {
+                "operationId": "v1.companies.invoices.manual.store",
+                "tags": [
+                    "ManualInvoice"
+                ],
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "description": "The company public id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreManualInvoiceRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
         "/v1/auth/forgot-password": {
             "post": {
                 "operationId": "v1.auth.forgot-password",
@@ -3173,6 +3226,22 @@
                     "legal_name"
                 ],
                 "title": "StoreCompanyRequest"
+            },
+            "StoreManualInvoiceRequest": {
+                "type": "object",
+                "description": "Valida la carga manual de un XML autorizado (F2-13 / US-14).\n\nEl l\u00edmite de 2 MB se aplica antes de leer el contenido y la extensi\u00f3n se\nrestringe a XML; la guardia XXE y el parseo viven en la acci\u00f3n de dominio.",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "description": "Maximum file size: 2048 kilobytes."
+                    }
+                },
+                "required": [
+                    "file"
+                ],
+                "title": "StoreManualInvoiceRequest"
             },
             "StoreSriCredentialRequest": {
                 "type": "object",
