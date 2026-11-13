@@ -2,7 +2,7 @@
 
 > Tabla viva del proyecto. Se actualiza al cerrar cada tarea (una tarea = un commit/PR). La fuente de verdad del alcance sigue siendo `docs/02-implementation-plan.md`.
 
-**Última actualización:** 2026-11-10
+**Última actualización:** 2026-11-13
 
 ## Resumen por fase
 
@@ -10,7 +10,7 @@
 |---|---|---|---|
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
 | F1 · Núcleo tenant-ready | Completado | 11/11 | F1-11 · Staging en AWS (EC2, RDS, DuckDNS, TLS, deploy, smoke tests) |
-| F2 · Ingesta SRI | Completado | 12/12 | F2-09 · Progreso en vivo (polling + Reverb) |
+| F2 · Ingesta SRI | Completado | 12/12 + F2-13 | F2-13 · Carga manual de XML (`US-14`) |
 | F3 · Motor fiscal + IA | Pendiente | 0/9 | — |
 | F4 · Frontend | En curso | 0/11 + fundaciones/auth parciales | Login, reset, 2FA, invitación y layout mínimo (#36–#40) |
 | F5 · Declaraciones | Pendiente | 0/8 | — |
@@ -55,6 +55,7 @@
 | F2-10 | Resiliencia | Completado | — | `ProcessSriRunJob` en cola `sri`, tenant-aware y único por run; callback y scheduler encolan la importación; parseo + batch de `ImportSriChunkJob` (25 claves), fallo por documento en `sri_sync_run_files` y cierre idempotente con `FinalizeSriRunJob` (`partial_import`/`import_failed`); reintentos 30/120/300 s; runs huérfanos resueltos por `ResolveStaleSriRun` (`robot_timeout`/`import_timeout`) con alerta por umbral · 10 tests nuevos en F2-10c (#33, #34) |
 | F2-11 | Límites y cuotas | Completado | — | `StartSriSync` serializa por empresa (bloqueo de caché), rechaza runs solapados con `SriSyncAlreadyRunning`, reserva cuota por RUC con `RateLimiter` (`sri.sync.max_calls_per_minute`) y divide por `sri.sync.max_days_per_run` · los reintentos idempotentes no consumen cuota · 7 tests nuevos |
 | F2-12 | Observabilidad | Completado | — | `SriRunMetrics` registra `sri.run.finished`/`partial`/`failed` con duración y volumen al cerrarse cada run; `sri:metrics` resume duración media/p95 y tasa de fallo por ventana · 7 tests nuevos (#35) |
+| F2-13 | Carga manual de XML (`US-14`) | Completado | P1 | `POST /api/v1/companies/{company}/invoices/manual` (multipart): valida XML, clave de acceso y totales; importa con `source=manual_upload`, marca `totals_mismatch` sin corregir, rechaza XXE y archivos > 2 MB; idempotente por `(tenant, company, access_key)` · 9 tests / 37 assertions |
 | F2-13 | Carga manual de XML (`US-14`) | Pendiente | P1 | Upload validado (estructura, clave, totales), `source=manual_upload`, cuarentena y límites XXE |
 | F2-14 | Cancelación de run | Pendiente | P2 | Endpoint idempotente → `cancelled`, detención de batches, UI en monitor |
 | F2-15 | Runbook de runs huérfanos | Pendiente | P2 | Procedimiento de `sri:recover-run`, alerta por umbral y prueba de restauración |

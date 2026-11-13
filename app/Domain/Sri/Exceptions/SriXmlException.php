@@ -25,4 +25,14 @@ final class SriXmlException extends RuntimeException
     {
         return new self("El tipo de comprobante no está soportado por el parser: {$type}.");
     }
+
+    public static function unsafe(): self
+    {
+        return new self('El XML contiene declaraciones no permitidas.');
+    }
+
+    public static function tooLarge(): self
+    {
+        return new self('El XML supera el tamaño máximo permitido.');
+    }
 }

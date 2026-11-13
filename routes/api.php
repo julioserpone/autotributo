@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationController;
+use App\Http\Controllers\Api\V1\ManualInvoiceController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\RealtimeStatusController;
 use App\Http\Controllers\Api\V1\SriCredentialController;
@@ -109,6 +110,11 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
             ->name('api.v1.companies.credential.rotate');
         Route::delete('companies/{company}/credential', [SriCredentialController::class, 'destroy'])
             ->name('api.v1.companies.credential.destroy');
+
+        // Carga manual de XML autorizado (F2-13 / US-14): contingencia cuando
+        // el robot no entrega el paquete. Importación síncrona de un documento.
+        Route::post('companies/{company}/invoices/manual', [ManualInvoiceController::class, 'store'])
+            ->name('api.v1.companies.invoices.manual.store');
 
         // Sincronización (F1-06 + F2-03 + F2-09a): usa las credenciales guardadas
         // y la clave de idempotencia del cliente para no duplicar runs. El

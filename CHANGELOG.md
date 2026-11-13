@@ -8,6 +8,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ### Added
 
+- F2-13: carga manual de XML autorizado (`US-14`) en `POST /api/v1/companies/{company}/invoices/manual`; valida estructura, clave de acceso y totales, importa con `source=manual_upload`, marca `totals_mismatch` sin corregir, rechaza XXE/archivos > 2 MB y es idempotente por `(tenant, company, access_key)`.
 - F1-11: staging temporal en AWS (ADR-0008) con una EC2 `t3.micro` y Docker Compose (`app`, `queue`, `scheduler`, `reverb` y Caddy), RDS PostgreSQL `db.t3.micro` como base de datos, `database` para caché/sesiones/colas y DuckDNS con TLS automático; target `staging` del Dockerfile, entrypoint con espera de BD y `optimize`, `scripts/staging/{deploy,provision-host,duckdns-update,ec2-control}.sh`, workflow manual `deploy-staging.yml` y runbook `docs/13-aws-staging-deployment.md`. Provisionado en us-east-2: EC2 + RDS + DuckDNS + Let's Encrypt. Smoke tests OK.
 - F1-08: canales privados de Reverb (`tenant.{tenantId}.company.{companyId}` y `tenant.{tenantId}.user.{userId}`) con autorización por membresía y empresa, `POST /api/v1/broadcasting/auth` y `GET /api/v1/realtime/status` (sin secretos).
 - F1-09: convenciones de API: respuestas de error en `application/problem+json` (RFC 9457) para validación, autenticación, autorización, 404, throttling y errores de dominio; filtros declarativos `filter[...]` con compatibilidad hacia atrás en `companies` y `audit-logs`; OpenAPI generado con Scramble versionado en `docs/openapi.json` y validado en CI.
@@ -52,6 +53,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ### Fixed
 
+- Script `scripts/staging/ec2-control.sh`: al detener staging se hace polling del estado de RDS en lugar de usar el waiter inexistente `db-instance-stopped` de AWS CLI 2.x.
 - Validación del manifiesto S3 y de los archivos de claves antes de marcar un run como `parsing`.
 
 ### Security

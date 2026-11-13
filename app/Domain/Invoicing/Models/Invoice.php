@@ -27,7 +27,7 @@ use Illuminate\Support\Str;
  * @property int $company_id
  * @property SriDocumentType $document_type
  * @property string $access_key
- * @property string $issue_date
+ * @property Carbon $issue_date
  * @property int $subtotal_cents
  * @property int $tax_cents
  * @property int $total_cents
@@ -42,6 +42,8 @@ final class Invoice extends Model
     use BelongsToTenant, HasFactory;
 
     public const SOURCE_SRI_ROBOT = 'sri_robot';
+
+    public const SOURCE_MANUAL_UPLOAD = 'manual_upload';
 
     public const STATUS_AUTHORIZED = 'authorized';
 
