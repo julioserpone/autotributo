@@ -63,7 +63,7 @@
 
 | ID | Tarea | Estado | Prioridad | Evidencia |
 |---|---|---|---|---|
-| F3-01 | Catálogos versionados | Completado | P1 | `tax_rates`, `retention_rates`, `form_lines` y `personal_expense_caps` con `valid_from/valid_to`, `source`, `published_at` y `checksum`; `SyncFiscalCatalogs` idempotente, seeder, integración con `app:provision` y comando `catalogs:validate`; IVA 0/5/12/14/15 %, retenciones IR/IVA 2026 y topes 2026 (CBF enero = USD 821,80) · 7 tests / 35 assertions. **Pendiente de firma del contador** (`docs/fiscal-signoff.md`) |
+| F3-01 | Catálogos versionados | Completado | P1 | `tax_rates`, `retention_rates`, `form_lines` y `personal_expense_caps` con `valid_from/valid_to`, `source`, `published_at` y `checksum`; `SyncFiscalCatalogs` idempotente, seeder, integración con `app:provision` y comando `catalogs:validate`; IVA 0/5/12/14/15 %, retenciones IR/IVA 2026 y topes 2026 (CBF enero = USD 821,80) · 7 tests / 35 assertions. **Pendiente de firma del contador** (`docs/fiscal-signoff.md`) (#60) |
 
 ## Fases 3–6 · Estado resumido
 
@@ -91,6 +91,7 @@
 | #47 | Comando idempotente `app:provision` | F1-10 |
 | #48 | CRUD de empresas y validador de RUC | F1-05 |
 | #59 | Carga manual de XML autorizado y fix del script de staging | F2-13 |
+| #60 | Catálogos fiscales versionados y comando `catalogs:validate` | F3-01 |
 
 ## Cómo actualizar
 

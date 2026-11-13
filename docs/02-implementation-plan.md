@@ -132,7 +132,7 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 
 | ID | Tarea | Est. | Detalle |
 |---|---|---|---|
-| F3-01 | Catálogos versionados | 2 d | `tax_rates`, `form_lines`, `retention_rates`, `personal_expense_caps` con `valid_from/valid_to`; seeds por año. **Completado 2026-11-13:** carga idempotente, `catalogs:validate`, integración con `app:provision` y firma del contador pendiente |
+| F3-01 | Catálogos versionados | 2 d | `tax_rates`, `form_lines`, `retention_rates`, `personal_expense_caps` con `valid_from/valid_to`; seeds por año. **Completado 2026-11-13 (PR #60):** carga idempotente, `catalogs:validate`, integración con `app:provision` y firma del contador pendiente |
 | F3-02 | Motor de reglas | 2 d | Reglas por tenant/globales, prioridad, match por descripción/proveedor/código, dry-run, detección de conflictos, cache con invalidación |
 | F3-03 | Clasificador IA | 2 d | Contrato `Classifier`, fake, adaptador OpenAI/Anthropic, JSON schema, validación, 1 reintento, timeout, circuit breaker |
 | F3-04 | Gobierno de IA | 1,5 d | Prompt versionado, caché por hash, `llm_calls` con tokens/coste/latencia, presupuesto por tenant, degradación a revisión manual |
