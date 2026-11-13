@@ -133,21 +133,23 @@ Obligaciones por empresa/año: `company_id`, `fiscal_year`, `form_code` (`104`, 
 `code` (`01`,`02`,`03`,`04`,`05`,`06`,`07`), `name`, `is_deductible_supported`, `valid_from`, `valid_to`.
 
 ### `tax_rates` (IVA)
-`id`, `code` (`IVA`), `rate` numeric(9,6), `sri_percentage_code` (`0`,`5`,`12`,`15`), `label`, `valid_from` date, `valid_to` date null, `legal_basis`.
+`id`, `code` (`IVA`), `rate` numeric(9,6), `sri_percentage_code` (`0`,`5`,`12`,`15`), `label`, `applies_to` (`general`,`construction_materials`), `valid_from` date, `valid_to` date null, `legal_basis`, `source`, `published_at`, `checksum`. Unique `(code, sri_percentage_code, valid_from)`.
 
-> El código de porcentaje del SRI (`codigoPorcentaje`) es distinto de la tarifa. Ambos se guardan.
+> El código de porcentaje del SRI (`codigoPorcentaje`) es distinto de la tarifa. Ambos se guardan. El catálogo conserva la tarifa de 14 % vigente entre junio de 2016 y mayo de 2017.
 
 ### `retention_rates`
-`id`, `tax_type` (`IR`,`IVA`), `code` (código de retención), `rate`, `applies_to` (`services`,`goods`,`rent`,`professional`…), `valid_from`, `valid_to`, `legal_basis`.
+`id`, `tax_type` (`IR`,`IVA`), `code` (código de retención), `rate` numeric(9,6), `label`, `applies_to` (`services`,`goods`,`rent`,`professional`…), `valid_from`, `valid_to`, `legal_basis`, `source`, `published_at`, `checksum`. Unique `(tax_type, code, valid_from)`.
 
 ### `form_lines`
-Definición de casilleros por formulario y vigencia: `form_code`, `line_code`, `section`, `label`, `data_type` (`amount`,`count`,`rate`), `is_required`, `display_order`, `valid_from`, `valid_to`. Unique `(form_code, line_code, valid_from)`.
+Definición de casilleros por formulario y vigencia: `form_code`, `line_code`, `section`, `label`, `data_type` (`amount`,`count`,`rate`), `is_required`, `display_order`, `valid_from`, `valid_to`, `source`, `published_at`, `checksum`. Unique `(form_code, line_code, valid_from)`.
 
 ### `expense_categories`
-`code`, `name`, `is_personal_deductible`, `is_business_deductible`, `parent_id`, `icon`, `valid_from`, `valid_to`. Árbol: alimentación, vivienda, salud, educación, vestimenta, turismo, operativo, activo fijo, no deducible.
+`code`, `name`, `is_personal_deductible`, `is_business_deductible`, `parent_id`, `icon`, `valid_from`, `valid_to`. Árbol: alimentación, vivienda, salud, educación, vestimenta, turismo, operativo, activo fijo, no deducible. Se incorpora con el motor de reglas (F3-02) y la importación de catálogos (F3-09).
 
 ### `personal_expense_caps`
-`fiscal_year`, `category_code`, `cap_cents`, `basic_food_basket_cents`, `source`, `published_at`. Unique `(fiscal_year, category_code)`.
+`fiscal_year`, `category_code` (`global`,`catastrophic_illness`), `dependents` (0–5; 5 = cinco o más), `cap_cents`, `baskets`, `basic_food_basket_cents`, `valid_from`, `valid_to`, `source`, `published_at`, `checksum`. Unique `(fiscal_year, category_code, dependents, valid_from)`.
+
+> El tope se calcula como `baskets × basic_food_basket_cents`; `catalogs:validate` falla si `cap_cents` no coincide.
 
 ### `ghost_companies`
 `ruc` PK, `legal_name`, `resolution`, `published_at`, `source_url`, `status`, `imported_at`. Se refresca por comando desde la fuente oficial.

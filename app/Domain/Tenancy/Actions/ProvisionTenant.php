@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Tenancy\Actions;
 
+use App\Domain\Fiscal\Actions\SyncFiscalCatalogs;
 use App\Domain\Tenancy\Data\ProvisionResult;
 use App\Domain\Tenancy\Enums\MembershipRole;
 use App\Domain\Tenancy\Models\Membership;
@@ -20,12 +21,14 @@ use Spatie\Permission\Models\Role;
  *
  * Crea (o reutiliza) el tenant, sus roles, el usuario owner y la membresía.
  * En la primera ejecución envía un enlace de establecimiento de contraseña.
- * Los catálogos fiscales se incorporan en F3-01; este action los dejará
- * enganchados cuando exista el provisionador de catálogos.
+ * Los catálogos fiscales globales se sincronizan de forma idempotente.
  */
 final readonly class ProvisionTenant
 {
-    public function __construct(private EnsureTenantRoles $ensureTenantRoles) {}
+    public function __construct(
+        private EnsureTenantRoles $ensureTenantRoles,
+        private SyncFiscalCatalogs $syncFiscalCatalogs,
+    ) {}
 
     public function handle(
         string $name,
@@ -51,6 +54,7 @@ final readonly class ProvisionTenant
 
         app(TenantContext::class)->initialize($tenant);
         $this->ensureTenantRoles->handle($tenant);
+        $catalogs = $this->syncFiscalCatalogs->handle();
 
         $existingOwner = Membership::query()
             ->with('user')
@@ -98,6 +102,7 @@ final readonly class ProvisionTenant
             tenantCreated: $tenantCreated,
             ownerCreated: $ownerCreated,
             membershipCreated: $membership->wasRecentlyCreated,
+            catalogs: $catalogs,
         );
     }
 
