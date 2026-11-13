@@ -97,7 +97,13 @@ final class ProvisionCommand extends Command
                 : 'No se reenvió el enlace; usa --resend-invite para forzarlo.');
         }
 
-        $this->line('Catálogos fiscales: se incorporan en F3-01.');
+        $this->line(sprintf(
+            'Catálogos fiscales: %d filas (%d creadas, %d actualizadas, %d sin cambios).',
+            $result->catalogs->total(),
+            $result->catalogs->created(),
+            $result->catalogs->updated(),
+            $result->catalogs->unchanged(),
+        ));
 
         return self::SUCCESS;
     }

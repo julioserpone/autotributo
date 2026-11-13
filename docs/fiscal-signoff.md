@@ -17,6 +17,7 @@ Registro de validación de cálculos, catálogos y formularios por parte del con
 | 2026-10-22 | v0 (pendiente) | Formulario 103 | Retenciones IR e IVA | — | — | — | Ficha técnica SRI (pendiente de adjuntar) | — |
 | 2026-10-22 | v0 (pendiente) | Formulario 102 | Topes de gastos personales | — | — | — | Tabla anual (pendiente de adjuntar) | — |
 | 2026-10-22 | v0 (pendiente) | Tarifas IVA | 0 %, 5 %, 12 % histórico, 15 % | — | — | — | Resolución SRI (pendiente de adjuntar) | — |
+| 2026-11-13 | v1 (pendiente) | Catálogos F3-01 | IVA 0/5/12/14/15 %, retenciones IR/IVA 2026, casilleros base 104 y topes 2026 | `catalogs:validate` OK (50 filas) | — | — | SRI/INEC; detalle por fila en `FiscalCatalogData` | — |
 
 ## Escenarios mínimos a validar (Fase 5)
 
@@ -46,3 +47,4 @@ Registro de validación de cálculos, catálogos y formularios por parte del con
 | Fecha | Cambio | Autor |
 |---|---|---|
 | 2026-10-22 | Creación de la plantilla | — |
+| 2026-11-13 | Alta de catálogos F3-01 (IVA, retenciones, casilleros 104 y topes 2026); queda pendiente la firma del contador | — |
