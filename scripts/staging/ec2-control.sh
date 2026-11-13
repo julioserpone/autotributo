@@ -71,8 +71,18 @@ case "${1:-}" in
       echo "Apagando RDS $RDS_ID..."
       aws rds stop-db-instance --db-instance-identifier "$RDS_ID" \
         --profile "$PROFILE" --region "$REGION" >/dev/null
-      aws rds wait db-instance-stopped --db-instance-identifier "$RDS_ID" \
-        --profile "$PROFILE" --region "$REGION"
+      # La AWS CLI 2.x no ofrece un waiter `db-instance-stopped`; se hace
+      # polling del estado hasta que RDS quede en `stopped`.
+      echo "Esperando a que la RDS se detenga..."
+      for _ in $(seq 1 90); do
+        RDS_ST="$(rds_status)"
+        [[ "$RDS_ST" == "stopped" ]] && break
+        sleep 10
+      done
+      if [[ "$(rds_status)" != "stopped" ]]; then
+        echo "La RDS no llegó a 'stopped' (estado actual: $(rds_status))." >&2
+        exit 1
+      fi
       echo "RDS apagada."
     elif [[ "$RDS_ST" == "stopped" ]]; then
       echo "RDS ya está apagada."
