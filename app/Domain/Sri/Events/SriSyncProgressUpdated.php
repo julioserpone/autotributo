@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Sri\Events;
 
+use App\Domain\Companies\Models\Company;
 use App\Domain\Sri\Models\SriSyncRun;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
@@ -22,6 +23,9 @@ final class SriSyncProgressUpdated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    /** Caché del `public_id`; el evento se serializa y puede reutilizarlo. */
+    private ?string $companyPublicId = null;
+
     public function __construct(public readonly SriSyncRun $run) {}
 
     /**
@@ -29,11 +33,32 @@ final class SriSyncProgressUpdated implements ShouldBroadcast
      */
     public function broadcastOn(): array
     {
-        $run = $this->run->loadMissing('company');
-
         return [
-            new PrivateChannel("tenant.{$run->tenant_id}.company.{$run->company?->public_id}"),
+            new PrivateChannel("tenant.{$this->run->tenant_id}.company.{$this->companyPublicId()}"),
         ];
+    }
+
+    /**
+     * Resuelve el `public_id` de la empresa sin depender del contexto de tenant.
+     *
+     * El evento también se emite desde el webhook del robot, que se autentica
+     * por HMAC y no abre contexto; usar el `TenantScope` ahí reventaría el
+     * worker (`TenantContextNotSet`) y el progreso nunca llegaría al monitor.
+     */
+    private function companyPublicId(): string
+    {
+        if ($this->companyPublicId !== null) {
+            return $this->companyPublicId;
+        }
+
+        if ($this->run->relationLoaded('company') && $this->run->company !== null) {
+            return $this->companyPublicId = $this->run->company->public_id;
+        }
+
+        return $this->companyPublicId = (string) Company::query()
+            ->withoutGlobalScopes()
+            ->whereKey($this->run->company_id)
+            ->value('public_id');
     }
 
     public function broadcastAs(): string
