@@ -53,6 +53,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ### Fixed
 
+- F2-09: el progreso en vivo no llegaba a Reverb en Docker local porque `app`/`queue`/`scheduler` usaban `REVERB_HOST=localhost`; ahora la red interna resuelve `reverb` y el navegador conserva `VITE_REVERB_HOST`. Además, `SriSyncProgressUpdated` resuelve la empresa sin `TenantScope`, para que el webhook del robot (sin contexto de tenant) también pueda publicar el evento.
 - Script `scripts/staging/ec2-control.sh`: al detener staging se hace polling del estado de RDS en lugar de usar el waiter inexistente `db-instance-stopped` de AWS CLI 2.x.
 - Validación del manifiesto S3 y de los archivos de claves antes de marcar un run como `parsing`.
 

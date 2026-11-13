@@ -25,6 +25,10 @@ x-app: &app
   environment:
     HOME: /tmp
     COMPOSER_HOME: /tmp/composer
+    # Dentro de la red Docker, app/queue/scheduler alcanzan Reverb por el
+    # nombre del servicio. El navegador sigue usando VITE_REVERB_HOST
+    # (localhost) porque el puerto 8080 está publicado en el host.
+    REVERB_HOST: ${REVERB_HOST_INTERNAL:-reverb}
   volumes:
     - ./:/var/www/html:cached
   depends_on:
