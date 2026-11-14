@@ -304,6 +304,8 @@ Escenario: Prioridad
 
 **Pruebas:** feature (límite, notificación, corte, override), unit (agregación de coste).
 
+**Implementado en F3-04:** límite mensual por tenant (`LLM_MONTHLY_BUDGET_USD`, `0` = sin límite), corte antes de llamar con fila `budget_exceeded` y degradación del ítem a `review`, y aviso al 80 % en el log una vez al mes. El canal de notificación y la elevación del límite con auditoría quedan para F6-03 y la administración de tenants.
+
 ---
 
 ## Épica 5 — Declaraciones e informes

@@ -95,6 +95,7 @@ final readonly class OpenAiClassifier implements Classifier
             inputTokens: (int) data_get($body, 'usage.prompt_tokens', 0),
             outputTokens: (int) data_get($body, 'usage.completion_tokens', 0),
             latencyMs: intdiv(hrtime(true) - $started, 1_000_000),
+            provider: 'openai',
         );
     }
 

@@ -11,7 +11,7 @@
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
 | F1 · Núcleo tenant-ready | Completado | 11/11 | F1-11 · Staging en AWS (EC2, RDS, DuckDNS, TLS, deploy, smoke tests) |
 | F2 · Ingesta SRI | Completado | 12/12 + F2-13 | F2-13 · Carga manual de XML (`US-14`) |
-| F3 · Motor fiscal + IA | En curso | 3/9 | F3-03 · Clasificador IA con reglas como primera opción |
+| F3 · Motor fiscal + IA | En curso | 4/9 | F3-04 · Caché, `llm_calls` y presupuesto por tenant |
 | F4 · Frontend | En curso | 0/11 + fundaciones/auth parciales | Login, reset, 2FA, invitación y layout mínimo (#36–#40) |
 | F5 · Declaraciones | Pendiente | 0/8 | — |
 | F6 · Hardening y beta | Pendiente | 0/8 | — |
@@ -66,12 +66,13 @@
 | F3-01 | Catálogos versionados | Completado | P1 | `tax_rates`, `retention_rates`, `form_lines` y `personal_expense_caps` con `valid_from/valid_to`, `source`, `published_at` y `checksum`; `SyncFiscalCatalogs` idempotente, seeder, integración con `app:provision` y comando `catalogs:validate`; IVA 0/5/12/14/15 %, retenciones IR/IVA 2026 y topes 2026 (CBF enero = USD 821,80) · 7 tests / 35 assertions. **Pendiente de firma del contador** (`docs/fiscal-signoff.md`) (#60) |
 | F3-02 | Motor de reglas | Completado | P1 | `expense_categories` (9 categorías), `classification_rules` (tenant/global, soft delete) y `classifications`; `ClassificationRuleMatcher` (`contains`, `starts_with`, `exact`, `regex`, `provider_ruc`, `item_code`), precedencia por `priority` con desempate tenant > global, `ClassificationRuleRepository` con caché versionada e invalidación al guardar/borrar; dry-run y detección de conflictos con `409 classification-rule-conflict`; `ClassifyInvoiceItems` integrado en `PersistSriInvoice` sin bloquear la importación; endpoints `classification-rules` (CRUD + dry-run) y `expense-categories`; provisión y seeder idempotentes · 37 tests / 154 assertions. `match_type=item_code` documentado en `docs/03-data-model.md`. **Pendiente firma de deducibilidad** (`docs/fiscal-signoff.md`) (#62) |
 | F3-03 | Clasificador IA | Completado | P1 | `Classifier` + DTOs (`ClassificationRequest`, `ClassificationSuggestion`, `ClassifierResult`), prompt versionado `v1` en `resources/prompts/classify-item.v1.md`, `ClassifierOutputValidator` estricto (claves exactas, categoría del catálogo, confianza 0..1, `reason` ≤ 300, rechazo de markdown/JSON truncado), `OpenAiClassifier` (JSON Schema estricto) y `AnthropicClassifier`, `FakeClassifier` determinista, `ResilientClassifier` con un reintento solo ante salida inválida y `ClassifierCircuitBreaker` por tenant; `ClassifyInvoiceItems` usa la IA solo si ninguna regla coincide y aplica `LLM_CONFIDENCE_THRESHOLD`: `auto`/`suggested` o `review`/`needs_review`, con degradación a `review` sin clasificación persistida ante timeout/429/5xx/salida inválida/circuito abierto/error inesperado · 39 tests / 131 assertions. Validado contra PostgreSQL local (smoke transaccional revertido: `auto`, `llm`, confianza 0,95, prompt `v1`) y con un mock HTTP local real para ambos adaptadores. Persistencia de `llm_calls`, caché por hash y presupuesto quedan para F3-04 (#63) |
+| F3-04 | Gobierno de IA | Completado | P1 | `llm_calls` (tenant/company, `purpose`, `provider`, `model`, `prompt_version`, `input_hash` SHA-256, tokens, `cost_micros`, `latency_ms`, `status`, `error_code`, `created_at`) enlazado desde `classifications.llm_call_id`; `GovernedClassifier` decide caché → presupuesto → proveedor; `LlmCache` reutiliza la última clasificación exitosa con la misma huella normalizada (descripción sin acentos, rubro, catálogo, modelo y prompt) y persiste `method=cache` sin coste; `LlmBudget` suma el mes en curso y corta antes de llamar con `budget_exceeded`, dejando el ítem en `review`; aviso al 80 % una vez al mes; `LlmCostCalculator` calcula en micros con enteros desde `config/ai.php`; `ClassifierUnavailable` e `InvalidClassifierOutput` exponen `errorCode()` para la bitácora. Groq/Gemini se prueban por configuración (`LLM_DRIVER=openai` + `OPENAI_BASE_URL`) · 15 tests / 70 assertions. Smoke real contra PostgreSQL (transacción revertida): `llm` con 1.200/300 tokens, 960 micros y 37 ms; segunda descripción idéntica `cache` con el mismo `llm_call_id` y una sola petición; presupuesto agotado `review` + `budget_exceeded` sin llamada (#64) |
 
 ## Fases 3–6 · Estado resumido
 
 | Fase | Tareas | Estado | Prioridad actual |
 |---|---|---|---|
-| F3 · Motor fiscal + IA | F3-01…F3-09 | En curso (3/9) | P1 (catálogos, reglas y clasificador) / P2 (gobierno, riesgos, revisión) |
+| F3 · Motor fiscal + IA | F3-01…F3-09 | En curso (4/9) | P1 (catálogos, reglas, clasificador y gobierno de IA) / P2 (riesgos, revisión) |
 | F4 · Frontend | F4-01…F4-11 | Parcial: fundaciones, auth y layout mínimo | **P0** (design system, layout, bandeja, monitor) / P2 (resto) |
 | F5 · Declaraciones | F5-01…F5-08 | Pendiente | P3 (después de F3) |
 | F6 · Hardening y beta | F6-01…F6-08 | Pendiente | P3 (lanzamiento) |
@@ -97,6 +98,7 @@
 | #61 | Fix del progreso en vivo de Reverb en Docker | F2-09 |
 | #62 | Motor de reglas de clasificación | F3-02 |
 | #63 | Clasificador IA resiliente y degradación a revisión | F3-03 |
+| #64 | Gobierno de IA: caché, `llm_calls` y presupuesto | F3-04 |
 
 ## Cómo actualizar
 

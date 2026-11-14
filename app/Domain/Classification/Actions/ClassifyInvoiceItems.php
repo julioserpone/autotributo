@@ -81,6 +81,8 @@ final readonly class ClassifyInvoiceItems
                         'confidence' => 1.0,
                         'status' => ClassificationStatus::Suggested,
                         'rule_id' => $rule->id,
+                        'llm_call_id' => null,
+                        'prompt_version' => null,
                     ],
                 );
 
@@ -191,10 +193,11 @@ final readonly class ClassifyInvoiceItems
             [
                 'tenant_id' => $invoice->tenant_id,
                 'expense_category_id' => $category->id,
-                'method' => ClassificationMethod::Llm,
+                'method' => $result->cached ? ClassificationMethod::Cache : ClassificationMethod::Llm,
                 'confidence' => $suggestion->confidence,
                 'status' => $accepted ? ClassificationStatus::Suggested : ClassificationStatus::NeedsReview,
                 'rule_id' => null,
+                'llm_call_id' => $result->llmCallId,
                 'prompt_version' => $result->promptVersion,
             ],
         );

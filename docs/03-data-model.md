@@ -285,12 +285,14 @@ Se conserva historial en `audit_logs`; para análisis de calidad se agrega `clas
 
 Índice: `(tenant_id, is_active, priority)` y `(tenant_id, match_type)`. Precedencia: `priority` ascendente y, en empate, la regla del tenant gana a la global. `contains`, `starts_with`, `exact` y `regex` comparan la descripción normalizada; `provider_ruc` el RUC del emisor; `item_code` el código principal o auxiliar del ítem. Validación: regex compilada al guardar; conflictos de misma prioridad detectados antes de guardar y en dry-run. Las reglas globales son de solo lectura desde un tenant.
 
-`invoice_items.classification_status` pasa a `auto` cuando una regla o una sugerencia de IA con confianza suficiente clasifica el ítem, a `review` cuando la IA no es concluyente o no está disponible, y permanece `pending` si ninguna regla coincide y el clasificador no propone nada. La clasificación vigente en `classifications` guarda `method=llm`, `confidence` y `prompt_version` para explicar el origen; `llm_call_id` se completa en F3-04.
+`invoice_items.classification_status` pasa a `auto` cuando una regla o una sugerencia de IA con confianza suficiente clasifica el ítem, a `review` cuando la IA no es concluyente o no está disponible, y permanece `pending` si ninguna regla coincide y el clasificador no propone nada. La clasificación vigente en `classifications` guarda `method=llm` (o `cache` si se reutilizó una sugerencia previa), `confidence`, `prompt_version` y `llm_call_id` para explicar el origen y auditar el coste.
 
 ### `llm_calls`
 `id`, `tenant_id`, `company_id` null, `purpose` (`classify_item`), `provider`, `model`, `prompt_version`, `input_hash` char(64), `input_tokens`, `output_tokens`, `cost_micros`, `latency_ms`, `status`, `error_code`, `created_at`.
 
-Índice `(tenant_id, created_at)` para el presupuesto. **No** se guarda la descripción cruda si contiene datos personales; se guarda el hash y, opcionalmente, una versión redactada.
+Índice `(tenant_id, created_at)` para el presupuesto, `(tenant_id, input_hash)` para la caché y `(tenant_id, status)` para métricas. **No** se guarda la descripción cruda si contiene datos personales; se guarda el hash y, opcionalmente, una versión redactada.
+
+`status` vale `success`, `invalid_output`, `unavailable` o `budget_exceeded`; este último no representa una llamada al proveedor, sino el corte por presupuesto con su motivo. `error_code` concreta el fallo (`rate_limited`, `http_503`, `connection_failed`, `missing_api_key`, `circuit_open`, `invalid_json`, `unexpected_shape`, `budget_exceeded`). La huella incluye descripción normalizada, rubro del emisor, catálogo, modelo y versión del prompt; un cambio en cualquiera invalida la caché.
 
 ## 8. Fiscal
 

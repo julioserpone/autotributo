@@ -15,21 +15,32 @@ use Throwable;
  */
 final class ClassifierUnavailable extends RuntimeException
 {
+    private function __construct(
+        string $message,
+        private readonly string $errorCode,
+        ?Throwable $previous = null,
+    ) {
+        parent::__construct($message, 0, $previous);
+    }
+
     public static function circuitOpen(): self
     {
-        return new self('El circuito del clasificador está abierto; se omite la llamada a la IA.');
+        return new self(
+            'El circuito del clasificador está abierto; se omite la llamada a la IA.',
+            'circuit_open',
+        );
     }
 
     public static function rateLimited(): self
     {
-        return new self('El proveedor de IA limitó la tasa de solicitudes.');
+        return new self('El proveedor de IA limitó la tasa de solicitudes.', 'rate_limited');
     }
 
     public static function requestFailed(int $status, ?Throwable $previous = null): self
     {
         return new self(
             "El proveedor de IA respondió con un error HTTP {$status}.",
-            0,
+            "http_{$status}",
             $previous,
         );
     }
@@ -38,13 +49,29 @@ final class ClassifierUnavailable extends RuntimeException
     {
         return new self(
             'No fue posible conectar con el proveedor de IA (timeout o red).',
-            0,
+            'connection_failed',
             $previous,
         );
     }
 
     public static function missingApiKey(string $provider): self
     {
-        return new self("Falta la clave de API del proveedor de IA ({$provider}).");
+        return new self(
+            "Falta la clave de API del proveedor de IA ({$provider}).",
+            'missing_api_key',
+        );
+    }
+
+    public static function budgetExceeded(): self
+    {
+        return new self(
+            'El presupuesto mensual de IA del tenant está agotado.',
+            'budget_exceeded',
+        );
+    }
+
+    public function errorCode(): string
+    {
+        return $this->errorCode;
     }
 }
