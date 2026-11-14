@@ -285,7 +285,7 @@ Se conserva historial en `audit_logs`; para análisis de calidad se agrega `clas
 
 Índice: `(tenant_id, is_active, priority)` y `(tenant_id, match_type)`. Precedencia: `priority` ascendente y, en empate, la regla del tenant gana a la global. `contains`, `starts_with`, `exact` y `regex` comparan la descripción normalizada; `provider_ruc` el RUC del emisor; `item_code` el código principal o auxiliar del ítem. Validación: regex compilada al guardar; conflictos de misma prioridad detectados antes de guardar y en dry-run. Las reglas globales son de solo lectura desde un tenant.
 
-`invoice_items.classification_status` pasa a `auto` cuando una regla clasifica el ítem y permanece `pending` si ninguna coincide, para que F3-03/F3-05 lo resuelvan.
+`invoice_items.classification_status` pasa a `auto` cuando una regla o una sugerencia de IA con confianza suficiente clasifica el ítem, a `review` cuando la IA no es concluyente o no está disponible, y permanece `pending` si ninguna regla coincide y el clasificador no propone nada. La clasificación vigente en `classifications` guarda `method=llm`, `confidence` y `prompt_version` para explicar el origen; `llm_call_id` se completa en F3-04.
 
 ### `llm_calls`
 `id`, `tenant_id`, `company_id` null, `purpose` (`classify_item`), `provider`, `model`, `prompt_version`, `input_hash` char(64), `input_tokens`, `output_tokens`, `cost_micros`, `latency_ms`, `status`, `error_code`, `created_at`.

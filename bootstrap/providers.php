@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Providers\AppServiceProvider;
 use App\Providers\AuditServiceProvider;
 use App\Providers\BroadcastServiceProvider;
+use App\Providers\ClassificationServiceProvider;
 use App\Providers\CompaniesServiceProvider;
 use App\Providers\SriServiceProvider;
 use App\Providers\TenancyServiceProvider;
@@ -15,5 +16,6 @@ return [
     BroadcastServiceProvider::class,
     TenancyServiceProvider::class,
     CompaniesServiceProvider::class,
+    ClassificationServiceProvider::class,
     SriServiceProvider::class,
 ];

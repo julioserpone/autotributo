@@ -187,7 +187,7 @@ Dónde se ejecutan: **en local** (`make up && make migrate && make seed` y `make
 | Coste | se registra por ejecución en `docs/reports/ai-eval-YYYY-MM-DD.md` |
 | Cambios de prompt | PR obligatorio con diff del reporte antes/después |
 
-En tests normales, `FakeClassifier` es determinista y no consume red.
+En tests normales, `FakeClassifier` es determinista y no consume red. F3-03 cubre con `Http::fake` la respuesta válida, la salida inválida, el JSON truncado, el timeout de conexión, el 429, el 5xx y el circuito abierto, tanto en los adaptadores como en el flujo de clasificación. `ai:evaluate`, el dataset dorado y la comparación de prompts llegan en F3-08.
 
 ## 5. Casos obligatorios por módulo
 
