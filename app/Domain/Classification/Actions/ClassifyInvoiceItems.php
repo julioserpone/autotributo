@@ -4,43 +4,54 @@ declare(strict_types=1);
 
 namespace App\Domain\Classification\Actions;
 
+use App\Domain\Classification\Contracts\Classifier;
+use App\Domain\Classification\Data\ClassificationCategory;
+use App\Domain\Classification\Data\ClassificationRequest;
+use App\Domain\Classification\Data\ClassificationSuggestion;
 use App\Domain\Classification\Enums\ClassificationMethod;
 use App\Domain\Classification\Enums\ClassificationStatus;
+use App\Domain\Classification\Exceptions\ClassifierUnavailable;
+use App\Domain\Classification\Exceptions\InvalidClassifierOutput;
 use App\Domain\Classification\Models\Classification;
 use App\Domain\Classification\Models\ClassificationRule;
+use App\Domain\Classification\Models\ExpenseCategory;
 use App\Domain\Classification\Services\ClassificationRuleMatcher;
 use App\Domain\Classification\Services\ClassificationRuleRepository;
 use App\Domain\Invoicing\Models\Invoice;
 use App\Domain\Invoicing\Models\InvoiceItem;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
- * Clasifica los ítems de un comprobante con el motor de reglas.
+ * Clasifica los ítems de un comprobante: primero reglas, luego IA.
  *
  * US-16: una regla que coincide clasifica con `method=rule` y confianza 1.0,
- * sin consumir presupuesto de IA. Si no hay reglas o ninguna coincide, el ítem
- * queda `pending` para que F3-03/F3-05 lo resuelvan.
+ * sin consumir presupuesto de IA. US-17: si ninguna regla coincide, el
+ * clasificador propone una categoría; con confianza mayor o igual al umbral el
+ * ítem queda `auto`, con menor confianza queda en revisión.
  *
- * Los contadores de aciertos se actualizan con consultas directas para no
- * disparar `saved` ni invalidar la caché del catálogo en cada ítem.
+ * La IA es un respaldo best-effort: timeout, 429, salida inválida o circuito
+ * abierto dejan el ítem en `review` sin bloquear la importación. Un clasificador
+ * sin sugerencia (el fake por defecto) mantiene el ítem `pending`.
  */
 final readonly class ClassifyInvoiceItems
 {
     public function __construct(
         private ClassificationRuleMatcher $matcher,
         private ClassificationRuleRepository $rules,
+        private Classifier $classifier,
+        private float $confidenceThreshold,
     ) {}
 
     public function handle(Invoice $invoice): int
     {
         $rules = $this->rules->forTenant((int) $invoice->tenant_id);
 
-        if ($rules === []) {
-            return 0;
-        }
-
         $classified = 0;
         /** @var array<int, int> $hits */
         $hits = [];
+        /** @var list<ClassificationCategory>|null $categories */
+        $categories = null;
 
         foreach ($invoice->items()->get() as $item) {
             if (! $item instanceof InvoiceItem) {
@@ -55,29 +66,51 @@ final readonly class ClassifyInvoiceItems
                 $issuerRuc === null ? null : (string) $issuerRuc,
             );
 
-            if (! $rule instanceof ClassificationRule) {
+            if ($rule instanceof ClassificationRule) {
+                $item->forceFill([
+                    'expense_category_id' => $rule->expense_category_id,
+                    'classification_status' => InvoiceItem::STATUS_AUTO,
+                ])->save();
+
+                Classification::query()->updateOrCreate(
+                    ['invoice_item_id' => $item->id],
+                    [
+                        'tenant_id' => $invoice->tenant_id,
+                        'expense_category_id' => $rule->expense_category_id,
+                        'method' => ClassificationMethod::Rule,
+                        'confidence' => 1.0,
+                        'status' => ClassificationStatus::Suggested,
+                        'rule_id' => $rule->id,
+                    ],
+                );
+
+                $hits[$rule->id] = ($hits[$rule->id] ?? 0) + 1;
+                $classified++;
+
                 continue;
             }
 
-            $item->forceFill([
-                'expense_category_id' => $rule->expense_category_id,
-                'classification_status' => InvoiceItem::STATUS_AUTO,
-            ])->save();
+            // Solo se consulta la IA para ítems aún pendientes: una segunda
+            // pasada no debe volver a gastar presupuesto ni pisar una revisión.
+            if ($item->classification_status !== InvoiceItem::STATUS_PENDING) {
+                continue;
+            }
 
-            Classification::query()->updateOrCreate(
-                ['invoice_item_id' => $item->id],
-                [
-                    'tenant_id' => $invoice->tenant_id,
-                    'expense_category_id' => $rule->expense_category_id,
-                    'method' => ClassificationMethod::Rule,
-                    'confidence' => 1.0,
-                    'status' => ClassificationStatus::Suggested,
-                    'rule_id' => $rule->id,
-                ],
-            );
+            if (trim((string) $item->description) === '') {
+                continue;
+            }
 
-            $hits[$rule->id] = ($hits[$rule->id] ?? 0) + 1;
-            $classified++;
+            if ($categories === null) {
+                $categories = $this->validCategories();
+            }
+
+            if ($categories === []) {
+                continue;
+            }
+
+            if ($this->classifyWithAi($invoice, $item, $categories)) {
+                $classified++;
+            }
         }
 
         foreach ($hits as $ruleId => $count) {
@@ -87,5 +120,131 @@ final readonly class ClassifyInvoiceItems
         }
 
         return $classified;
+    }
+
+    /**
+     * @param  list<ClassificationCategory>  $categories
+     */
+    private function classifyWithAi(Invoice $invoice, InvoiceItem $item, array $categories): bool
+    {
+        try {
+            $result = $this->classifier->classify(new ClassificationRequest(
+                description: (string) $item->description,
+                // El comprobante no guarda el rubro del emisor; queda null
+                // hasta que exista una fuente (F3-04/F4). El DTO ya lo admite.
+                issuerActivity: null,
+                categories: $categories,
+            ));
+        } catch (ClassifierUnavailable|InvalidClassifierOutput $exception) {
+            Log::warning('classification.ai_unavailable', [
+                'tenant_id' => $invoice->tenant_id,
+                'invoice_item_id' => $item->id,
+                'reason' => $exception::class,
+            ]);
+
+            $this->markForReview($item);
+
+            return false;
+        } catch (Throwable $exception) {
+            // Último cortafuegos: un fallo inesperado del adaptador no debe
+            // tumbar la importación del comprobante. El ítem va a revisión y
+            // el detalle queda en el log sin datos del comprobante.
+            Log::error('classification.ai_error', [
+                'tenant_id' => $invoice->tenant_id,
+                'invoice_item_id' => $item->id,
+                'reason' => $exception::class,
+            ]);
+
+            $this->markForReview($item);
+
+            return false;
+        }
+
+        $suggestion = $result->suggestion;
+
+        if (! $suggestion instanceof ClassificationSuggestion) {
+            return false;
+        }
+
+        $category = $this->categoryByCode($categories, $suggestion->categoryCode);
+
+        if (! $category instanceof ClassificationCategory) {
+            Log::warning('classification.ai_unknown_category', [
+                'tenant_id' => $invoice->tenant_id,
+                'invoice_item_id' => $item->id,
+            ]);
+
+            $this->markForReview($item);
+
+            return false;
+        }
+
+        $accepted = $suggestion->confidence >= $this->confidenceThreshold;
+
+        $item->forceFill([
+            'expense_category_id' => $category->id,
+            'classification_status' => $accepted ? InvoiceItem::STATUS_AUTO : InvoiceItem::STATUS_REVIEW,
+        ])->save();
+
+        Classification::query()->updateOrCreate(
+            ['invoice_item_id' => $item->id],
+            [
+                'tenant_id' => $invoice->tenant_id,
+                'expense_category_id' => $category->id,
+                'method' => ClassificationMethod::Llm,
+                'confidence' => $suggestion->confidence,
+                'status' => $accepted ? ClassificationStatus::Suggested : ClassificationStatus::NeedsReview,
+                'rule_id' => null,
+                'prompt_version' => $result->promptVersion,
+            ],
+        );
+
+        return true;
+    }
+
+    /**
+     * @param  list<ClassificationCategory>  $categories
+     */
+    private function categoryByCode(array $categories, string $code): ?ClassificationCategory
+    {
+        foreach ($categories as $category) {
+            if ($category->code === $code) {
+                return $category;
+            }
+        }
+
+        return null;
+    }
+
+    private function markForReview(InvoiceItem $item): void
+    {
+        $item->forceFill([
+            'classification_status' => InvoiceItem::STATUS_REVIEW,
+        ])->save();
+    }
+
+    /**
+     * @return list<ClassificationCategory>
+     */
+    private function validCategories(): array
+    {
+        /** @var list<ClassificationCategory> $categories */
+        $categories = [];
+
+        $rows = ExpenseCategory::query()
+            ->currentlyValid()
+            ->orderBy('display_order')
+            ->orderBy('code')
+            ->get();
+
+        foreach ($rows as $category) {
+            $categories[] = new ClassificationCategory(
+                id: (int) $category->id,
+                code: (string) $category->code,
+                name: (string) $category->name,
+            );
+        }
+
+        return $categories;
     }
 }

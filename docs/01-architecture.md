@@ -270,9 +270,10 @@ InvoiceItem.description
 - **Proveedor abstraído** (`Classifier`): `FakeClassifier` (tests), `OpenAiClassifier`, `AnthropicClassifier`.
 - Prompt versionado en `resources/prompts/classify-item.v1.md`; **la versión se guarda en cada clasificación**.
 - Salida JSON validada estrictamente (enum de categorías + `confidence` 0..1); si el modelo devuelve algo inválido, se reintenta una vez y se degrada a revisión humana.
+- Timeout, 429, 5xx y circuito abierto no se reintentan: el ítem queda en revisión sin clasificación persistida y la importación continúa. El circuit breaker es por tenant y usa caché local al despliegue.
 - **Presupuesto por tenant** y global (`llm_calls.cost_micros`); al superar el umbral se desactiva la clasificación automática y se encola revisión manual.
-- Minimización de datos: solo se envía la descripción del ítem y el rubro del emisor; nunca RUC, nombres, montos ni credenciales.
-- Evaluación offline con dataset dorado (≥300 descripciones etiquetadas) ejecutada semanalmente; métricas registradas en `docs/04`.
+- Minimización de datos: solo se envía la descripción del ítem y el rubro del emisor; nunca RUC, nombres, montos ni credenciales. El comprobante aún no guarda el rubro del emisor, así que el DTO lo admite nullable y hoy viaja como `null` hasta que exista una fuente.
+- Evaluación offline con dataset dorado (≥300 descripciones etiquetadas) ejecutada semanalmente; métricas registradas en `docs/04` (F3-08).
 
 ## 9. Motor fiscal
 
