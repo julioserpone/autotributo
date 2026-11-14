@@ -36,6 +36,7 @@ final class FakeClassifier implements Classifier
             suggestion: new ClassificationSuggestion($categoryCode, $confidence, $reason),
             model: 'fake',
             promptVersion: ClassifierPrompt::VERSION,
+            provider: 'fake',
         );
 
         return $this;
@@ -75,6 +76,6 @@ final class FakeClassifier implements Classifier
             return $next;
         }
 
-        return ClassifierResult::withoutSuggestion('fake', ClassifierPrompt::VERSION);
+        return ClassifierResult::withoutSuggestion('fake', ClassifierPrompt::VERSION, 'fake');
     }
 }

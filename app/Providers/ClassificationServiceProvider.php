@@ -11,6 +11,12 @@ use App\Domain\Classification\Services\ClassificationRuleRepository;
 use App\Domain\Classification\Services\ClassifierCircuitBreaker;
 use App\Domain\Classification\Services\ClassifierOutputValidator;
 use App\Domain\Classification\Services\ClassifierPrompt;
+use App\Domain\Classification\Services\GovernedClassifier;
+use App\Domain\Classification\Services\LlmBudget;
+use App\Domain\Classification\Services\LlmCache;
+use App\Domain\Classification\Services\LlmCallRecorder;
+use App\Domain\Classification\Services\LlmCostCalculator;
+use App\Domain\Classification\Services\LlmInputHash;
 use App\Domain\Classification\Services\ResilientClassifier;
 use App\Domain\Tenancy\TenantContext;
 use App\Integrations\Ai\AnthropicClassifier;
@@ -33,6 +39,11 @@ final class ClassificationServiceProvider extends ServiceProvider
 
         $this->app->singleton(Classifier::class, function (Application $app): Classifier {
             $driver = (string) config('ai.classifier.driver', 'fake');
+            $model = match ($driver) {
+                'anthropic' => (string) config('ai.anthropic.model', 'claude-sonnet-4-5'),
+                default => (string) config('ai.classifier.model', 'gpt-4.1-mini'),
+            };
+
             $inner = match ($driver) {
                 'fake' => $app->make(FakeClassifier::class),
                 'openai' => new OpenAiClassifier(
@@ -58,7 +69,7 @@ final class ClassificationServiceProvider extends ServiceProvider
                 default => throw new InvalidArgumentException("Driver de clasificador IA no soportado: {$driver}."),
             };
 
-            return new ResilientClassifier(
+            $resilient = new ResilientClassifier(
                 $inner,
                 new ClassifierCircuitBreaker(
                     (int) config('ai.classifier.circuit.failure_threshold', 5),
@@ -66,6 +77,29 @@ final class ClassificationServiceProvider extends ServiceProvider
                 ),
                 (int) config('ai.classifier.max_attempts', 2),
                 $app->make(TenantContext::class),
+            );
+
+            $monthlyUsd = (float) config('ai.budget.monthly_usd', 0);
+            $limitMicros = $monthlyUsd > 0 ? (int) round($monthlyUsd * 1_000_000) : 0;
+
+            /** @var array<string, array{input:int, output:int}> $prices */
+            $prices = (array) config('ai.pricing.models', []);
+            /** @var array{input:int, output:int} $fallbackPrice */
+            $fallbackPrice = (array) config('ai.pricing.default', ['input' => 0, 'output' => 0]);
+
+            return new GovernedClassifier(
+                $resilient,
+                new LlmCache(
+                    (bool) config('ai.cache.enabled', true),
+                    (int) config('ai.cache.ttl_days', 30),
+                ),
+                new LlmBudget($limitMicros, (float) config('ai.budget.warn_ratio', 0.8)),
+                new LlmCostCalculator($prices, $fallbackPrice),
+                $app->make(LlmInputHash::class),
+                $app->make(LlmCallRecorder::class),
+                $app->make(TenantContext::class),
+                $driver,
+                $model,
             );
         });
 

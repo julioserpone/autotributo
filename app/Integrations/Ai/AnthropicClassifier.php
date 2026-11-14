@@ -93,6 +93,7 @@ final readonly class AnthropicClassifier implements Classifier
             inputTokens: (int) data_get($body, 'usage.input_tokens', 0),
             outputTokens: (int) data_get($body, 'usage.output_tokens', 0),
             latencyMs: intdiv(hrtime(true) - $started, 1_000_000),
+            provider: 'anthropic',
         );
     }
 

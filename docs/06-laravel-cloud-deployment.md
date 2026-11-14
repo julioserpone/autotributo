@@ -91,7 +91,9 @@ Notas:
 | `SRI_CREDENTIALS_KEY` | base64 32 bytes | ✅ | Cifra credenciales SRI; guardar copia en el gestor de secretos de la organización |
 | `LLM_DRIVER` / `LLM_MODEL` | `openai` / `gpt-...` | — | |
 | `OPENAI_API_KEY` | `sk-...` | ✅ | Presupuesto y límite de gasto configurados en el proveedor |
-| `LLM_MONTHLY_BUDGET_USD` | `200` | — | Corta la clasificación automática al alcanzarlo |
+| `LLM_MONTHLY_BUDGET_USD` | `200` | — | Corta la clasificación automática al alcanzarlo; `0` desactiva el límite |
+| `LLM_BUDGET_WARN_RATIO` | `0.8` | — | Aviso en el log antes del corte |
+| `LLM_CACHE_ENABLED` / `LLM_CACHE_TTL_DAYS` | `true` / `30` | — | Caché por huella; reduce coste sin llamar al proveedor |
 | `REVERB_*` | inyectadas | ✅ | Las define Cloud al adjuntar WebSockets |
 | `SENTRY_LARAVEL_DSN` | `https://...` | ✅ | |
 | `MAIL_*` | inyectadas por Resend | ✅ | |
