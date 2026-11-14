@@ -688,6 +688,417 @@
                 }
             }
         },
+        "/v1/classification-rules/dry-run": {
+            "post": {
+                "operationId": "v1.classification-rules.dry-run",
+                "tags": [
+                    "ClassificationRule"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PreviewClassificationRuleRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "matches_count": {
+                                                    "type": "integer",
+                                                    "const": 0
+                                                },
+                                                "scanned_count": {
+                                                    "type": "integer",
+                                                    "const": 0
+                                                },
+                                                "sample": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "minItems": 0,
+                                                    "maxItems": 0
+                                                },
+                                                "conflicts": {
+                                                    "type": "array",
+                                                    "items": {}
+                                                }
+                                            },
+                                            "required": [
+                                                "matches_count",
+                                                "scanned_count",
+                                                "sample",
+                                                "conflicts"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/classification-rules": {
+            "get": {
+                "operationId": "v1.classification-rules.index",
+                "tags": [
+                    "ClassificationRule"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated set of `ClassificationRuleResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ClassificationRuleResource"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "from": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "minimum": 1
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "links": {
+                                                    "type": "array",
+                                                    "description": "Generated paginator links.",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "url": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "label": {
+                                                                "type": "string"
+                                                            },
+                                                            "active": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "url",
+                                                            "label",
+                                                            "active"
+                                                        ]
+                                                    }
+                                                },
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "to": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "description": "Number of the last item in the slice.",
+                                                    "minimum": 1
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "description": "Total number of items being paginated.",
+                                                    "minimum": 0
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "from",
+                                                "last_page",
+                                                "links",
+                                                "path",
+                                                "per_page",
+                                                "to",
+                                                "total"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "links",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "v1.classification-rules.store",
+                "tags": [
+                    "ClassificationRule"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreClassificationRuleRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`ClassificationRuleResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ClassificationRuleResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/classification-rules/{rule}": {
+            "get": {
+                "operationId": "v1.classification-rules.show",
+                "tags": [
+                    "ClassificationRule"
+                ],
+                "parameters": [
+                    {
+                        "name": "rule",
+                        "in": "path",
+                        "required": true,
+                        "description": "The rule ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`ClassificationRuleResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ClassificationRuleResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "v1.classification-rules.update",
+                "tags": [
+                    "ClassificationRule"
+                ],
+                "parameters": [
+                    {
+                        "name": "rule",
+                        "in": "path",
+                        "required": true,
+                        "description": "The rule ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateClassificationRuleRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`ClassificationRuleResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ClassificationRuleResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "v1.classification-rules.destroy",
+                "tags": [
+                    "ClassificationRule"
+                ],
+                "parameters": [
+                    {
+                        "name": "rule",
+                        "in": "path",
+                        "required": true,
+                        "description": "The rule ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/companies": {
             "get": {
                 "operationId": "v1.companies.index",
@@ -1162,6 +1573,43 @@
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/expense-categories": {
+            "get": {
+                "operationId": "v1.expense-categories.index",
+                "tags": [
+                    "ExpenseCategory"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `ExpenseCategoryResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ExpenseCategoryResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
@@ -2571,6 +3019,98 @@
                 ],
                 "title": "ChangePasswordRequest"
             },
+            "ClassificationRuleResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "priority": {
+                        "type": "integer"
+                    },
+                    "match_type": {
+                        "type": "string",
+                        "enum": [
+                            "contains",
+                            "starts_with",
+                            "exact",
+                            "regex",
+                            "provider_ruc",
+                            "item_code"
+                        ]
+                    },
+                    "match_type_label": {
+                        "type": "string",
+                        "enum": [
+                            "La descripci\u00f3n contiene",
+                            "La descripci\u00f3n empieza con",
+                            "La descripci\u00f3n es exactamente",
+                            "La descripci\u00f3n coincide con la expresi\u00f3n regular",
+                            "El RUC del proveedor es",
+                            "El c\u00f3digo del \u00edtem es"
+                        ]
+                    },
+                    "pattern": {
+                        "type": "string"
+                    },
+                    "is_global": {
+                        "type": "boolean"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "expense_category": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/ExpenseCategoryResource"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "hits_count": {
+                        "type": "integer"
+                    },
+                    "last_matched_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "priority",
+                    "match_type",
+                    "match_type_label",
+                    "pattern",
+                    "is_global",
+                    "is_active",
+                    "expense_category",
+                    "hits_count",
+                    "last_matched_at",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "ClassificationRuleResource"
+            },
             "CompanyResource": {
                 "type": "object",
                 "properties": {
@@ -2693,6 +3233,52 @@
                 ],
                 "title": "CompanyResource"
             },
+            "ExpenseCategoryResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "parent_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "is_personal_deductible": {
+                        "type": "boolean"
+                    },
+                    "is_business_deductible": {
+                        "type": "boolean"
+                    },
+                    "icon": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "display_order": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "id",
+                    "code",
+                    "name",
+                    "parent_id",
+                    "is_personal_deductible",
+                    "is_business_deductible",
+                    "icon",
+                    "display_order"
+                ],
+                "title": "ExpenseCategoryResource"
+            },
             "ForgotPasswordRequest": {
                 "type": "object",
                 "properties": {
@@ -2749,6 +3335,19 @@
                 ],
                 "title": "LoginRequest"
             },
+            "MatchType": {
+                "type": "string",
+                "description": "Forma en que una regla compara su patr\u00f3n con el \u00edtem. `contains`, `starts_with`, `exact` y `regex` trabajan sobre la descripci\u00f3n normalizada; `provider_ruc` compara el RUC del emisor y `item_code` el c\u00f3digo principal o auxiliar del \u00edtem.\n",
+                "enum": [
+                    "contains",
+                    "starts_with",
+                    "exact",
+                    "regex",
+                    "provider_ruc",
+                    "item_code"
+                ],
+                "title": "MatchType"
+            },
             "Membership": {
                 "type": "object",
                 "properties": {
@@ -2798,6 +3397,56 @@
                     "viewer"
                 ],
                 "title": "MembershipRole"
+            },
+            "PreviewClassificationRuleRequest": {
+                "type": "object",
+                "description": "Criterios del dry-run: una regla existente (`rule_id`) o una candidata.",
+                "properties": {
+                    "rule_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "match_type": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/MatchType"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "pattern": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "priority": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1000
+                    },
+                    "company_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 50
+                    }
+                },
+                "title": "PreviewClassificationRuleRequest"
             },
             "ResetPasswordRequest": {
                 "type": "object",
@@ -3145,6 +3794,43 @@
                 ],
                 "title": "SriSyncRunResource"
             },
+            "StoreClassificationRuleRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "priority": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1000
+                    },
+                    "match_type": {
+                        "$ref": "#/components/schemas/MatchType"
+                    },
+                    "pattern": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "expense_category_id": {
+                        "type": "integer"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "confirm_conflict": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "name",
+                    "match_type",
+                    "pattern",
+                    "expense_category_id"
+                ],
+                "title": "StoreClassificationRuleRequest"
+            },
             "StoreCompanyRequest": {
                 "type": "object",
                 "properties": {
@@ -3321,6 +4007,37 @@
                     "sociedad"
                 ],
                 "title": "TaxRegime"
+            },
+            "UpdateClassificationRuleRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "priority": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1000
+                    },
+                    "match_type": {
+                        "$ref": "#/components/schemas/MatchType"
+                    },
+                    "pattern": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "expense_category_id": {
+                        "type": "integer"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "confirm_conflict": {
+                        "type": "boolean"
+                    }
+                },
+                "title": "UpdateClassificationRuleRequest"
             },
             "UpdateCompanyRequest": {
                 "type": "object",

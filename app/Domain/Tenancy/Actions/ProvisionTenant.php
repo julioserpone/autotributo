@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Tenancy\Actions;
 
+use App\Domain\Classification\Actions\SyncExpenseCategories;
 use App\Domain\Fiscal\Actions\SyncFiscalCatalogs;
 use App\Domain\Tenancy\Data\ProvisionResult;
 use App\Domain\Tenancy\Enums\MembershipRole;
@@ -28,6 +29,7 @@ final readonly class ProvisionTenant
     public function __construct(
         private EnsureTenantRoles $ensureTenantRoles,
         private SyncFiscalCatalogs $syncFiscalCatalogs,
+        private SyncExpenseCategories $syncExpenseCategories,
     ) {}
 
     public function handle(
@@ -55,6 +57,7 @@ final readonly class ProvisionTenant
         app(TenantContext::class)->initialize($tenant);
         $this->ensureTenantRoles->handle($tenant);
         $catalogs = $this->syncFiscalCatalogs->handle();
+        $expenseCategories = $this->syncExpenseCategories->handle();
 
         $existingOwner = Membership::query()
             ->with('user')
@@ -103,6 +106,7 @@ final readonly class ProvisionTenant
             ownerCreated: $ownerCreated,
             membershipCreated: $membership->wasRecentlyCreated,
             catalogs: $catalogs,
+            expenseCategories: $expenseCategories,
         );
     }
 

@@ -18,6 +18,7 @@ Registro de validación de cálculos, catálogos y formularios por parte del con
 | 2026-10-22 | v0 (pendiente) | Formulario 102 | Topes de gastos personales | — | — | — | Tabla anual (pendiente de adjuntar) | — |
 | 2026-10-22 | v0 (pendiente) | Tarifas IVA | 0 %, 5 %, 12 % histórico, 15 % | — | — | — | Resolución SRI (pendiente de adjuntar) | — |
 | 2026-11-13 | v1 (pendiente) | Catálogos F3-01 | IVA 0/5/12/14/15 %, retenciones IR/IVA 2026, casilleros base 104 y topes 2026 | `catalogs:validate` OK (50 filas) | — | — | SRI/INEC; detalle por fila en `FiscalCatalogData` | — |
+| 2026-11-14 | v1 (pendiente) | Categorías F3-02 | Árbol de 9 categorías y banderas `is_personal_deductible`/`is_business_deductible` | 9 categorías cargadas de forma idempotente | — | — | Criterio interno; falta contraste con ficha del SRI | — |
 
 ## Escenarios mínimos a validar (Fase 5)
 
@@ -48,3 +49,4 @@ Registro de validación de cálculos, catálogos y formularios por parte del con
 |---|---|---|
 | 2026-10-22 | Creación de la plantilla | — |
 | 2026-11-13 | Alta de catálogos F3-01 (IVA, retenciones, casilleros 104 y topes 2026); queda pendiente la firma del contador | — |
+| 2026-11-14 | Alta de categorías de gasto F3-02 y banderas de deducibilidad; queda pendiente la firma del contador | — |

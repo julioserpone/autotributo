@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Classification\Exceptions\ClassificationRuleConflict;
 use App\Domain\Companies\Exceptions\SriCredentialsMissing;
 use App\Domain\Companies\Exceptions\SriCredentialUnavailable;
 use App\Domain\Sri\Exceptions\SriRateLimitExceeded;
@@ -111,6 +112,14 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (SriRateLimitExceeded $e): JsonResponse {
             return ProblemDetails::tooManyRequests($e->retryAfterSeconds);
+        });
+
+        $exceptions->render(function (ClassificationRuleConflict $e): JsonResponse {
+            return ProblemDetails::conflict(
+                'classification-rule-conflict',
+                $e->getMessage(),
+                ['conflicts' => $e->conflictsToArray()],
+            );
         });
 
         $exceptions->render(function (SriSyncAlreadyRunning $e): JsonResponse {

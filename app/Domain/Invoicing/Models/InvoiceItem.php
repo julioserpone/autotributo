@@ -20,6 +20,12 @@ final class InvoiceItem extends Model
 
     public const STATUS_PENDING = 'pending';
 
+    public const STATUS_AUTO = 'auto';
+
+    public const STATUS_REVIEW = 'review';
+
+    public const STATUS_MANUAL = 'manual';
+
     protected $table = 'invoice_items';
 
     /** @var list<string> */

@@ -144,7 +144,7 @@ Obligaciones por empresa/año: `company_id`, `fiscal_year`, `form_code` (`104`, 
 Definición de casilleros por formulario y vigencia: `form_code`, `line_code`, `section`, `label`, `data_type` (`amount`,`count`,`rate`), `is_required`, `display_order`, `valid_from`, `valid_to`, `source`, `published_at`, `checksum`. Unique `(form_code, line_code, valid_from)`.
 
 ### `expense_categories`
-`code`, `name`, `is_personal_deductible`, `is_business_deductible`, `parent_id`, `icon`, `valid_from`, `valid_to`. Árbol: alimentación, vivienda, salud, educación, vestimenta, turismo, operativo, activo fijo, no deducible. Se incorpora con el motor de reglas (F3-02) y la importación de catálogos (F3-09).
+`code` (unique), `name`, `is_personal_deductible`, `is_business_deductible`, `parent_id`, `icon`, `display_order`, `valid_from`, `valid_to`, `source`. Árbol: alimentación, vivienda, salud, educación, vestimenta, turismo, operativo, activo fijo, no deducible. Se carga de forma idempotente con `SyncExpenseCategories` (F3-02) y queda pendiente de la importación oficial de catálogos (F3-09). Las banderas de deducibilidad requieren firma del contador.
 
 ### `personal_expense_caps`
 `fiscal_year`, `category_code` (`global`,`catastrophic_illness`), `dependents` (0–5; 5 = cinco o más), `cap_cents`, `baskets`, `basic_food_basket_cents`, `valid_from`, `valid_to`, `source`, `published_at`, `checksum`. Unique `(fiscal_year, category_code, dependents, valid_from)`.
@@ -281,9 +281,11 @@ Log de progreso: `id`, `run_id`, `tenant_id`, `level`, `message`, `context jsonb
 Se conserva historial en `audit_logs`; para análisis de calidad se agrega `classification_feedback` (`item_id`, `from_category`, `to_category`, `user_id`, `created_at`).
 
 ### `classification_rules`
-`id`, `tenant_id` (null = global), `name`, `priority` (menor = primero), `match_type` (`contains`,`starts_with`,`regex`,`exact`,`provider_ruc`), `pattern`, `expense_category_id`, `is_active`, `created_by`, `hits_count`, `last_matched_at`, timestamps.
+`id`, `tenant_id` (null = regla global del catálogo base), `name`, `priority` (menor = primero), `match_type` (`contains`,`starts_with`,`exact`,`regex`,`provider_ruc`,`item_code`), `pattern`, `expense_category_id`, `is_active`, `created_by`, `hits_count`, `last_matched_at`, timestamps, soft delete.
 
-Índice: `(tenant_id, is_active, priority)`. Validación: regex compilada al guardar; conflictos detectados en dry-run.
+Índice: `(tenant_id, is_active, priority)` y `(tenant_id, match_type)`. Precedencia: `priority` ascendente y, en empate, la regla del tenant gana a la global. `contains`, `starts_with`, `exact` y `regex` comparan la descripción normalizada; `provider_ruc` el RUC del emisor; `item_code` el código principal o auxiliar del ítem. Validación: regex compilada al guardar; conflictos de misma prioridad detectados antes de guardar y en dry-run. Las reglas globales son de solo lectura desde un tenant.
+
+`invoice_items.classification_status` pasa a `auto` cuando una regla clasifica el ítem y permanece `pending` si ninguna coincide, para que F3-03/F3-05 lo resuelvan.
 
 ### `llm_calls`
 `id`, `tenant_id`, `company_id` null, `purpose` (`classify_item`), `provider`, `model`, `prompt_version`, `input_hash` char(64), `input_tokens`, `output_tokens`, `cost_micros`, `latency_ms`, `status`, `error_code`, `created_at`.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Sri\Actions;
 
+use App\Domain\Classification\Actions\ClassifyInvoiceItems;
 use App\Domain\Companies\Models\Company;
 use App\Domain\Invoicing\Models\Invoice;
 use App\Domain\Sri\Data\SriImportResult;
@@ -14,6 +15,7 @@ use App\Domain\Sri\Data\SriRetentionData;
 use App\Domain\Sri\Enums\SriImportOutcome;
 use App\Domain\Sri\Models\SriSyncRun;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 /**
  * Persiste un comprobante de forma idempotente.
@@ -34,6 +36,8 @@ use Illuminate\Support\Facades\DB;
  */
 final readonly class PersistSriInvoice
 {
+    public function __construct(private ClassifyInvoiceItems $classifyItems) {}
+
     public function handle(
         Company $company,
         SriInvoiceData $data,
@@ -44,7 +48,7 @@ final readonly class PersistSriInvoice
         $checksum = hash('sha256', $xml);
         $now = now();
 
-        return DB::transaction(function () use ($company, $data, $xml, $checksum, $run, $source, $now): SriImportResult {
+        $result = DB::transaction(function () use ($company, $data, $xml, $checksum, $run, $source, $now): SriImportResult {
             $invoice = Invoice::query()
                 ->where('company_id', $company->id)
                 ->where('access_key', $data->accessKey)
@@ -108,6 +112,18 @@ final readonly class PersistSriInvoice
                 $isNew ? SriImportOutcome::Created : SriImportOutcome::Updated,
             );
         });
+
+        // La clasificación es un valor añadido: si falla, el comprobante ya
+        // quedó persistido y el ítem sigue `pending` para revisión manual.
+        if ($result->outcome !== SriImportOutcome::Skipped) {
+            try {
+                $this->classifyItems->handle($result->invoice);
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        return $result;
     }
 
     /**

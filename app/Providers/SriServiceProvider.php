@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Classification\Actions\ClassifyInvoiceItems;
 use App\Domain\Sri\Actions\FinalizeSriRun;
 use App\Domain\Sri\Actions\ImportSriKeys;
 use App\Domain\Sri\Actions\ImportSriRun;
@@ -157,7 +158,9 @@ final class SriServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->singleton(PersistSriInvoice::class, fn (): PersistSriInvoice => new PersistSriInvoice);
+        $this->app->singleton(PersistSriInvoice::class, fn (Application $app): PersistSriInvoice => new PersistSriInvoice(
+            $app->make(ClassifyInvoiceItems::class),
+        ));
 
         $this->app->singleton(ImportSriKeys::class, function (Application $app): ImportSriKeys {
             return new ImportSriKeys(
