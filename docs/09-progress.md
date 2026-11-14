@@ -64,8 +64,8 @@
 | ID | Tarea | Estado | Prioridad | Evidencia |
 |---|---|---|---|---|
 | F3-01 | Catálogos versionados | Completado | P1 | `tax_rates`, `retention_rates`, `form_lines` y `personal_expense_caps` con `valid_from/valid_to`, `source`, `published_at` y `checksum`; `SyncFiscalCatalogs` idempotente, seeder, integración con `app:provision` y comando `catalogs:validate`; IVA 0/5/12/14/15 %, retenciones IR/IVA 2026 y topes 2026 (CBF enero = USD 821,80) · 7 tests / 35 assertions. **Pendiente de firma del contador** (`docs/fiscal-signoff.md`) (#60) |
-| F3-02 | Motor de reglas | Completado | P1 | `expense_categories` (9 categorías), `classification_rules` (tenant/global, soft delete) y `classifications`; `ClassificationRuleMatcher` (`contains`, `starts_with`, `exact`, `regex`, `provider_ruc`, `item_code`), precedencia por `priority` con desempate tenant > global, `ClassificationRuleRepository` con caché versionada e invalidación al guardar/borrar; dry-run y detección de conflictos con `409 classification-rule-conflict`; `ClassifyInvoiceItems` integrado en `PersistSriInvoice` sin bloquear la importación; endpoints `classification-rules` (CRUD + dry-run) y `expense-categories`; provisión y seeder idempotentes · 37 tests / 154 assertions. `match_type=item_code` documentado en `docs/03-data-model.md`. **Pendiente firma de deducibilidad** (`docs/fiscal-signoff.md`) |
-| F3-03 | Clasificador IA | Completado | P1 | `Classifier` + DTOs (`ClassificationRequest`, `ClassificationSuggestion`, `ClassifierResult`), prompt versionado `v1` en `resources/prompts/classify-item.v1.md`, `ClassifierOutputValidator` estricto (claves exactas, categoría del catálogo, confianza 0..1, `reason` ≤ 300, rechazo de markdown/JSON truncado), `OpenAiClassifier` (JSON Schema estricto) y `AnthropicClassifier`, `FakeClassifier` determinista, `ResilientClassifier` con un reintento solo ante salida inválida y `ClassifierCircuitBreaker` por tenant; `ClassifyInvoiceItems` usa la IA solo si ninguna regla coincide y aplica `LLM_CONFIDENCE_THRESHOLD`: `auto`/`suggested` o `review`/`needs_review`, con degradación a `review` sin clasificación persistida ante timeout/429/5xx/salida inválida/circuito abierto/error inesperado · 39 tests / 131 assertions. Validado contra PostgreSQL local (smoke transaccional revertido: `auto`, `llm`, confianza 0,95, prompt `v1`) y con un mock HTTP local real para ambos adaptadores. Persistencia de `llm_calls`, caché por hash y presupuesto quedan para F3-04 |
+| F3-02 | Motor de reglas | Completado | P1 | `expense_categories` (9 categorías), `classification_rules` (tenant/global, soft delete) y `classifications`; `ClassificationRuleMatcher` (`contains`, `starts_with`, `exact`, `regex`, `provider_ruc`, `item_code`), precedencia por `priority` con desempate tenant > global, `ClassificationRuleRepository` con caché versionada e invalidación al guardar/borrar; dry-run y detección de conflictos con `409 classification-rule-conflict`; `ClassifyInvoiceItems` integrado en `PersistSriInvoice` sin bloquear la importación; endpoints `classification-rules` (CRUD + dry-run) y `expense-categories`; provisión y seeder idempotentes · 37 tests / 154 assertions. `match_type=item_code` documentado en `docs/03-data-model.md`. **Pendiente firma de deducibilidad** (`docs/fiscal-signoff.md`) (#62) |
+| F3-03 | Clasificador IA | Completado | P1 | `Classifier` + DTOs (`ClassificationRequest`, `ClassificationSuggestion`, `ClassifierResult`), prompt versionado `v1` en `resources/prompts/classify-item.v1.md`, `ClassifierOutputValidator` estricto (claves exactas, categoría del catálogo, confianza 0..1, `reason` ≤ 300, rechazo de markdown/JSON truncado), `OpenAiClassifier` (JSON Schema estricto) y `AnthropicClassifier`, `FakeClassifier` determinista, `ResilientClassifier` con un reintento solo ante salida inválida y `ClassifierCircuitBreaker` por tenant; `ClassifyInvoiceItems` usa la IA solo si ninguna regla coincide y aplica `LLM_CONFIDENCE_THRESHOLD`: `auto`/`suggested` o `review`/`needs_review`, con degradación a `review` sin clasificación persistida ante timeout/429/5xx/salida inválida/circuito abierto/error inesperado · 39 tests / 131 assertions. Validado contra PostgreSQL local (smoke transaccional revertido: `auto`, `llm`, confianza 0,95, prompt `v1`) y con un mock HTTP local real para ambos adaptadores. Persistencia de `llm_calls`, caché por hash y presupuesto quedan para F3-04 (#63) |
 
 ## Fases 3–6 · Estado resumido
 
@@ -76,7 +76,7 @@
 | F5 · Declaraciones | F5-01…F5-08 | Pendiente | P3 (después de F3) |
 | F6 · Hardening y beta | F6-01…F6-08 | Pendiente | P3 (lanzamiento) |
 
-## Registro de PRs recientes (2026-11-06 → 2026-11-13)
+## Registro de PRs recientes (2026-11-06 → 2026-11-14)
 
 | PR | Contenido | Tarea |
 |---|---|---|
@@ -94,6 +94,9 @@
 | #48 | CRUD de empresas y validador de RUC | F1-05 |
 | #59 | Carga manual de XML autorizado y fix del script de staging | F2-13 |
 | #60 | Catálogos fiscales versionados y comando `catalogs:validate` | F3-01 |
+| #61 | Fix del progreso en vivo de Reverb en Docker | F2-09 |
+| #62 | Motor de reglas de clasificación | F3-02 |
+| #63 | Clasificador IA resiliente y degradación a revisión | F3-03 |
 
 ## Cómo actualizar
 
