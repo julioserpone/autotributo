@@ -17,6 +17,7 @@ final readonly class ProvisionResult
         public bool $ownerCreated,
         public bool $membershipCreated,
         public CatalogSyncResult $catalogs,
+        public CatalogSyncResult $expenseCategories,
     ) {}
 
     public function hasChanges(): bool
@@ -24,6 +25,7 @@ final readonly class ProvisionResult
         return $this->tenantCreated
             || $this->ownerCreated
             || $this->membershipCreated
-            || $this->catalogs->hasChanges();
+            || $this->catalogs->hasChanges()
+            || $this->expenseCategories->hasChanges();
     }
 }

@@ -105,6 +105,14 @@ final class ProvisionCommand extends Command
             $result->catalogs->unchanged(),
         ));
 
+        $this->line(sprintf(
+            'Categorías de gasto: %d filas (%d creadas, %d actualizadas, %d sin cambios).',
+            $result->expenseCategories->total(),
+            $result->expenseCategories->created(),
+            $result->expenseCategories->updated(),
+            $result->expenseCategories->unchanged(),
+        ));
+
         return self::SUCCESS;
     }
 }

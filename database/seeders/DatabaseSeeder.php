@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(DefaultTenantSeeder::class);
         $this->call(FiscalCatalogSeeder::class);
+        $this->call(ExpenseCategorySeeder::class);
 
         if (app()->environment(['local', 'testing'])) {
             $this->call(AuthTestUsersSeeder::class);

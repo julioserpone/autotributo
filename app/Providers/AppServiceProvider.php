@@ -6,6 +6,10 @@ namespace App\Providers;
 
 use App\Domain\Audit\Models\AuditLog;
 use App\Domain\Audit\Policies\AuditLogPolicy;
+use App\Domain\Classification\Models\ClassificationRule;
+use App\Domain\Classification\Models\ExpenseCategory;
+use App\Domain\Classification\Policies\ClassificationRulePolicy;
+use App\Domain\Classification\Policies\ExpenseCategoryPolicy;
 use App\Domain\Companies\Models\Company;
 use App\Domain\Companies\Policies\CompanyPolicy;
 use App\Domain\Companies\Policies\SriCredentialPolicy;
@@ -51,6 +55,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(SriSyncRun::class, SriSyncRunPolicy::class);
         Gate::policy(Invoice::class, InvoicePolicy::class);
         Gate::policy(Membership::class, MembershipPolicy::class);
+        Gate::policy(ClassificationRule::class, ClassificationRulePolicy::class);
+        Gate::policy(ExpenseCategory::class, ExpenseCategoryPolicy::class);
 
         // Las credenciales se autorizan sobre la empresa, porque todavía pueden
         // no existir cuando el contador las crea por primera vez.

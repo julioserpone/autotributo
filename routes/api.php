@@ -6,8 +6,10 @@ use App\Domain\Sri\Http\Controllers\SriRobotCallbackController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BroadcastingAuthController;
+use App\Http\Controllers\Api\V1\ClassificationRuleController;
 use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
+use App\Http\Controllers\Api\V1\ExpenseCategoryController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationController;
 use App\Http\Controllers\Api\V1\ManualInvoiceController;
@@ -127,6 +129,16 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
             ->name('api.v1.sync-runs.show');
         Route::get('sync-runs/{run}/files', [SyncRunController::class, 'files'])
             ->name('api.v1.sync-runs.files');
+
+        // Clasificación automática (F3-02 / US-16): reglas por tenant y
+        // globales, dry-run antes de guardar y catálogo de categorías.
+        Route::get('expense-categories', [ExpenseCategoryController::class, 'index'])
+            ->name('api.v1.expense-categories.index');
+        Route::post('classification-rules/dry-run', [ClassificationRuleController::class, 'dryRun'])
+            ->name('api.v1.classification-rules.dry-run');
+        Route::apiResource('classification-rules', ClassificationRuleController::class)
+            ->parameters(['classification-rules' => 'rule'])
+            ->names('api.v1.classification-rules');
 
         // Historial de auditoría (F1-07), solo lectura y filtrado por tenant.
         Route::get('audit-logs', [AuditLogController::class, 'index'])
