@@ -19,6 +19,7 @@ Registro de validación de cálculos, catálogos y formularios por parte del con
 | 2026-10-22 | v0 (pendiente) | Tarifas IVA | 0 %, 5 %, 12 % histórico, 15 % | — | — | — | Resolución SRI (pendiente de adjuntar) | — |
 | 2026-11-13 | v1 (pendiente) | Catálogos F3-01 | IVA 0/5/12/14/15 %, retenciones IR/IVA 2026, casilleros base 104 y topes 2026 | `catalogs:validate` OK (50 filas) | — | — | SRI/INEC; detalle por fila en `FiscalCatalogData` | — |
 | 2026-11-14 | v1 (pendiente) | Categorías F3-02 | Árbol de 9 categorías y banderas `is_personal_deductible`/`is_business_deductible` | 9 categorías cargadas de forma idempotente | — | — | Criterio interno; falta contraste con ficha del SRI | — |
+| 2026-11-15 | v1 (pendiente) | Proporcionalidad F3-07 | Factor de proporcionalidad IVA: ventas 0 % / ventas totales, 6 decimales HALF_UP | `factor(100,00; 300,00) = 0.250000`; `0 %` y `15 %` puros = `1.000000` y `0.000000` | — | — | Ficha técnica del 104 (pendiente de adjuntar) | — |
 
 ## Escenarios mínimos a validar (Fase 5)
 
@@ -50,3 +51,4 @@ Registro de validación de cálculos, catálogos y formularios por parte del con
 | 2026-10-22 | Creación de la plantilla | — |
 | 2026-11-13 | Alta de catálogos F3-01 (IVA, retenciones, casilleros 104 y topes 2026); queda pendiente la firma del contador | — |
 | 2026-11-14 | Alta de categorías de gasto F3-02 y banderas de deducibilidad; queda pendiente la firma del contador | — |
+| 2026-11-15 | Alta de la calculadora de proporcionalidad F3-07 (factor 6 decimales HALF_UP); queda pendiente la firma de la convención que aplica al 104 | — |

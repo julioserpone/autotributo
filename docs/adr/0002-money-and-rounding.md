@@ -46,3 +46,23 @@ Ecuador está dollarizado: no hay conversión de moneda en el MVP.
 - Nunca `$invoice->total / 100` sin formateador; usar `Money::ofMinor($cents, 'USD')`.
 - Los campos de entrada del usuario en USD se convierten a centavos en el borde (FormRequest/DTO).
 - Los tests de calculadoras incluyen casos de `0.005`, `0.015` y valores con seis decimales.
+
+## Enmienda 2026-11-15: `Money` propio sobre `brick/money`
+
+El punto 2 se materializa en un value object del dominio,
+`App\Domain\Shared\Values\Money`, que encapsula `brick/money` (instalado como
+dependencia directa `^0.15`). El dominio no usa `Brick\Money\Money` ni
+`Brick\Math\BigDecimal` directamente para importes: entra por `Money::cents()`
+(línea base de datos y cálculos) o `Money::ofDecimal()` (borde de entrada) y
+sale por `toCents()` / `decimal()`.
+
+| Punto 2 (original) | Implementación |
+|---|---|
+| `Money::ofMinor($cents, 'USD')` | `Money::cents($cents)` |
+| `$money->getMinorAmount()` | `$money->toCents()` |
+| `$money->getAmount()` | `$money->decimal()` |
+
+La regla única de redondeo HALF_UP vive en `Money::ofDecimal()` (conversión a
+centavos) y `Money::multipliedBy()` (derivados como la proporcionalidad), de
+modo que ninguna calculadora repite el redondeo. La moneda es fija (`USD`)
+porque Ecuador está dollarizado y el MVP no convierte divisas.
