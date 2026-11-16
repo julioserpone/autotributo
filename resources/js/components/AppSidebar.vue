@@ -26,7 +26,7 @@ interface NavItem {
 
 const primaryNav: NavItem[] = [
     { label: 'Dashboard', icon: 'i-lucide-layout-dashboard', route: 'dashboard' },
-    { label: 'Comprobantes SRI', icon: 'i-lucide-file-text', soon: true },
+    { label: 'Comprobantes SRI', icon: 'i-lucide-file-text', route: 'invoices' },
     { label: 'Declaraciones (104 / ATS)', icon: 'i-lucide-chart-column', soon: true },
     { label: 'Contribuyentes', icon: 'i-lucide-users', soon: true },
 ];

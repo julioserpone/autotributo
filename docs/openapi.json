@@ -2104,6 +2104,174 @@
                 }
             }
         },
+        "/v1/invoices": {
+            "get": {
+                "operationId": "v1.invoices.index",
+                "tags": [
+                    "Invoice"
+                ],
+                "parameters": [
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated set of `InvoiceResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/InvoiceResource"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "next_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "The \"cursor\" that points to the next set of items."
+                                                },
+                                                "prev_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "The \"cursor\" that points to the previous set of items."
+                                                }
+                                            },
+                                            "required": [
+                                                "path",
+                                                "per_page",
+                                                "next_cursor",
+                                                "prev_cursor"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "links",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/invoices/{invoice}": {
+            "get": {
+                "operationId": "v1.invoices.show",
+                "tags": [
+                    "Invoice"
+                ],
+                "parameters": [
+                    {
+                        "name": "invoice",
+                        "in": "path",
+                        "required": true,
+                        "description": "The invoice public id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`InvoiceResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/InvoiceResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/companies/{company}/invoices/manual": {
             "post": {
                 "operationId": "v1.companies.invoices.manual.store",
@@ -3821,6 +3989,144 @@
                     "role"
                 ],
                 "title": "InviteUserRequest"
+            },
+            "InvoiceResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "document_type": {
+                        "type": "string",
+                        "enum": [
+                            "01",
+                            "03",
+                            "04",
+                            "05",
+                            "06",
+                            "07"
+                        ]
+                    },
+                    "access_key": {
+                        "type": "string"
+                    },
+                    "authorization_number": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "issue_date": {
+                        "type": "string"
+                    },
+                    "authorization_date": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "environment": {
+                        "type": "string"
+                    },
+                    "direction": {
+                        "type": "string"
+                    },
+                    "issuer_ruc": {
+                        "type": "string"
+                    },
+                    "issuer_name": {
+                        "type": "string"
+                    },
+                    "receiver_ruc": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "receiver_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "subtotal_cents": {
+                        "type": "integer"
+                    },
+                    "discount_cents": {
+                        "type": "integer"
+                    },
+                    "tax_cents": {
+                        "type": "integer"
+                    },
+                    "ice_cents": {
+                        "type": "integer"
+                    },
+                    "irbpnr_cents": {
+                        "type": "integer"
+                    },
+                    "tip_cents": {
+                        "type": "integer"
+                    },
+                    "total_cents": {
+                        "type": "integer"
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "totals_mismatch": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "document_type",
+                    "access_key",
+                    "authorization_number",
+                    "number",
+                    "issue_date",
+                    "authorization_date",
+                    "status",
+                    "environment",
+                    "direction",
+                    "issuer_ruc",
+                    "issuer_name",
+                    "receiver_ruc",
+                    "receiver_name",
+                    "subtotal_cents",
+                    "discount_cents",
+                    "tax_cents",
+                    "ice_cents",
+                    "irbpnr_cents",
+                    "tip_cents",
+                    "total_cents",
+                    "currency",
+                    "source",
+                    "totals_mismatch",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "InvoiceResource"
             },
             "LoginRequest": {
                 "type": "object",

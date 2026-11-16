@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import DashboardPage from '@/pages/DashboardPage.vue';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage.vue';
+import InvoiceInboxPage from '@/pages/InvoiceInboxPage.vue';
 import LoginPage from '@/pages/LoginPage.vue';
 import NotFoundPage from '@/pages/NotFoundPage.vue';
 import ResetPasswordPage from '@/pages/ResetPasswordPage.vue';
@@ -47,6 +48,12 @@ const router = createRouter({
             name: 'dashboard',
             component: DashboardPage,
             meta: { title: 'Panel' },
+        },
+        {
+            path: '/invoices',
+            name: 'invoices',
+            component: InvoiceInboxPage,
+            meta: { title: 'Comprobantes' },
         },
         {
             path: '/:pathMatch(.*)*',

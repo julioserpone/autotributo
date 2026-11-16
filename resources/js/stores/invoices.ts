@@ -1,0 +1,156 @@
+import { computed, ref } from 'vue';
+
+import { defineStore } from 'pinia';
+
+import { getJson } from '@/lib/api';
+
+export type InvoiceStatus = 'authorized' | 'pending' | 'rejected';
+
+export interface InvoiceApi {
+    id: string;
+    number: string;
+    document_type: string;
+    access_key: string;
+    authorization_number: string | null;
+    issue_date: string | null;
+    authorization_date: string | null;
+    status: string;
+    environment: string;
+    direction: string;
+    issuer_ruc: string;
+    issuer_name: string;
+    receiver_ruc: string;
+    receiver_name: string;
+    subtotal_cents: number;
+    discount_cents: number;
+    tax_cents: number;
+    ice_cents: number;
+    irbpnr_cents: number;
+    tip_cents: number;
+    total_cents: number;
+    currency: string;
+    source: string;
+    totals_mismatch: boolean;
+}
+
+export interface InvoiceFilters {
+    status: string;
+    documentType: string;
+    companyId: string;
+    issuer: string;
+    dateFrom: string;
+    dateTo: string;
+}
+
+export const documentTypeLabels: Record<string, string> = {
+    '01': 'Factura',
+    '03': 'Liquidación de compra',
+    '04': 'Nota de crédito',
+    '05': 'Nota de débito',
+    '06': 'Guía de remisión',
+    '07': 'Comprobante de retención',
+};
+
+function toStatus(value: string): InvoiceStatus {
+    if (value === 'pending') return 'pending';
+    if (value === 'rejected') return 'rejected';
+    return 'authorized';
+}
+
+export function toInvoiceRow(invoice: InvoiceApi): import('@/components/invoices/InvoiceTable.vue').InvoiceRow {
+    return {
+        id: invoice.id,
+        number: invoice.number,
+        documentType: documentTypeLabels[invoice.document_type] ?? invoice.document_type,
+        issuerName: invoice.issuer_name,
+        issuerRuc: invoice.issuer_ruc,
+        issueDate: invoice.issue_date
+            ? new Date(invoice.issue_date).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })
+            : '—',
+        subtotalCents: invoice.subtotal_cents,
+        taxCents: invoice.tax_cents,
+        totalCents: invoice.total_cents,
+        status: toStatus(invoice.status),
+    };
+}
+
+export const useInvoiceStore = defineStore('invoices', () => {
+    const invoices = ref<InvoiceApi[]>([]);
+    const loading = ref(false);
+    const loadingMore = ref(false);
+    const error = ref<string | null>(null);
+    const nextCursor = ref<string | null>(null);
+
+    const filters = ref<InvoiceFilters>({
+        status: 'all',
+        documentType: 'all',
+        companyId: 'all',
+        issuer: '',
+        dateFrom: '',
+        dateTo: '',
+    });
+
+    const rows = computed(() => invoices.value.map(toInvoiceRow));
+
+    function buildQuery(cursor: string | null): string {
+        const params = new URLSearchParams();
+        params.set('per_page', '25');
+        if (cursor) params.set('cursor', cursor);
+        if (filters.value.status && filters.value.status !== 'all') params.set('status', filters.value.status);
+        if (filters.value.documentType && filters.value.documentType !== 'all') params.set('document_type', filters.value.documentType);
+        if (filters.value.companyId && filters.value.companyId !== 'all') params.set('company_id', filters.value.companyId);
+        if (filters.value.issuer.trim()) params.set('issuer', filters.value.issuer.trim());
+        if (filters.value.dateFrom) params.set('date_from', filters.value.dateFrom);
+        if (filters.value.dateTo) params.set('date_to', filters.value.dateTo);
+        return `/api/v1/invoices?${params.toString()}`;
+    }
+
+    async function fetchFirst(): Promise<void> {
+        loading.value = true;
+        error.value = null;
+        invoices.value = [];
+        nextCursor.value = null;
+
+        try {
+            const response = await getJson<{ data: InvoiceApi[]; meta: { next_cursor: string | null } }>(buildQuery(null));
+            invoices.value = response.data;
+            nextCursor.value = response.meta?.next_cursor ?? null;
+        } catch (caught: unknown) {
+            error.value = caught instanceof Error ? caught.message : 'No se pudieron cargar los comprobantes.';
+        } finally {
+            loading.value = false;
+        }
+    }
+
+    async function loadMore(): Promise<void> {
+        if (!nextCursor.value || loadingMore.value) return;
+        loadingMore.value = true;
+
+        try {
+            const response = await getJson<{ data: InvoiceApi[]; meta: { next_cursor: string | null } }>(buildQuery(nextCursor.value));
+            invoices.value = [...invoices.value, ...response.data];
+            nextCursor.value = response.meta?.next_cursor ?? null;
+        } catch (caught: unknown) {
+            error.value = caught instanceof Error ? caught.message : 'No se pudieron cargar más comprobantes.';
+        } finally {
+            loadingMore.value = false;
+        }
+    }
+
+    function setFilter(patch: Partial<InvoiceFilters>): void {
+        filters.value = { ...filters.value, ...patch };
+    }
+
+    return {
+        invoices,
+        loading,
+        loadingMore,
+        error,
+        nextCursor,
+        filters,
+        rows,
+        fetchFirst,
+        loadMore,
+        setFilter,
+    };
+});

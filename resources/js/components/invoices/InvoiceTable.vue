@@ -19,6 +19,13 @@ export interface InvoiceRow {
 const props = defineProps<{
     invoices: InvoiceRow[];
     loading?: boolean;
+    selectable?: boolean;
+    selected?: string[];
+}>();
+
+const emit = defineEmits<{
+    (e: 'update:selected', value: string[]): void;
+    (e: 'row-click', id: string): void;
 }>();
 
 const search = ref('');
@@ -74,6 +81,19 @@ function statusLabel(status: InvoiceStatus): string {
     }
 }
 
+function toggleAll(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    emit('update:selected', checked ? props.invoices.map((invoice) => invoice.id) : []);
+}
+
+function toggleOne(id: string): void {
+    const current = props.selected ?? [];
+    const next = current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id];
+    emit('update:selected', next);
+}
+
 function setFilter(next: 'all' | InvoiceStatus): void {
     statusFilter.value = next;
 }
@@ -126,6 +146,17 @@ function setFilter(next: 'all' | InvoiceStatus): void {
       <table class="w-full text-left text-xs">
         <thead class="border-b border-line bg-elevated/60 text-2xs font-medium uppercase tracking-wider text-muted">
           <tr>
+            <th
+              v-if="props.selectable"
+              class="w-10 px-4 py-2.5"
+            >
+              <input
+                type="checkbox"
+                class="size-3.5 rounded border-line bg-elevated"
+                :checked="props.selected?.length === props.invoices.length && props.invoices.length > 0"
+                @change="toggleAll"
+              >
+            </th>
             <th class="px-4 py-2.5">
               Comprobante
             </th>
@@ -156,8 +187,20 @@ function setFilter(next: 'all' | InvoiceStatus): void {
           <tr
             v-for="invoice in filtered"
             :key="invoice.id"
-            class="transition hover:bg-elevated/60"
+            class="cursor-pointer transition hover:bg-elevated/60"
+            @click="emit('row-click', invoice.id)"
           >
+            <td
+              v-if="props.selectable"
+              class="px-4 py-3"
+            >
+              <input
+                type="checkbox"
+                class="size-3.5 rounded border-line bg-elevated"
+                :checked="props.selected?.includes(invoice.id)"
+                @change="toggleOne(invoice.id)"
+              >
+            </td>
             <td class="px-4 py-3">
               <p class="font-mono font-medium text-ink">
                 {{ invoice.number }}
@@ -217,7 +260,7 @@ function setFilter(next: 'all' | InvoiceStatus): void {
 
           <tr v-if="filtered.length === 0">
             <td
-              colspan="8"
+              :colspan="props.selectable ? 9 : 8"
               class="px-4 py-10 text-center text-xs text-muted"
             >
               {{ props.invoices.length === 0
