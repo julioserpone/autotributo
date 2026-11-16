@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 
-import AppLayout from '@/layouts/AppLayout.vue';
+import AuthLayout from '@/layouts/AuthLayout.vue';
 import { postJson } from '@/lib/api';
 
 const route = useRoute();
@@ -42,101 +42,103 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <AppLayout title="Restablecer contraseña">
-    <section class="mx-auto max-w-md rounded-2xl border border-line bg-surface/60 p-6 shadow-2xl shadow-black/20">
-      <p
-        v-if="!done"
-        class="text-sm text-muted"
+  <AuthLayout
+    title="Restablecer contraseña"
+    subtitle="Define tu nueva contraseña."
+  >
+    <UAlert
+      v-if="done"
+      color="success"
+      variant="soft"
+      icon="i-lucide-check-circle"
+      description="Tu contraseña se restableció correctamente."
+    />
+
+    <form
+      v-if="!done"
+      class="space-y-4"
+      @submit.prevent="submit"
+    >
+      <UFormField
+        label="Correo"
+        name="email"
       >
-        Define tu nueva contraseña.
-      </p>
-      <p
-        v-else
-        class="text-sm text-success-ink"
+        <UInput
+          id="email"
+          v-model="email"
+          class="w-full"
+          type="email"
+          autocomplete="email"
+          required
+          icon="i-lucide-mail"
+          size="lg"
+        />
+      </UFormField>
+
+      <UFormField
+        label="Nueva contraseña"
+        name="password"
       >
-        Tu contraseña se restableció correctamente.
-      </p>
+        <UInput
+          id="password"
+          v-model="password"
+          class="w-full"
+          type="password"
+          autocomplete="new-password"
+          required
+          icon="i-lucide-lock"
+          size="lg"
+        />
+      </UFormField>
 
-      <form
-        v-if="!done"
-        class="mt-6 space-y-4"
-        @submit.prevent="submit"
+      <UFormField
+        label="Confirmar contraseña"
+        name="password_confirmation"
       >
-        <div>
-          <label
-            class="block text-xs font-medium uppercase tracking-wide text-muted"
-            for="email"
-          >
-            Correo
-          </label>
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            autocomplete="email"
-            required
-            class="mt-1 w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-          >
-        </div>
+        <UInput
+          id="password_confirmation"
+          v-model="passwordConfirmation"
+          class="w-full"
+          type="password"
+          autocomplete="new-password"
+          required
+          icon="i-lucide-lock"
+          size="lg"
+        />
+      </UFormField>
 
-        <div>
-          <label
-            class="block text-xs font-medium uppercase tracking-wide text-muted"
-            for="password"
-          >
-            Nueva contraseña
-          </label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            autocomplete="new-password"
-            required
-            class="mt-1 w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-          >
-        </div>
+      <UAlert
+        v-if="error"
+        color="error"
+        variant="soft"
+        icon="i-lucide-alert-circle"
+        :description="error"
+      />
 
-        <div>
-          <label
-            class="block text-xs font-medium uppercase tracking-wide text-muted"
-            for="password_confirmation"
-          >
-            Confirmar contraseña
-          </label>
-          <input
-            id="password_confirmation"
-            v-model="passwordConfirmation"
-            type="password"
-            autocomplete="new-password"
-            required
-            class="mt-1 w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-          >
-        </div>
+      <UButton
+        type="submit"
+        color="neutral"
+        variant="solid"
+        size="lg"
+        block
+        :loading="submitting"
+        :disabled="submitting"
+      >
+        {{ submitting ? 'Restableciendo…' : 'Restablecer' }}
+      </UButton>
+    </form>
 
-        <p
-          v-if="error"
-          class="rounded-lg border border-danger/40 bg-danger-soft/60 px-4 py-3 text-sm text-danger-ink"
-        >
-          {{ error }}
-        </p>
-
-        <button
-          type="submit"
-          :disabled="submitting"
-          class="w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:opacity-60"
-        >
-          {{ submitting ? 'Restableciendo…' : 'Restablecer' }}
-        </button>
-      </form>
-
-      <button
+    <template #footer>
+      <UButton
         v-if="done"
-        type="button"
-        class="mt-6 w-full rounded-lg border border-line-strong bg-raised px-4 py-2 text-sm font-medium transition hover:bg-line-strong"
+        color="neutral"
+        variant="outline"
+        size="lg"
+        block
         @click="router.push({ name: 'login' })"
       >
         Ir a iniciar sesión
-      </button>
-    </section>
-  </AppLayout>
+      </UButton>
+    </template>
+  </AuthLayout>
 </template>

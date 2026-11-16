@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import AppToastHost from '@/components/ui/AppToastHost.vue';
+import { es } from '@nuxt/ui/locale';
 </script>
 
 <template>
-  <RouterView />
-  <AppToastHost />
+  <UApp :locale="es">
+    <RouterView />
+  </UApp>
 </template>

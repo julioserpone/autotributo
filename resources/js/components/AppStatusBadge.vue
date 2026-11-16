@@ -1,38 +1,41 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-import AppBadge from '@/components/ui/AppBadge.vue';
-import type { Tone } from '@/components/ui/types';
 import type { HealthStatus } from '@/stores/health';
 
 const props = defineProps<{
     status: HealthStatus;
 }>();
 
-const labels: Record<HealthStatus, string> = {
-    idle: 'Sin verificar',
-    loading: 'Verificando…',
-    ok: 'API conectada',
-    error: 'API no disponible',
-};
-
-const tones: Record<HealthStatus, Tone> = {
-    idle: 'neutral',
-    loading: 'warning',
-    ok: 'success',
-    error: 'danger',
-};
-
-const label = computed(() => labels[props.status]);
-const tone = computed(() => tones[props.status]);
+const config = computed(() => {
+    switch (props.status) {
+        case 'ok':
+            return { label: 'API conectada', color: 'success' as const };
+        case 'loading':
+            return { label: 'Verificando…', color: 'warning' as const };
+        case 'error':
+            return { label: 'API no disponible', color: 'error' as const };
+        default:
+            return { label: 'Sin verificar', color: 'neutral' as const };
+    }
+});
 </script>
 
 <template>
-  <AppBadge
-    :tone="tone"
+  <UBadge
+    :color="config.color"
+    variant="subtle"
+    size="sm"
+    class="gap-1.5 font-medium"
     :data-status="status"
-    dot
   >
-    {{ label }}
-  </AppBadge>
+    <span
+      v-if="status === 'ok'"
+      class="relative flex size-2"
+    >
+      <span class="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+      <span class="relative inline-flex size-2 rounded-full bg-emerald-500" />
+    </span>
+    {{ config.label }}
+  </UBadge>
 </template>

@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-import AppLayout from '@/layouts/AppLayout.vue';
+import AuthLayout from '@/layouts/AuthLayout.vue';
 import { postJson } from '@/lib/api';
 
 const router = useRouter();
@@ -32,67 +32,71 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <AppLayout title="Recuperar contraseña">
-    <section class="mx-auto max-w-md rounded-2xl border border-line bg-surface/60 p-6 shadow-2xl shadow-black/20">
-      <p
-        v-if="!sent"
-        class="text-sm text-muted"
+  <AuthLayout
+    title="Recuperar contraseña"
+    subtitle="Te enviaremos un enlace para restablecer tu contraseña."
+  >
+    <UAlert
+      v-if="sent"
+      color="success"
+      variant="soft"
+      icon="i-lucide-check-circle"
+      description="Si el correo existe, te enviamos un enlace para restablecer la contraseña."
+    />
+
+    <form
+      v-if="!sent"
+      class="space-y-4"
+      @submit.prevent="submit"
+    >
+      <UFormField
+        label="Correo"
+        name="email"
       >
-        Ingresa tu correo y te enviaremos un enlace para restablecer la contraseña.
-      </p>
-      <p
-        v-else
-        class="text-sm text-success-ink"
+        <UInput
+          id="email"
+          v-model="email"
+          class="w-full"
+          type="email"
+          autocomplete="email"
+          required
+          icon="i-lucide-mail"
+          size="lg"
+        />
+      </UFormField>
+
+      <UAlert
+        v-if="error"
+        color="error"
+        variant="soft"
+        icon="i-lucide-alert-circle"
+        :description="error"
+      />
+
+      <UButton
+        type="submit"
+        color="neutral"
+        variant="solid"
+        size="lg"
+        block
+        :loading="submitting"
+        :disabled="submitting"
       >
-        Si el correo existe, te enviamos un enlace para restablecer la contraseña.
-      </p>
+        {{ submitting ? 'Enviando…' : 'Enviar enlace' }}
+      </UButton>
+    </form>
 
-      <form
-        v-if="!sent"
-        class="mt-6 space-y-4"
-        @submit.prevent="submit"
-      >
-        <div>
-          <label
-            class="block text-xs font-medium uppercase tracking-wide text-muted"
-            for="email"
-          >
-            Correo
-          </label>
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            autocomplete="email"
-            required
-            class="mt-1 w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-          >
-        </div>
-
-        <p
-          v-if="error"
-          class="rounded-lg border border-danger/40 bg-danger-soft/60 px-4 py-3 text-sm text-danger-ink"
-        >
-          {{ error }}
-        </p>
-
-        <button
-          type="submit"
-          :disabled="submitting"
-          class="w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:opacity-60"
-        >
-          {{ submitting ? 'Enviando…' : 'Enviar enlace' }}
-        </button>
-      </form>
-
-      <button
+    <template #footer>
+      <UButton
         v-if="sent"
-        type="button"
-        class="mt-6 w-full rounded-lg border border-line-strong bg-raised px-4 py-2 text-sm font-medium transition hover:bg-line-strong"
+        color="neutral"
+        variant="outline"
+        size="lg"
+        block
         @click="router.push({ name: 'login' })"
       >
         Volver a iniciar sesión
-      </button>
-    </section>
-  </AppLayout>
+      </UButton>
+    </template>
+  </AuthLayout>
 </template>

@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { renderSVG } from 'uqr';
 
-import AppLayout from '@/layouts/AppLayout.vue';
+import AppShell from '@/layouts/AppShell.vue';
 import { postJson } from '@/lib/api';
 
 interface SetupData {
@@ -21,10 +21,6 @@ const confirming = ref(false);
 const copied = ref(false);
 const error = ref<string | null>(null);
 
-/**
- * QR generado en el cliente a partir del otpauth_url. Evita enviar el secreto
- * a servicios externos de generación de imágenes.
- */
 const qrSrc = computed((): string => {
     if (!setup.value) {
         return '';
@@ -99,127 +95,158 @@ async function goToDashboard(): Promise<void> {
 </script>
 
 <template>
-  <AppLayout title="Verificación en dos pasos">
-    <section class="mx-auto max-w-md rounded-2xl border border-line bg-surface/60 p-6 shadow-2xl shadow-black/20">
-      <template v-if="recoveryCodes.length > 0">
-        <h2 class="text-lg font-semibold">
-          Verificación activada
-        </h2>
-        <p class="mt-2 text-sm text-muted">
-          Guarda estos códigos de recuperación en un lugar seguro. No se volverán a mostrar.
+  <AppShell title="Seguridad">
+    <div class="mx-auto max-w-2xl">
+      <section class="rounded-lg border border-line bg-surface p-6 shadow-2xs dark:shadow-none">
+        <h1 class="text-xl font-semibold tracking-tight text-ink">
+          Verificación en dos pasos
+        </h1>
+        <p class="mt-1 text-sm text-muted">
+          Tu rol de owner exige activar la verificación en dos pasos.
         </p>
 
-        <ul class="mt-4 grid grid-cols-1 gap-2 rounded-lg border border-line bg-canvas p-4 font-mono text-sm sm:grid-cols-2">
-          <li
-            v-for="recoveryCode in recoveryCodes"
-            :key="recoveryCode"
-          >
-            {{ recoveryCode }}
-          </li>
-        </ul>
-
-        <button
-          type="button"
-          class="mt-6 w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
-          @click="goToDashboard"
+        <div
+          v-if="recoveryCodes.length > 0"
+          class="mt-5 space-y-4"
         >
-          Ir al panel
-        </button>
-      </template>
+          <UAlert
+            color="success"
+            variant="soft"
+            icon="i-lucide-check-circle"
+            title="Verificación activada"
+            description="Guarda estos códigos de recuperación en un lugar seguro. No se volverán a mostrar."
+          />
 
-      <template v-else-if="setup">
-        <p class="text-sm text-muted">
-          Escanea este código con Google Authenticator, Authy u otra aplicación TOTP:
-        </p>
+          <ul class="grid grid-cols-1 gap-2 rounded-lg border border-line bg-canvas p-4 font-mono text-sm sm:grid-cols-2">
+            <li
+              v-for="recoveryCode in recoveryCodes"
+              :key="recoveryCode"
+              class="text-ink"
+            >
+              {{ recoveryCode }}
+            </li>
+          </ul>
 
-        <img
-          :src="qrSrc"
-          alt="Código QR para configurar la verificación en dos pasos"
-          class="mx-auto mt-4 size-52 rounded-xl bg-white p-3"
-        >
-
-        <p class="mt-4 text-center text-xs text-faint">
-          ¿No puedes escanearlo? Añade la cuenta manualmente con esta clave:
-        </p>
-
-        <div class="mt-2 flex items-center gap-2 rounded-lg border border-line bg-canvas p-3">
-          <code class="flex-1 break-all font-mono text-sm text-accent-ink">{{ setup.secret }}</code>
-          <button
-            type="button"
-            class="rounded-lg border border-line-strong bg-raised px-3 py-1 text-xs font-medium transition hover:bg-line-strong"
-            @click="copySecret"
+          <UButton
+            color="neutral"
+            variant="solid"
+            size="lg"
+            block
+            @click="goToDashboard"
           >
-            {{ copied ? 'Copiado' : 'Copiar' }}
-          </button>
+            Ir al panel
+          </UButton>
         </div>
 
-        <a
-          :href="setup.otpauth_url"
-          class="mt-2 block truncate text-xs text-faint hover:text-ink"
+        <div
+          v-else-if="setup"
+          class="mt-5 space-y-4"
         >
-          Abrir enlace otpauth
-        </a>
-
-        <form
-          class="mt-6 space-y-4"
-          @submit.prevent="confirm"
-        >
-          <div>
-            <label
-              class="block text-xs font-medium uppercase tracking-wide text-muted"
-              for="code"
-            >
-              Código de 6 dígitos
-            </label>
-            <input
-              id="code"
-              v-model="code"
-              type="text"
-              inputmode="numeric"
-              autocomplete="one-time-code"
-              required
-              class="mt-1 w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-            >
-          </div>
-
-          <p
-            v-if="error"
-            class="rounded-lg border border-danger/40 bg-danger-soft/60 px-4 py-3 text-sm text-danger-ink"
-          >
-            {{ error }}
+          <p class="text-sm text-muted">
+            Escanea este código con Google Authenticator, Authy u otra aplicación TOTP:
           </p>
 
-          <button
-            type="submit"
-            :disabled="confirming"
-            class="w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:opacity-60"
+          <img
+            :src="qrSrc"
+            alt="Código QR para configurar la verificación en dos pasos"
+            class="mx-auto size-52 rounded-xl bg-white p-3"
           >
-            {{ confirming ? 'Verificando…' : 'Activar verificación' }}
-          </button>
-        </form>
-      </template>
 
-      <template v-else>
-        <p class="text-sm text-muted">
-          Tu rol de owner exige la verificación en dos pasos antes de acceder a los endpoints de negocio.
-        </p>
+          <p class="text-center text-xs text-faint">
+            ¿No puedes escanearlo? Añade la cuenta manualmente con esta clave:
+          </p>
 
-        <p
-          v-if="error"
-          class="mt-4 rounded-lg border border-danger/40 bg-danger-soft/60 px-4 py-3 text-sm text-danger-ink"
+          <div class="flex items-center gap-2 rounded-lg border border-line bg-canvas p-3">
+            <code class="flex-1 break-all font-mono text-sm text-ink">{{ setup.secret }}</code>
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="xs"
+              @click="copySecret"
+            >
+              {{ copied ? 'Copiado' : 'Copiar' }}
+            </UButton>
+          </div>
+
+          <a
+            :href="setup.otpauth_url"
+            class="block truncate text-xs text-faint hover:text-ink"
+          >
+            Abrir enlace otpauth
+          </a>
+
+          <form
+            class="space-y-4"
+            @submit.prevent="confirm"
+          >
+            <UFormField
+              label="Código de 6 dígitos"
+              name="code"
+            >
+              <UInput
+                id="code"
+                v-model="code"
+                class="w-full"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                required
+                icon="i-lucide-key-round"
+                size="lg"
+              />
+            </UFormField>
+
+            <UAlert
+              v-if="error"
+              color="error"
+              variant="soft"
+              icon="i-lucide-alert-circle"
+              :description="error"
+            />
+
+            <UButton
+              type="submit"
+              color="neutral"
+              variant="solid"
+              size="lg"
+              block
+              :loading="confirming"
+              :disabled="confirming"
+            >
+              {{ confirming ? 'Verificando…' : 'Activar verificación' }}
+            </UButton>
+          </form>
+        </div>
+
+        <div
+          v-else
+          class="mt-5 space-y-4"
         >
-          {{ error }}
-        </p>
+          <p class="text-sm text-muted">
+            Tu rol de owner exige la verificación en dos pasos antes de acceder a los endpoints de negocio.
+          </p>
 
-        <button
-          type="button"
-          :disabled="starting"
-          class="mt-6 w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:opacity-60"
-          @click="start"
-        >
-          {{ starting ? 'Generando clave…' : 'Comenzar configuración' }}
-        </button>
-      </template>
-    </section>
-  </AppLayout>
+          <UAlert
+            v-if="error"
+            color="error"
+            variant="soft"
+            icon="i-lucide-alert-circle"
+            :description="error"
+          />
+
+          <UButton
+            color="neutral"
+            variant="solid"
+            size="lg"
+            block
+            :loading="starting"
+            :disabled="starting"
+            @click="start"
+          >
+            {{ starting ? 'Generando clave…' : 'Comenzar configuración' }}
+          </UButton>
+        </div>
+      </section>
+    </div>
+  </AppShell>
 </template>

@@ -67,7 +67,7 @@ Actores externos: portal del SRI, proveedor de LLM, AWS (Lambda, S3, CloudWatch)
 | Excel | `maatwebsite/excel` ^3.1 | Exportaciones y plantillas |
 | Auditoría | `owen-it/laravel-auditing` ^13 | Trazabilidad de cambios |
 | Frontend | Vue 3.5 + TypeScript 5 (strict) + Vite 7 | SPA en `resources/js` (ADR-0004) |
-| UI | Tailwind 4 + shadcn-vue + Radix Vue | Estilo Laravel Cloud, accesible |
+| UI | Tailwind 4 + Nuxt UI 4 (sobre Reka UI) | Estilo Laravel Cloud, accesible |
 | Estado | Pinia + TanStack Query | Estado de UI vs. estado de servidor, sin duplicar caché |
 | Gráficos | Chart.js 4 | Ligero y suficiente para tendencias |
 | Validación FE | vee-validate + zod | Contratos compartidos con la API |
