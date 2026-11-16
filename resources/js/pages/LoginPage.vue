@@ -45,8 +45,8 @@ async function submit(): Promise<void> {
 
 <template>
   <AppLayout title="Iniciar sesión">
-    <section class="mx-auto max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-2xl shadow-black/20">
-      <p class="text-sm text-zinc-400">
+    <section class="mx-auto max-w-md rounded-2xl border border-line bg-surface/60 p-6 shadow-2xl shadow-black/20">
+      <p class="text-sm text-muted">
         Accede con las credenciales de tu estudio para continuar.
       </p>
 
@@ -56,7 +56,7 @@ async function submit(): Promise<void> {
       >
         <div>
           <label
-            class="block text-xs font-medium uppercase tracking-wide text-zinc-400"
+            class="block text-xs font-medium uppercase tracking-wide text-muted"
             for="email"
           >
             Correo
@@ -67,13 +67,13 @@ async function submit(): Promise<void> {
             type="email"
             autocomplete="username"
             required
-            class="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+            class="mt-1 w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
           >
         </div>
 
         <div>
           <label
-            class="block text-xs font-medium uppercase tracking-wide text-zinc-400"
+            class="block text-xs font-medium uppercase tracking-wide text-muted"
             for="password"
           >
             Contraseña
@@ -84,22 +84,22 @@ async function submit(): Promise<void> {
             type="password"
             autocomplete="current-password"
             required
-            class="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+            class="mt-1 w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
           >
         </div>
 
-        <label class="flex items-center gap-2 text-sm text-zinc-400">
+        <label class="flex items-center gap-2 text-sm text-muted">
           <input
             v-model="remember"
             type="checkbox"
-            class="size-4 rounded border-zinc-700 bg-zinc-950 text-violet-600 focus:ring-violet-500"
+            class="size-4 rounded border-line-strong bg-canvas text-accent focus:ring-accent/30"
           >
           Recordarme
         </label>
 
         <p
           v-if="auth.error"
-          class="rounded-lg border border-red-900 bg-red-950/60 px-4 py-3 text-sm text-red-200"
+          class="rounded-lg border border-danger/40 bg-danger-soft/60 px-4 py-3 text-sm text-danger-ink"
         >
           {{ auth.error }}
         </p>
@@ -107,16 +107,16 @@ async function submit(): Promise<void> {
         <button
           type="submit"
           :disabled="submitting"
-          class="w-full rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 disabled:opacity-60"
+          class="w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:opacity-60"
         >
           {{ submitting ? 'Ingresando…' : 'Ingresar' }}
         </button>
       </form>
 
-      <p class="mt-4 text-center text-sm text-zinc-400">
+      <p class="mt-4 text-center text-sm text-muted">
         <RouterLink
           :to="{ name: 'forgot-password' }"
-          class="text-violet-400 underline-offset-4 hover:text-violet-300 hover:underline"
+          class="text-accent-ink underline-offset-4 hover:text-accent-ink hover:underline"
         >
           ¿Olvidaste tu contraseña?
         </RouterLink>

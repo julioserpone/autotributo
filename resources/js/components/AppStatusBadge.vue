@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
+import AppBadge from '@/components/ui/AppBadge.vue';
+import type { Tone } from '@/components/ui/types';
 import type { HealthStatus } from '@/stores/health';
 
 const props = defineProps<{
@@ -14,27 +16,23 @@ const labels: Record<HealthStatus, string> = {
     error: 'API no disponible',
 };
 
-const classes: Record<HealthStatus, string> = {
-    idle: 'border-zinc-700 bg-zinc-800 text-zinc-300',
-    loading: 'border-amber-700 bg-amber-950 text-amber-300',
-    ok: 'border-emerald-700 bg-emerald-950 text-emerald-300',
-    error: 'border-red-700 bg-red-950 text-red-300',
+const tones: Record<HealthStatus, Tone> = {
+    idle: 'neutral',
+    loading: 'warning',
+    ok: 'success',
+    error: 'danger',
 };
 
 const label = computed(() => labels[props.status]);
-const tone = computed(() => classes[props.status]);
+const tone = computed(() => tones[props.status]);
 </script>
 
 <template>
-  <span
-    class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium"
-    :class="tone"
+  <AppBadge
+    :tone="tone"
     :data-status="status"
+    dot
   >
-    <span
-      class="size-1.5 rounded-full bg-current"
-      aria-hidden="true"
-    />
     {{ label }}
-  </span>
+  </AppBadge>
 </template>

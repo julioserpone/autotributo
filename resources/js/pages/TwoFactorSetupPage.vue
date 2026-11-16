@@ -100,16 +100,16 @@ async function goToDashboard(): Promise<void> {
 
 <template>
   <AppLayout title="Verificación en dos pasos">
-    <section class="mx-auto max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-2xl shadow-black/20">
+    <section class="mx-auto max-w-md rounded-2xl border border-line bg-surface/60 p-6 shadow-2xl shadow-black/20">
       <template v-if="recoveryCodes.length > 0">
         <h2 class="text-lg font-semibold">
           Verificación activada
         </h2>
-        <p class="mt-2 text-sm text-zinc-400">
+        <p class="mt-2 text-sm text-muted">
           Guarda estos códigos de recuperación en un lugar seguro. No se volverán a mostrar.
         </p>
 
-        <ul class="mt-4 grid grid-cols-1 gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-4 font-mono text-sm sm:grid-cols-2">
+        <ul class="mt-4 grid grid-cols-1 gap-2 rounded-lg border border-line bg-canvas p-4 font-mono text-sm sm:grid-cols-2">
           <li
             v-for="recoveryCode in recoveryCodes"
             :key="recoveryCode"
@@ -120,7 +120,7 @@ async function goToDashboard(): Promise<void> {
 
         <button
           type="button"
-          class="mt-6 w-full rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+          class="mt-6 w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
           @click="goToDashboard"
         >
           Ir al panel
@@ -128,7 +128,7 @@ async function goToDashboard(): Promise<void> {
       </template>
 
       <template v-else-if="setup">
-        <p class="text-sm text-zinc-400">
+        <p class="text-sm text-muted">
           Escanea este código con Google Authenticator, Authy u otra aplicación TOTP:
         </p>
 
@@ -138,15 +138,15 @@ async function goToDashboard(): Promise<void> {
           class="mx-auto mt-4 size-52 rounded-xl bg-white p-3"
         >
 
-        <p class="mt-4 text-center text-xs text-zinc-500">
+        <p class="mt-4 text-center text-xs text-faint">
           ¿No puedes escanearlo? Añade la cuenta manualmente con esta clave:
         </p>
 
-        <div class="mt-2 flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-3">
-          <code class="flex-1 break-all font-mono text-sm text-violet-300">{{ setup.secret }}</code>
+        <div class="mt-2 flex items-center gap-2 rounded-lg border border-line bg-canvas p-3">
+          <code class="flex-1 break-all font-mono text-sm text-accent-ink">{{ setup.secret }}</code>
           <button
             type="button"
-            class="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs font-medium transition hover:bg-zinc-700"
+            class="rounded-lg border border-line-strong bg-raised px-3 py-1 text-xs font-medium transition hover:bg-line-strong"
             @click="copySecret"
           >
             {{ copied ? 'Copiado' : 'Copiar' }}
@@ -155,7 +155,7 @@ async function goToDashboard(): Promise<void> {
 
         <a
           :href="setup.otpauth_url"
-          class="mt-2 block truncate text-xs text-zinc-500 hover:text-zinc-300"
+          class="mt-2 block truncate text-xs text-faint hover:text-ink"
         >
           Abrir enlace otpauth
         </a>
@@ -166,7 +166,7 @@ async function goToDashboard(): Promise<void> {
         >
           <div>
             <label
-              class="block text-xs font-medium uppercase tracking-wide text-zinc-400"
+              class="block text-xs font-medium uppercase tracking-wide text-muted"
               for="code"
             >
               Código de 6 dígitos
@@ -178,13 +178,13 @@ async function goToDashboard(): Promise<void> {
               inputmode="numeric"
               autocomplete="one-time-code"
               required
-              class="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+              class="mt-1 w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
             >
           </div>
 
           <p
             v-if="error"
-            class="rounded-lg border border-red-900 bg-red-950/60 px-4 py-3 text-sm text-red-200"
+            class="rounded-lg border border-danger/40 bg-danger-soft/60 px-4 py-3 text-sm text-danger-ink"
           >
             {{ error }}
           </p>
@@ -192,7 +192,7 @@ async function goToDashboard(): Promise<void> {
           <button
             type="submit"
             :disabled="confirming"
-            class="w-full rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 disabled:opacity-60"
+            class="w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:opacity-60"
           >
             {{ confirming ? 'Verificando…' : 'Activar verificación' }}
           </button>
@@ -200,13 +200,13 @@ async function goToDashboard(): Promise<void> {
       </template>
 
       <template v-else>
-        <p class="text-sm text-zinc-400">
+        <p class="text-sm text-muted">
           Tu rol de owner exige la verificación en dos pasos antes de acceder a los endpoints de negocio.
         </p>
 
         <p
           v-if="error"
-          class="mt-4 rounded-lg border border-red-900 bg-red-950/60 px-4 py-3 text-sm text-red-200"
+          class="mt-4 rounded-lg border border-danger/40 bg-danger-soft/60 px-4 py-3 text-sm text-danger-ink"
         >
           {{ error }}
         </p>
@@ -214,7 +214,7 @@ async function goToDashboard(): Promise<void> {
         <button
           type="button"
           :disabled="starting"
-          class="mt-6 w-full rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 disabled:opacity-60"
+          class="mt-6 w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:opacity-60"
           @click="start"
         >
           {{ starting ? 'Generando clave…' : 'Comenzar configuración' }}

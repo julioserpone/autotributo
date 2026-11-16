@@ -12,7 +12,7 @@
 | F1 · Núcleo tenant-ready | Completado | 11/11 | F1-11 · Staging en AWS (EC2, RDS, DuckDNS, TLS, deploy, smoke tests) |
 | F2 · Ingesta SRI | Completado | 12/12 + F2-13 | F2-13 · Carga manual de XML (`US-14`) |
 | F3 · Motor fiscal + IA | En curso | 6/9 | F3-05 · Revisión humana de clasificaciones |
-| F4 · Frontend | En curso | 0/11 + fundaciones/auth parciales | Login, reset, 2FA, invitación y layout mínimo (#36–#40) |
+| F4 · Frontend | En curso | 1/11 + fundaciones/auth parciales | F4-02 · Design system (tokens, 11 componentes y Vitest) |
 | F5 · Declaraciones | Pendiente | 0/8 | — |
 | F6 · Hardening y beta | Pendiente | 0/8 | — |
 
@@ -70,16 +70,23 @@
 | F3-05 | Revisión humana | Completado | P1 | `GET /api/v1/classifications` (cola paginada que prioriza `needs_review` y filtra por `status`, `method`, `company_id`, `reviewed` y texto), `PATCH /api/v1/classifications/{classification}` (`decision=accept|reject`, categoría opcional para corregir) y `POST /api/v1/classifications/bulk-review` (máximo 100 ids, resultado parcial con `{updated, failed:[{id, reason}]}`); `ReviewClassification` acepta y deja el ítem `manual` con la categoría confirmada o lo rechaza devolviéndolo a `pending` sin categoría, siempre en transacción con bloqueo y conservando el origen (`method`, `rule_id`, `llm_call_id`); `Classification` pasa a ser auditable (`audit_logs` con `old_values`/`new_values`); `ClassificationPolicy` con `invoices.view` para leer y `invoices.review` para decidir (owner, accountant y assistant); revisar dos veces es válido y queda auditado · 12 tests / 71 assertions. OpenAPI regenerado (#69) |
 | F3-07 | Proporcionalidad IVA | Completado | P1 | `App\Domain\Shared\Values\Money` (value object inmutable sobre `brick/money` ^0.15: `cents()`, `ofDecimal()` con HALF_UP, `toCents()`, `decimal()`, `plus`/`minus`/`multipliedBy`, sin `float`) y `App\Domain\Fiscal\Services\Proportionality` (`factor()` = ventas 0 % / total con 6 decimales y `RoundingMode::HalfUp`; `complement()` calculado como `1 − factor` para que ambas caras sumen `1.000000` exacto; `apply()` del factor a un importe con redondeo a centavos; período sin ventas → `0.000000`; ventas negativas y factor fuera de [0,1] → `InvalidArgumentException`) · 33 tests / 66 assertions. Cierra el hueco del ADR-0002 (enmienda 2026-11-15): `brick/money` no estaba instalado y no existía `Money`. **Convención del 104 pendiente de firma del contador** (`docs/fiscal-signoff.md`) (#65) |
 
+## Fase 4 · Frontend
+
+| ID | Tarea | Estado | Prioridad | Evidencia |
+|---|---|---|---|---|
+| F4-01 | Fundaciones | Parcial | P1 | Vite, Vue 3.5 + TypeScript estricto, Tailwind 4, router, Pinia y cliente HTTP con CSRF/errores; F4-02 añade la base de shadcn-vue (`reka-ui`, `class-variance-authority`, `clsx`, `tailwind-merge`) y el entorno de Vitest con stubs de layout. **Pendiente:** TanStack Query e i18n |
+| F4-02 | Design system | Completado | **P0** | Tokens semánticos dark-first en `resources/css/app.css` (`#09090b`, `#18181b`, `#27272a`, borde `#262626`, acentos violeta/rojo/verde, radios, sombras y `text-2xs`), tipografía del sistema, `prefers-reduced-motion` y foco visible; `AppField`, `AppButton`, `AppInput`, `AppSelect`, `AppCombobox`, `AppDateRange`, `AppTable` (loading/empty/error, slots y selección), `AppBadge`, `AppModal`, `AppToastHost` y `AppDrawer` con portal, foco atrapado y Escape; `useToast` y `AppToastHost` en `App.vue`; `AppLayout` con enlace de salto y `AppStatusBadge` migrados a tokens; páginas de auth migradas a las utilidades semánticas · 50 tests / 50 assertions · `docs/14-design-system.md`. Verificado en navegador: login dark, sin errores de consola. (#70) |
+
 ## Fases 3–6 · Estado resumido
 
 | Fase | Tareas | Estado | Prioridad actual |
 |---|---|---|---|
 | F3 · Motor fiscal + IA | F3-01…F3-09 | En curso (6/9) | P1 (catálogos, reglas, clasificador, gobierno de IA y proporcionalidad) / P2 (riesgos, revisión) |
-| F4 · Frontend | F4-01…F4-11 | Parcial: fundaciones, auth y layout mínimo | **P0** (design system, layout, bandeja, monitor) / P2 (resto) |
+| F4 · Frontend | F4-01…F4-11 | En curso (1/11 + fundaciones, auth y layout parciales) | **P0** (design system, layout, bandeja, monitor) / P2 (resto) |
 | F5 · Declaraciones | F5-01…F5-08 | Pendiente | P3 (después de F3) |
 | F6 · Hardening y beta | F6-01…F6-08 | Pendiente | P3 (lanzamiento) |
 
-## Registro de PRs recientes (2026-11-06 → 2026-11-14)
+## Registro de PRs recientes (2026-11-06 → 2026-11-16)
 
 | PR | Contenido | Tarea |
 |---|---|---|
@@ -103,6 +110,7 @@
 | #64 | Gobierno de IA: caché, `llm_calls` y presupuesto | F3-04 |
 | #65 | Value object `Money` y proporcionalidad de IVA | F3-07 |
 | #69 | Revisión humana de clasificaciones | F3-05 |
+| #70 | Design system dark-first y componentes base | F4-02 |
 
 ## Cómo actualizar
 
