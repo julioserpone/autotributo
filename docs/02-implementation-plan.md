@@ -162,7 +162,7 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | ID | Tarea | Est. | Detalle |
 |---|---|---|---|
 | F4-01 | Fundaciones | 1 d | Vue 3 + TS strict, Vite, Tailwind 4, shadcn-vue, router, Pinia, TanStack Query, cliente HTTP con CSRF/errores, i18n |
-| F4-02 | Design system | 2 d | Tokens (`#09090b`, `#18181b`, `#27272a`, borde `#262626`, acentos violeta/rojo/verde), tipografía, dark mode, Button/Input/Select/Combobox/DateRange/Table/Badge/Modal/Toast/Drawer |
+| F4-02 | Design system | 2 d | **Completado 2026-11-16:** tokens semánticos dark-first (`#09090b`, `#18181b`, `#27272a`, borde `#262626`, acentos violeta/rojo/verde), tipografía, `prefers-reduced-motion` y foco visible en `resources/css/app.css`; `AppField`, `AppButton`, `AppInput`, `AppSelect`, `AppCombobox`, `AppDateRange`, `AppTable`, `AppBadge`, `AppModal`, `AppToastHost` y `AppDrawer` con Vitest; `AppLayout`/`AppStatusBadge` migrados a tokens · 50 tests · ver `docs/14-design-system.md` |
 | F4-03 | Auth y primer acceso | 1,5 d | Login, 2FA, invitación, recuperación, primer contribuyente (el estudio ya está provisionado) |
 | F4-04 | Layout | 1 d | Sidebar colapsable, selector empresa/RUC, header con estado Reverb, breadcrumbs, atajos |
 | F4-05 | Bandeja de comprobantes | 3 d | DataTable server-side, filtros (fecha, estado, proveedor, categoría, tipo), columnas configurables, drawer de detalle, acciones masivas |

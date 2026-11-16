@@ -4,13 +4,13 @@ import AppLayout from '@/layouts/AppLayout.vue';
 
 <template>
   <AppLayout title="Página no encontrada">
-    <section class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
-      <p class="text-sm text-zinc-400">
+    <section class="rounded-2xl border border-line bg-surface/60 p-6">
+      <p class="text-sm text-muted">
         La ruta que buscas no existe o fue movida.
       </p>
       <RouterLink
         to="/"
-        class="mt-4 inline-flex rounded-lg border border-violet-700 bg-violet-950 px-4 py-2 text-sm font-medium text-violet-200 hover:bg-violet-900"
+        class="mt-4 inline-flex rounded-lg border border-accent/40 bg-accent-soft px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-soft"
       >
         Volver al panel
       </RouterLink>

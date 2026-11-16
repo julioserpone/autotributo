@@ -33,16 +33,16 @@ async function submit(): Promise<void> {
 
 <template>
   <AppLayout title="Recuperar contraseña">
-    <section class="mx-auto max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-2xl shadow-black/20">
+    <section class="mx-auto max-w-md rounded-2xl border border-line bg-surface/60 p-6 shadow-2xl shadow-black/20">
       <p
         v-if="!sent"
-        class="text-sm text-zinc-400"
+        class="text-sm text-muted"
       >
         Ingresa tu correo y te enviaremos un enlace para restablecer la contraseña.
       </p>
       <p
         v-else
-        class="text-sm text-emerald-300"
+        class="text-sm text-success-ink"
       >
         Si el correo existe, te enviamos un enlace para restablecer la contraseña.
       </p>
@@ -54,7 +54,7 @@ async function submit(): Promise<void> {
       >
         <div>
           <label
-            class="block text-xs font-medium uppercase tracking-wide text-zinc-400"
+            class="block text-xs font-medium uppercase tracking-wide text-muted"
             for="email"
           >
             Correo
@@ -65,13 +65,13 @@ async function submit(): Promise<void> {
             type="email"
             autocomplete="email"
             required
-            class="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+            class="mt-1 w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
           >
         </div>
 
         <p
           v-if="error"
-          class="rounded-lg border border-red-900 bg-red-950/60 px-4 py-3 text-sm text-red-200"
+          class="rounded-lg border border-danger/40 bg-danger-soft/60 px-4 py-3 text-sm text-danger-ink"
         >
           {{ error }}
         </p>
@@ -79,7 +79,7 @@ async function submit(): Promise<void> {
         <button
           type="submit"
           :disabled="submitting"
-          class="w-full rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 disabled:opacity-60"
+          class="w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:opacity-60"
         >
           {{ submitting ? 'Enviando…' : 'Enviar enlace' }}
         </button>
@@ -88,7 +88,7 @@ async function submit(): Promise<void> {
       <button
         v-if="sent"
         type="button"
-        class="mt-6 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium transition hover:bg-zinc-700"
+        class="mt-6 w-full rounded-lg border border-line-strong bg-raised px-4 py-2 text-sm font-medium transition hover:bg-line-strong"
         @click="router.push({ name: 'login' })"
       >
         Volver a iniciar sesión
