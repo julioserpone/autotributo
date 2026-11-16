@@ -43,5 +43,8 @@ it('documenta los endpoints de la etapa', function (): void {
             '/v1/sync-runs/{run}',
             '/v1/audit-logs',
             '/v1/realtime/status',
+            '/v1/classifications',
+            '/v1/classifications/bulk-review',
+            '/v1/classifications/{classification}',
         ]);
 });

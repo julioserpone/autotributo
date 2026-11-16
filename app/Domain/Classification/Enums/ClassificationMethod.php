@@ -7,8 +7,9 @@ namespace App\Domain\Classification\Enums;
 /**
  * Origen de una clasificación.
  *
- * `rule` y `cache` no consumen presupuesto de IA; `manual` lo registra la
- * revisión humana de F3-05.
+ * `rule` y `cache` no consumen presupuesto de IA. `manual` queda reservado
+ * para una clasificación creada por una persona sin sugerencia previa; la
+ * revisión de F3-05 conserva el origen y solo marca `reviewed_by`/`status`.
  */
 enum ClassificationMethod: string
 {
