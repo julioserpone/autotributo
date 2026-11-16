@@ -1,7 +1,17 @@
 # 14 — Design system
 
-> Referencia de los tokens y componentes base de la SPA (F4-02). La fuente de
+> Referencia de los tokens y componentes base de la SPA (F4-02, F4-04). La fuente de
 > verdad del alcance sigue siendo `docs/02-implementation-plan.md` §6.
+
+## Base de componentes (F4-04)
+
+A partir de F4-04 la base de la SPA es **Nuxt UI 4** (`@nuxt/ui`), integrado con
+Vite sin framework Nuxt (ADR-0009). Los componentes se usan con el prefijo `U`
+(`UButton`, `UInput`, `UModal`, `UBadge`, `USlideover`, `UPopover`, `UAlert`,
+`UFormField`, `UCheckbox`, `UIcon`). Los wrappers propios (`AppStatusBadge`,
+`AppThemeToggle`, `AppSidebar`, `AppShell`, `AuthLayout`, `InvoiceTable`) se
+construyen sobre ellos. `reka-ui` se mantiene como dependencia transitiva de
+Nuxt UI, no directa.
 
 ## Principios
 

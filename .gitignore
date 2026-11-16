@@ -56,3 +56,7 @@ rector.php.bak
 
 # Respuestas reales del SRI (contienen datos fiscales de terceros)
 tests/Fixtures/response.xml
+
+# Nuxt UI (declaraciones generadas por el plugin de Vite)
+/auto-imports.d.ts
+/components.d.ts

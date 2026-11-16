@@ -6,24 +6,22 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
-        "typecheck": "vue-tsc --noEmit",
+        "typecheck": "vite build --logLevel error && vue-tsc --noEmit",
         "lint": "eslint . --max-warnings=0",
         "lint:fix": "eslint . --fix",
         "test:unit": "vitest",
         "test:e2e": "playwright test"
     },
     "dependencies": {
-        "class-variance-authority": "^0.7.1",
-        "clsx": "^2.1.1",
+        "@nuxt/ui": "^4.12.2",
         "pinia": "^4.1.0",
-        "reka-ui": "^2.11.0",
-        "tailwind-merge": "^3.7.0",
         "uqr": "^0.1.3",
         "vue": "^3.5.45",
         "vue-router": "^5.5.0"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.0",
+        "@iconify-json/lucide": "^1.2.155",
         "@playwright/test": "^1.65.0",
         "@tailwindcss/vite": "^4.3.5",
         "@types/node": "^26.6.6",

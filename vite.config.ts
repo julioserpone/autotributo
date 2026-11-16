@@ -1,6 +1,6 @@
 import { fileURLToPath, URL } from 'node:url';
 
-import tailwindcss from '@tailwindcss/vite';
+import ui from '@nuxt/ui/vite';
 import vue from '@vitejs/plugin-vue';
 import { defineConfig } from 'vite';
 import type { Plugin } from 'vite';
@@ -63,7 +63,17 @@ export default defineConfig({
             refresh: true,
         }),
         vue(),
-        tailwindcss(),
+        ui({
+            ui: {
+                colors: {
+                    primary: 'zinc',
+                    neutral: 'zinc',
+                },
+            },
+            icon: {
+                clientBundle: { scan: true },
+            },
+        }),
         redPrivada,
     ],
     resolve: {

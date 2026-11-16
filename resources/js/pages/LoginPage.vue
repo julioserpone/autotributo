@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 
-import AppLayout from '@/layouts/AppLayout.vue';
+import AuthLayout from '@/layouts/AuthLayout.vue';
 import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
@@ -44,83 +44,79 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <AppLayout title="Iniciar sesión">
-    <section class="mx-auto max-w-md rounded-2xl border border-line bg-surface/60 p-6 shadow-2xl shadow-black/20">
-      <p class="text-sm text-muted">
-        Accede con las credenciales de tu estudio para continuar.
-      </p>
-
-      <form
-        class="mt-6 space-y-4"
-        @submit.prevent="submit"
+  <AuthLayout
+    title="Iniciar sesión"
+    subtitle="Accede con las credenciales de tu estudio para continuar."
+  >
+    <form
+      class="space-y-4"
+      @submit.prevent="submit"
+    >
+      <UFormField
+        label="Correo"
+        name="email"
       >
-        <div>
-          <label
-            class="block text-xs font-medium uppercase tracking-wide text-muted"
-            for="email"
-          >
-            Correo
-          </label>
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            autocomplete="username"
-            required
-            class="mt-1 w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-          >
-        </div>
+        <UInput
+          id="email"
+          v-model="email"
+          type="email"
+          autocomplete="username"
+          required
+          icon="i-lucide-mail"
+          size="sm"
+        />
+      </UFormField>
 
-        <div>
-          <label
-            class="block text-xs font-medium uppercase tracking-wide text-muted"
-            for="password"
-          >
-            Contraseña
-          </label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            autocomplete="current-password"
-            required
-            class="mt-1 w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-          >
-        </div>
+      <UFormField
+        label="Contraseña"
+        name="password"
+      >
+        <UInput
+          id="password"
+          v-model="password"
+          type="password"
+          autocomplete="current-password"
+          required
+          icon="i-lucide-lock"
+          size="sm"
+        />
+      </UFormField>
 
-        <label class="flex items-center gap-2 text-sm text-muted">
-          <input
-            v-model="remember"
-            type="checkbox"
-            class="size-4 rounded border-line-strong bg-canvas text-accent focus:ring-accent/30"
-          >
-          Recordarme
-        </label>
+      <UCheckbox
+        v-model="remember"
+        label="Recordarme"
+      />
 
-        <p
-          v-if="auth.error"
-          class="rounded-lg border border-danger/40 bg-danger-soft/60 px-4 py-3 text-sm text-danger-ink"
-        >
-          {{ auth.error }}
-        </p>
+      <UAlert
+        v-if="auth.error"
+        color="error"
+        variant="soft"
+        icon="i-lucide-alert-circle"
+        :description="auth.error"
+      />
 
-        <button
-          type="submit"
-          :disabled="submitting"
-          class="w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:opacity-60"
-        >
-          {{ submitting ? 'Ingresando…' : 'Ingresar' }}
-        </button>
-      </form>
+      <UButton
+        type="submit"
+        color="neutral"
+        variant="solid"
+        size="sm"
+        block
+        :loading="submitting"
+        :disabled="submitting"
+      >
+        {{ submitting ? 'Ingresando…' : 'Ingresar' }}
+      </UButton>
+    </form>
 
-      <p class="mt-4 text-center text-sm text-muted">
+    <template #footer>
+      <p class="text-center text-sm text-muted">
         <RouterLink
           :to="{ name: 'forgot-password' }"
-          class="text-accent-ink underline-offset-4 hover:text-accent-ink hover:underline"
+          class="text-ink underline-offset-4 hover:underline"
         >
           ¿Olvidaste tu contraseña?
         </RouterLink>
       </p>
-    </section>
-  </AppLayout>
+    </template>
+  </AuthLayout>
 </template>
