@@ -155,6 +155,7 @@ function setFilter(next: 'all' | InvoiceStatus): void {
                 class="size-3.5 rounded border-line bg-elevated"
                 :checked="props.selected?.length === props.invoices.length && props.invoices.length > 0"
                 @change="toggleAll"
+                @click.stop
               >
             </th>
             <th class="px-4 py-2.5">
@@ -193,12 +194,14 @@ function setFilter(next: 'all' | InvoiceStatus): void {
             <td
               v-if="props.selectable"
               class="px-4 py-3"
+              @click.stop
             >
               <input
                 type="checkbox"
                 class="size-3.5 rounded border-line bg-elevated"
                 :checked="props.selected?.includes(invoice.id)"
                 @change="toggleOne(invoice.id)"
+                @click.stop
               >
             </td>
             <td class="px-4 py-3">

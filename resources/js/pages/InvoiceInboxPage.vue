@@ -13,6 +13,18 @@ const selected = ref<string[]>([]);
 const detailOpen = ref(false);
 const detailInvoice = ref<import('@/stores/invoices').InvoiceApi | null>(null);
 
+const detailStatusColor = computed<'success' | 'warning' | 'error'>(() => {
+    if (detailInvoice.value?.status === 'pending') return 'warning';
+    if (detailInvoice.value?.status === 'rejected') return 'error';
+    return 'success';
+});
+
+const detailStatusLabel = computed(() => {
+    if (detailInvoice.value?.status === 'pending') return 'Pendiente';
+    if (detailInvoice.value?.status === 'rejected') return 'Rechazado';
+    return 'Autorizado';
+});
+
 const documentTypeOptions = [
     { label: 'Todos los tipos', value: 'all' },
     { label: 'Factura', value: '01' },
@@ -221,7 +233,7 @@ onMounted(() => {
     <USlideover
       v-model:open="detailOpen"
       side="right"
-      :ui="{ content: 'max-w-xl' }"
+      :ui="{ content: 'max-w-xl', header: 'border-b-0' }"
       title="Detalle del comprobante"
     >
       <template #body>
@@ -272,10 +284,25 @@ onMounted(() => {
             </div>
             <div>
               <dt class="text-2xs uppercase tracking-wider text-faint">
-                Estado
+                Estado SRI
               </dt>
-              <dd class="text-ink">
-                {{ detailInvoice.status }}
+              <dd class="mt-1">
+                <UBadge
+                  :color="detailStatusColor"
+                  variant="subtle"
+                  size="xs"
+                  class="gap-1.5 font-medium"
+                >
+                  <span
+                    class="size-1.5 rounded-full"
+                    :class="{
+                      'bg-emerald-500': detailInvoice.status === 'authorized',
+                      'bg-amber-500': detailInvoice.status === 'pending',
+                      'bg-red-500': detailInvoice.status === 'rejected',
+                    }"
+                  />
+                  {{ detailStatusLabel }}
+                </UBadge>
               </dd>
             </div>
           </dl>
