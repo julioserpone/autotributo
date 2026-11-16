@@ -46,32 +46,35 @@ onMounted(() => {
       Saltar al contenido
     </a>
 
-    <div class="hidden lg:block">
-      <AppSidebar class="sticky top-0 h-screen" />
-    </div>
+    <!-- Overlay móvil -->
+    <div
+      v-if="mobileOpen"
+      class="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
+      @click="mobileOpen = false"
+    />
 
-    <USlideover
-      v-model:open="mobileOpen"
-      side="left"
-      :ui="{ content: 'w-64 max-w-[16rem] p-0', header: 'hidden', body: 'p-0' }"
+    <!-- Sidebar: fija en móvil, estática en escritorio -->
+    <div
+      class="fixed inset-y-0 left-0 z-40 w-64 -translate-x-full transform transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0"
+      :class="{ 'translate-x-0': mobileOpen }"
     >
-      <template #body>
-        <AppSidebar />
-      </template>
-    </USlideover>
+      <AppSidebar class="h-full" />
+    </div>
 
     <div class="flex min-w-0 flex-1 flex-col">
       <header class="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-line bg-surface/80 px-4 backdrop-blur-md lg:px-8">
         <div class="flex min-w-0 items-center gap-3">
-          <UButton
-            class="lg:hidden"
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-menu"
+          <button
+            type="button"
+            class="inline-flex items-center justify-center rounded-md border border-line bg-surface p-2 text-muted transition hover:bg-elevated hover:text-ink lg:hidden"
             aria-label="Abrir menú"
             @click="mobileOpen = true"
-          />
+          >
+            <UIcon
+              name="i-lucide-menu"
+              class="size-4"
+            />
+          </button>
           <nav
             aria-label="Ruta actual"
             class="flex min-w-0 items-center gap-2 text-xs"

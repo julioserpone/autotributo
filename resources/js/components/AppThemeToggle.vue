@@ -3,17 +3,36 @@ import { computed } from 'vue';
 
 import { useTheme } from '@/composables/useTheme';
 
-const { isDark, toggleTheme } = useTheme();
+const { theme, toggleTheme } = useTheme();
 
-const label = computed(() => (isDark.value ? 'Modo claro' : 'Modo oscuro'));
-const icon = computed(() => (isDark.value ? 'i-lucide-sun' : 'i-lucide-moon'));
+const label = computed(() => {
+    switch (theme.value) {
+        case 'light':
+            return 'Modo claro';
+        case 'dark':
+            return 'Modo oscuro';
+        default:
+            return 'Modo sistema';
+    }
+});
+
+const icon = computed(() => {
+    switch (theme.value) {
+        case 'light':
+            return 'i-lucide-sun';
+        case 'dark':
+            return 'i-lucide-moon';
+        default:
+            return 'i-lucide-monitor';
+    }
+});
 </script>
 
 <template>
   <UButton
     color="neutral"
     variant="outline"
-    size="sm"
+    size="md"
     :icon="icon"
     :aria-label="label"
     class="gap-2"

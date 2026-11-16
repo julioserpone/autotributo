@@ -1,12 +1,24 @@
 import { computed, readonly, ref } from 'vue';
 
-export type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark' | 'system';
 
 const STORAGE_KEY = 'autotributo.theme';
 
 const theme = ref<Theme>('dark');
 
 let initialized = false;
+
+function resolveTheme(value: Theme): 'light' | 'dark' {
+    if (value !== 'system') {
+        return value;
+    }
+
+    if (typeof window === 'undefined') {
+        return 'dark';
+    }
+
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 
 /**
  * Aplica el tema al `<html>`: alterna las clases `.dark`/`.light` y el
@@ -17,10 +29,11 @@ export function applyTheme(value: Theme): void {
         return;
     }
 
+    const resolved = resolveTheme(value);
     const root = document.documentElement;
-    root.classList.toggle('dark', value === 'dark');
-    root.classList.toggle('light', value === 'light');
-    root.style.colorScheme = value;
+    root.classList.toggle('dark', resolved === 'dark');
+    root.classList.toggle('light', resolved === 'light');
+    root.style.colorScheme = resolved;
 }
 
 function storedTheme(): Theme | null {
@@ -30,14 +43,10 @@ function storedTheme(): Theme | null {
 
     try {
         const value = window.localStorage.getItem(STORAGE_KEY);
-        return value === 'light' || value === 'dark' ? value : null;
+        return value === 'light' || value === 'dark' || value === 'system' ? value : null;
     } catch {
         return null;
     }
-}
-
-export function resetTheme(): void {
-    initialized = false;
 }
 
 export function initTheme(): Theme {
@@ -51,10 +60,14 @@ export function initTheme(): Theme {
     return theme.value;
 }
 
+export function resetTheme(): void {
+    initialized = false;
+}
+
 export function useTheme() {
     initTheme();
 
-    const isDark = computed(() => theme.value === 'dark');
+    const isDark = computed(() => resolveTheme(theme.value) === 'dark');
 
     function setTheme(next: Theme): void {
         theme.value = next;
@@ -68,7 +81,9 @@ export function useTheme() {
     }
 
     function toggleTheme(): void {
-        setTheme(isDark.value ? 'light' : 'dark');
+        const order: Theme[] = ['light', 'dark', 'system'];
+        const index = order.indexOf(theme.value as Theme);
+        setTheme((order[(index + 1) % order.length] ?? 'dark') as Theme);
     }
 
     return {
