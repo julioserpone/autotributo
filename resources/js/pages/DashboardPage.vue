@@ -194,9 +194,9 @@ onMounted(() => {
 
     <UAlert
       v-if="!isPreview"
-      color="neutral"
+      color="warning"
       variant="soft"
-      icon="i-lucide-info"
+      icon="i-lucide-alert-triangle"
       title="Sin datos todavía"
       description="Los comprobantes aparecerán aquí cuando sincronices con el SRI o cargues un XML autorizado. La bandeja completa llega con el siguiente paso (F4-05)."
     />
