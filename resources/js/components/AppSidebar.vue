@@ -49,7 +49,7 @@ async function logout(): Promise<void> {
 
 <template>
   <aside class="flex h-full w-64 shrink-0 flex-col border-r border-line bg-surface">
-    <div class="flex h-14 items-center border-b border-line px-3">
+    <div class="flex h-12 items-center border-b border-line px-3">
       <AppWorkspaceSwitcher />
     </div>
 

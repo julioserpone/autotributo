@@ -56,11 +56,12 @@ async function submit(): Promise<void> {
         <UInput
           id="email"
           v-model="email"
+          class="w-full"
           type="email"
           autocomplete="email"
           required
           icon="i-lucide-mail"
-          size="sm"
+          size="lg"
         />
       </UFormField>
 
@@ -76,7 +77,7 @@ async function submit(): Promise<void> {
         type="submit"
         color="neutral"
         variant="solid"
-        size="sm"
+        size="lg"
         block
         :loading="submitting"
         :disabled="submitting"
@@ -90,7 +91,7 @@ async function submit(): Promise<void> {
         v-if="sent"
         color="neutral"
         variant="outline"
-        size="sm"
+        size="lg"
         block
         @click="router.push({ name: 'login' })"
       >

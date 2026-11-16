@@ -7,7 +7,7 @@ defineProps<{
 
 <template>
   <div class="flex min-h-screen items-center justify-center bg-canvas px-6 py-12">
-    <div class="w-full max-w-md space-y-6">
+    <div class="w-full max-w-lg space-y-6">
       <div class="flex flex-col items-center gap-2 text-center">
         <span class="grid size-10 place-items-center rounded-control bg-brand font-bold text-white shadow-2xs">
           A

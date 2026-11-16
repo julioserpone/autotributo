@@ -59,11 +59,12 @@ async function submit(): Promise<void> {
         <UInput
           id="email"
           v-model="email"
+          class="w-full"
           type="email"
           autocomplete="username"
           required
           icon="i-lucide-mail"
-          size="sm"
+          size="lg"
         />
       </UFormField>
 
@@ -74,11 +75,12 @@ async function submit(): Promise<void> {
         <UInput
           id="password"
           v-model="password"
+          class="w-full"
           type="password"
           autocomplete="current-password"
           required
           icon="i-lucide-lock"
-          size="sm"
+          size="lg"
         />
       </UFormField>
 
@@ -99,7 +101,7 @@ async function submit(): Promise<void> {
         type="submit"
         color="neutral"
         variant="solid"
-        size="sm"
+        size="lg"
         block
         :loading="submitting"
         :disabled="submitting"

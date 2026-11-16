@@ -51,12 +51,13 @@ async function submit(): Promise<void> {
           <UInput
             id="code"
             v-model="code"
+            class="w-full"
             type="text"
             inputmode="numeric"
             autocomplete="one-time-code"
             required
             icon="i-lucide-key-round"
-            size="sm"
+            size="lg"
           />
         </UFormField>
       </template>
@@ -69,10 +70,11 @@ async function submit(): Promise<void> {
           <UInput
             id="recovery_code"
             v-model="recoveryCode"
+            class="w-full"
             type="text"
             required
             icon="i-lucide-key-round"
-            size="sm"
+            size="lg"
           />
         </UFormField>
       </template>
@@ -89,7 +91,7 @@ async function submit(): Promise<void> {
         type="submit"
         color="neutral"
         variant="solid"
-        size="sm"
+        size="lg"
         block
         :loading="submitting"
         :disabled="submitting"

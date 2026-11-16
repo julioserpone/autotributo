@@ -53,8 +53,7 @@ onMounted(() => {
     <USlideover
       v-model:open="mobileOpen"
       side="left"
-      :ui="{ content: 'max-w-xs p-0' }"
-      title="Menú"
+      :ui="{ content: 'w-64 max-w-[16rem] p-0', header: 'hidden', body: 'p-0' }"
     >
       <template #body>
         <AppSidebar />
