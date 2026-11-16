@@ -280,6 +280,8 @@ Log de progreso: `id`, `run_id`, `tenant_id`, `level`, `message`, `context jsonb
 
 Se conserva historial en `audit_logs`; para análisis de calidad se agrega `classification_feedback` (`item_id`, `from_category`, `to_category`, `user_id`, `created_at`).
 
+**Revisión humana (F3-05).** Aceptar confirma la categoría sugerida o la corrige en el mismo paso: la clasificación queda `accepted` con `reviewed_by`/`reviewed_at` y el ítem pasa a `manual` con esa categoría. Rechazar marca la clasificación `rejected` —conservando la categoría propuesta como evidencia— y devuelve el ítem a `pending` sin categoría, de modo que una regla posterior pueda volver a intentarlo. El origen (`method`, `rule_id`, `llm_call_id`, `prompt_version`) nunca se reescribe: la revisión solo añade la decisión y la firma. Cada cambio queda en `audit_logs` y revisar una clasificación ya revisada es válido y también se audita.
+
 ### `classification_rules`
 `id`, `tenant_id` (null = regla global del catálogo base), `name`, `priority` (menor = primero), `match_type` (`contains`,`starts_with`,`exact`,`regex`,`provider_ruc`,`item_code`), `pattern`, `expense_category_id`, `is_active`, `created_by`, `hits_count`, `last_matched_at`, timestamps, soft delete.
 

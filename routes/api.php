@@ -6,6 +6,7 @@ use App\Domain\Sri\Http\Controllers\SriRobotCallbackController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BroadcastingAuthController;
+use App\Http\Controllers\Api\V1\ClassificationController;
 use App\Http\Controllers\Api\V1\ClassificationRuleController;
 use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
@@ -139,6 +140,17 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
         Route::apiResource('classification-rules', ClassificationRuleController::class)
             ->parameters(['classification-rules' => 'rule'])
             ->names('api.v1.classification-rules');
+
+        // Revisión humana de clasificaciones (F3-05 / US-18): cola priorizada
+        // por estado, decisión individual y acciones masivas con resultado por
+        // ítem. Aceptar confirma o corrige la categoría; rechazar devuelve el
+        // ítem a `pending`.
+        Route::get('classifications', [ClassificationController::class, 'index'])
+            ->name('api.v1.classifications.index');
+        Route::post('classifications/bulk-review', [ClassificationController::class, 'bulkReview'])
+            ->name('api.v1.classifications.bulk-review');
+        Route::patch('classifications/{classification}', [ClassificationController::class, 'review'])
+            ->name('api.v1.classifications.review');
 
         // Historial de auditoría (F1-07), solo lectura y filtrado por tenant.
         Route::get('audit-logs', [AuditLogController::class, 'index'])

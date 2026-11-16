@@ -688,6 +688,320 @@
                 }
             }
         },
+        "/v1/classifications": {
+            "get": {
+                "operationId": "v1.classifications.index",
+                "summary": "Cola de revisi\u00f3n paginada",
+                "tags": [
+                    "Classification"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated set of `ClassificationResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ClassificationResource"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "from": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "minimum": 1
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "links": {
+                                                    "type": "array",
+                                                    "description": "Generated paginator links.",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "url": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "label": {
+                                                                "type": "string"
+                                                            },
+                                                            "active": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "url",
+                                                            "label",
+                                                            "active"
+                                                        ]
+                                                    }
+                                                },
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "to": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "description": "Number of the last item in the slice.",
+                                                    "minimum": 1
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "description": "Total number of items being paginated.",
+                                                    "minimum": 0
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "from",
+                                                "last_page",
+                                                "links",
+                                                "path",
+                                                "per_page",
+                                                "to",
+                                                "total"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "links",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/classifications/bulk-review": {
+            "post": {
+                "operationId": "v1.classifications.bulk-review",
+                "summary": "Aplica la misma decisi\u00f3n a un lote de clasificaciones",
+                "tags": [
+                    "Classification"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BulkReviewClassificationsRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "updated": {
+                                                    "type": "integer"
+                                                },
+                                                "failed": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "anyOf": [
+                                                            {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "id": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "reason": {
+                                                                        "type": "string",
+                                                                        "const": "not_found"
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "id",
+                                                                    "reason"
+                                                                ]
+                                                            },
+                                                            {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "id": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "reason": {
+                                                                        "type": "string",
+                                                                        "const": "review_failed"
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "id",
+                                                                    "reason"
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "updated",
+                                                "failed"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/classifications/{classification}": {
+            "patch": {
+                "operationId": "v1.classifications.review",
+                "summary": "Acepta la categor\u00eda sugerida, la corrige o rechaza la clasificaci\u00f3n",
+                "tags": [
+                    "Classification"
+                ],
+                "parameters": [
+                    {
+                        "name": "classification",
+                        "in": "path",
+                        "required": true,
+                        "description": "The classification ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReviewClassificationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`ClassificationResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ClassificationResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
         "/v1/classification-rules/dry-run": {
             "post": {
                 "operationId": "v1.classification-rules.dry-run",
@@ -2997,6 +3311,35 @@
                 ],
                 "title": "AuditLogResource"
             },
+            "BulkReviewClassificationsRequest": {
+                "type": "object",
+                "description": "Revisi\u00f3n masiva (F3-05).\n\nEl lote se limita a 100 ids para que una acci\u00f3n de UI no se convierta en\nuna transacci\u00f3n larga ni en un pico de auditor\u00eda.",
+                "properties": {
+                    "ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "minItems": 1,
+                        "maxItems": 100,
+                        "uniqueItems": true
+                    },
+                    "decision": {
+                        "$ref": "#/components/schemas/ReviewDecision"
+                    },
+                    "expense_category_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "ids",
+                    "decision"
+                ],
+                "title": "BulkReviewClassificationsRequest"
+            },
             "ChangePasswordRequest": {
                 "type": "object",
                 "properties": {
@@ -3018,6 +3361,170 @@
                     "password_confirmation"
                 ],
                 "title": "ChangePasswordRequest"
+            },
+            "ClassificationResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "suggested",
+                            "accepted",
+                            "rejected",
+                            "needs_review"
+                        ]
+                    },
+                    "method": {
+                        "type": "string",
+                        "enum": [
+                            "rule",
+                            "cache",
+                            "llm",
+                            "manual"
+                        ]
+                    },
+                    "confidence": {
+                        "type": "number"
+                    },
+                    "prompt_version": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "expense_category": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/ExpenseCategoryResource"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "item": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "line_number": {
+                                "type": "integer"
+                            },
+                            "description": {
+                                "type": "string"
+                            },
+                            "total_cents": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "line_number",
+                            "description",
+                            "total_cents"
+                        ]
+                    },
+                    "invoice": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "document_type": {
+                                "type": "string",
+                                "enum": [
+                                    "01",
+                                    "03",
+                                    "04",
+                                    "05",
+                                    "06",
+                                    "07"
+                                ]
+                            },
+                            "issue_date": {
+                                "type": "string"
+                            },
+                            "issuer_name": {
+                                "type": "string"
+                            },
+                            "issuer_ruc": {
+                                "type": "string"
+                            },
+                            "total_cents": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "document_type",
+                            "issue_date",
+                            "issuer_name",
+                            "issuer_ruc",
+                            "total_cents"
+                        ]
+                    },
+                    "reviewed_by": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name"
+                        ]
+                    },
+                    "reviewed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "status",
+                    "method",
+                    "confidence",
+                    "prompt_version",
+                    "expense_category",
+                    "item",
+                    "invoice",
+                    "reviewed_by",
+                    "reviewed_at",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "ClassificationResource"
             },
             "ClassificationRuleResource": {
                 "type": "object",
@@ -3474,6 +3981,34 @@
                     "password_confirmation"
                 ],
                 "title": "ResetPasswordRequest"
+            },
+            "ReviewClassificationRequest": {
+                "type": "object",
+                "description": "Decisi\u00f3n de revisi\u00f3n de una clasificaci\u00f3n (F3-05).\n\n`expense_category_id` solo acompa\u00f1a a `accept`: permite corregir la\ncategor\u00eda sugerida. Al rechazar se proh\u00edbe, porque el \u00edtem queda sin\ncategor\u00eda a prop\u00f3sito.",
+                "properties": {
+                    "decision": {
+                        "$ref": "#/components/schemas/ReviewDecision"
+                    },
+                    "expense_category_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "decision"
+                ],
+                "title": "ReviewClassificationRequest"
+            },
+            "ReviewDecision": {
+                "type": "string",
+                "description": "Decisi\u00f3n de una persona sobre una clasificaci\u00f3n sugerida. Aceptar confirma la categor\u00eda (la sugerida o una elegida); rechazar deja el \u00edtem sin categor\u00eda y pendiente, para que una regla futura lo vuelva a intentar.\n",
+                "enum": [
+                    "accept",
+                    "reject"
+                ],
+                "title": "ReviewDecision"
             },
             "SriCredentialResource": {
                 "type": "object",

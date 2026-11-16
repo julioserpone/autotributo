@@ -6,8 +6,10 @@ namespace App\Providers;
 
 use App\Domain\Audit\Models\AuditLog;
 use App\Domain\Audit\Policies\AuditLogPolicy;
+use App\Domain\Classification\Models\Classification;
 use App\Domain\Classification\Models\ClassificationRule;
 use App\Domain\Classification\Models\ExpenseCategory;
+use App\Domain\Classification\Policies\ClassificationPolicy;
 use App\Domain\Classification\Policies\ClassificationRulePolicy;
 use App\Domain\Classification\Policies\ExpenseCategoryPolicy;
 use App\Domain\Companies\Models\Company;
@@ -57,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Membership::class, MembershipPolicy::class);
         Gate::policy(ClassificationRule::class, ClassificationRulePolicy::class);
         Gate::policy(ExpenseCategory::class, ExpenseCategoryPolicy::class);
+        Gate::policy(Classification::class, ClassificationPolicy::class);
 
         // Las credenciales se autorizan sobre la empresa, porque todavía pueden
         // no existir cuando el contador las crea por primera vez.

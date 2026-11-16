@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Classification\Models;
 
+use App\Domain\Audit\Concerns\Auditable;
 use App\Domain\Classification\Enums\ClassificationMethod;
 use App\Domain\Classification\Enums\ClassificationStatus;
 use App\Domain\Invoicing\Models\InvoiceItem;
@@ -12,6 +13,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 
 /**
  * Clasificación vigente de un ítem de comprobante.
@@ -27,11 +29,12 @@ use Illuminate\Support\Carbon;
  * @property float $confidence
  * @property ClassificationStatus $status
  * @property int|null $rule_id
+ * @property int|null $reviewed_by
  * @property Carbon|null $reviewed_at
  */
-final class Classification extends Model
+final class Classification extends Model implements AuditableContract
 {
-    use BelongsToTenant;
+    use Auditable, BelongsToTenant;
 
     protected $table = 'classifications';
 
