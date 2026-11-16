@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 import { storeToRefs } from 'pinia';
 
@@ -8,15 +8,20 @@ import { useCompanyStore } from '@/stores/company';
 const companyStore = useCompanyStore();
 const { companies, activeCompany } = storeToRefs(companyStore);
 
+const open = ref(false);
+
 const displayName = computed(() => activeCompany.value?.trade_name || activeCompany.value?.legal_name || 'Sin empresa');
 
 function select(id: string): void {
     companyStore.setActive(id);
+    open.value = false;
 }
 </script>
 
 <template>
   <UPopover
+    v-model:open="open"
+    :portal="false"
     :content="{ side: 'bottom', sideOffset: 8, align: 'start' }"
   >
     <button
