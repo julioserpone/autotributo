@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\ExpenseCategoryController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationController;
+use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\ManualInvoiceController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\RealtimeStatusController;
@@ -102,6 +103,13 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
     ->group(function (): void {
         Route::apiResource('companies', CompanyController::class)
             ->names('api.v1.companies');
+
+        // Bandeja de comprobantes (F4-05): listado paginado por cursor con
+        // filtros y detalle con líneas, impuestos y retenciones.
+        Route::get('invoices', [InvoiceController::class, 'index'])
+            ->name('api.v1.invoices.index');
+        Route::get('invoices/{invoice:public_id}', [InvoiceController::class, 'show'])
+            ->name('api.v1.invoices.show');
 
         // Credenciales del portal SRI (F1-06). El secreto nunca se devuelve y
         // cada lectura o cambio queda auditado en `sri_credential_accesses`.

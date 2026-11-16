@@ -111,7 +111,8 @@
 | #65 | Value object `Money` y proporcionalidad de IVA | F3-07 |
 | #69 | Revisión humana de clasificaciones | F3-05 |
 | #70 | Design system dark-first y componentes base | F4-02 |
-| #71 | Layout Laravel Cloud sobre Nuxt UI, tema claro/oscuro y bandeja con vista previa | F4-04 (pendiente de merge) |
+| #71 | Layout Laravel Cloud sobre Nuxt UI, tema claro/oscuro y bandeja con vista previa | F4-04 |
+| #72 | Bandeja de comprobantes: endpoint cursor + filtros, drawer de detalle y selección | F4-05 (pendiente de merge) |
 
 ## Cómo actualizar
 

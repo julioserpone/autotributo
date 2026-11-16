@@ -30,6 +30,7 @@ final class InvoiceResource extends JsonResource
             'document_type' => $invoice->document_type->value,
             'access_key' => $invoice->access_key,
             'authorization_number' => $invoice->authorization_number,
+            'number' => $invoice->establishment.'-'.$invoice->emission_point.'-'.$invoice->sequential,
             'issue_date' => $invoice->issue_date?->toDateString(),
             'authorization_date' => $invoice->authorization_date?->toIso8601String(),
             'status' => $invoice->status,
