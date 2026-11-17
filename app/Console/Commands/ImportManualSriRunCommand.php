@@ -115,4 +115,4 @@ final class ImportManualSriRunCommand extends Command
 
         return Company::query()->withoutGlobalScopes()->where('public_id', $value)->first();
     }
-};
+}

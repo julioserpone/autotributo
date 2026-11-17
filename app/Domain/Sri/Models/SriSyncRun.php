@@ -36,7 +36,7 @@ use InvalidArgumentException;
  * @property string|null $lambda_request_id
  * @property string|null $callback_event_id
  * @property string|null $manifest_event_id
- * @property \Illuminate\Support\Carbon|null $manifest_generated_at
+ * @property Carbon|null $manifest_generated_at
  * @property string|null $s3_prefix
  * @property array<string, int>|null $totals
  * @property string|null $error_code
