@@ -56,6 +56,9 @@ export interface SyncRunFile {
 
 const activeStatuses: SyncRunStatus[] = ['queued', 'invoking', 'downloading', 'parsing'];
 
+/** Estados en los que el run sigue trabajando y conviene refrescar el detalle. */
+export const activeSyncStatuses: readonly SyncRunStatus[] = activeStatuses;
+
 export const useSyncStore = defineStore('sync', () => {
     const runs = ref<SyncRun[]>([]);
     const loading = ref(false);
@@ -64,6 +67,7 @@ export const useSyncStore = defineStore('sync', () => {
     const selectedRunId = ref<string | null>(null);
     const selectedRun = ref<SyncRun | null>(null);
     const selectedFiles = ref<SyncRunFile[]>([]);
+    const selectedLoading = ref(false);
     const polling = ref(false);
 
     let pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -110,6 +114,7 @@ export const useSyncStore = defineStore('sync', () => {
 
     async function loadRun(id: string): Promise<void> {
         selectedRunId.value = id;
+        selectedLoading.value = true;
 
         try {
             const [runResponse, filesResponse] = await Promise.all([
@@ -123,7 +128,23 @@ export const useSyncStore = defineStore('sync', () => {
             startPollingIfNeeded();
         } catch (caught: unknown) {
             error.value = caught instanceof Error ? caught.message : 'No se pudo cargar el run.';
+        } finally {
+            selectedLoading.value = false;
         }
+    }
+
+    /**
+     * Descarta el detalle cargado.
+     *
+     * Se llama al cerrar el drawer para que, al volver a abrirlo, no se muestre
+     * por un instante la información del run anterior mientras llega la nueva.
+     */
+    function clearSelection(): void {
+        stopPolling();
+        selectedRunId.value = null;
+        selectedRun.value = null;
+        selectedFiles.value = [];
+        selectedLoading.value = false;
     }
 
     function startPollingIfNeeded(): void {
@@ -260,12 +281,15 @@ export const useSyncStore = defineStore('sync', () => {
         selectedRunId,
         selectedRun,
         selectedFiles,
+        selectedLoading,
         polling,
         activeRuns,
+        activeStatuses: activeSyncStatuses,
         statusLabel,
         statusColor,
         fetchRuns,
         loadRun,
+        clearSelection,
         stopPolling,
         startSync,
         monthsBetween,
