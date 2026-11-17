@@ -12,6 +12,7 @@ use App\Domain\Sri\Enums\SriSyncRunStatus;
 use App\Domain\Sri\Exceptions\SriRobotObjectNotFound;
 use App\Domain\Sri\Models\SriSyncRun;
 use App\Domain\Sri\Models\SriSyncRunFile;
+use Carbon\CarbonImmutable;
 use JsonException;
 
 /**
@@ -73,6 +74,16 @@ final readonly class ReconcileSriRun
             }
 
             $data = $manifest['data'];
+
+            // Evita reutilizar un manifiesto de una ejecución anterior del robot:
+            // si fue generado antes de que este run se invocara, se ignora como si
+            // no existiera. Así una re-sincronización no se "cuela" con archivos
+            // viejos cuando el robot falló en la nueva ejecución.
+            if (! $this->manifestIsFresh($data, $run)) {
+                $allComplete = false;
+
+                continue;
+            }
 
             if (! $this->manifestMatches($data, $company->ruc, $period)) {
                 $this->recordFile(
@@ -229,7 +240,7 @@ final readonly class ReconcileSriRun
                 $type,
                 SriSyncRunFileStatus::Invalid,
                 hash('sha256', $contents),
-                "El TXT no coincide con los bytes del manifiesto ({$bytes}).",
+                "El manifiesto declara {$bytes} bytes para el TXT, pero el archivo tiene ".strlen($contents).' bytes.',
             );
 
             return false;
@@ -347,6 +358,40 @@ final readonly class ReconcileSriRun
         return strtolower((string) ($data['ambiente'] ?? '')) === $this->environment
             && ($data['ruc'] ?? null) === $ruc
             && ($data['periodo'] ?? null) === $period;
+    }
+
+    /**
+     * Un manifiesto solo es válido para este run si fue generado después de que
+     * se invocara el robot (con una tolerancia de 5 minutos para el desfase de
+     * reloj entre la app y la Lambda). Un manifiesto anterior pertenece a una
+     * ejecución previa y no debe reutilizarse.
+     */
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function manifestIsFresh(array $data, SriSyncRun $run): bool
+    {
+        $generatedAt = $data['generadoEn'] ?? null;
+
+        if (! is_string($generatedAt) || trim($generatedAt) === '') {
+            return true;
+        }
+
+        try {
+            $generated = new \DateTimeImmutable($generatedAt);
+        } catch (\Throwable) {
+            return true;
+        }
+
+        $reference = $run->started_at ?? $run->created_at;
+
+        if (! $reference instanceof \DateTimeInterface) {
+            return true;
+        }
+
+        $threshold = CarbonImmutable::instance($reference)->subMinutes(5);
+
+        return $generated >= $threshold;
     }
 
     /**

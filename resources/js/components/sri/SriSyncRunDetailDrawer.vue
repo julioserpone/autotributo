@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
 import { fileErrorLabel, fileStatusLabel, formatDocumentTypes, importOutcomeLabel, syncErrorLabel } from '@/lib/sri';
 import { useSyncStore } from '@/stores/sync';
@@ -16,6 +16,25 @@ const syncStore = useSyncStore();
 
 const filesExpanded = ref(false);
 
+const now = ref(Date.now());
+let ticker: ReturnType<typeof setInterval> | null = null;
+
+function startTicker(): void {
+    stopTicker();
+    ticker = setInterval(() => {
+        now.value = Date.now();
+    }, 1000);
+}
+
+function stopTicker(): void {
+    if (ticker) {
+        clearInterval(ticker);
+        ticker = null;
+    }
+}
+
+onBeforeUnmount(stopTicker);
+
 const isOpen = computed({
     get: () => props.open,
     set: (value: boolean) => emit('update:open', value),
@@ -24,6 +43,44 @@ const isOpen = computed({
 const run = computed(() => syncStore.selectedRun);
 
 const isActive = computed(() => run.value !== null && syncStore.activeStatuses.includes(run.value.status));
+
+const elapsedTitle = computed(() =>
+    isActive.value ? 'Tiempo transcurrido' : 'Tiempo de ejecución del robot',
+);
+
+const elapsedLabel = computed(() => {
+    const current = run.value;
+    if (!current) {
+        return null;
+    }
+
+    const startRaw = current.started_at ?? current.created_at;
+    if (!startRaw) {
+        return null;
+    }
+
+    const startMs = new Date(startRaw).getTime();
+    if (Number.isNaN(startMs)) {
+        return null;
+    }
+
+    const endRaw = !current.is_active ? (current.finished_at ?? null) : null;
+    const endMs = endRaw ? new Date(endRaw).getTime() : now.value;
+    if (Number.isNaN(endMs)) {
+        return null;
+    }
+
+    const seconds = Math.max(0, Math.floor((endMs - startMs) / 1000));
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hours > 0) {
+        return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    return `${minutes}:${String(secs).padStart(2, '0')}`;
+});
 
 const periods = computed(() => run.value?.periods?.join(', ') ?? '—');
 
@@ -64,9 +121,21 @@ const progressPercent = computed(() => {
 // Al cerrar se descarta el run cargado: al reabrir siempre se ve el loader
 // hasta que llegue la información del run seleccionado.
 watch(isOpen, (open) => {
-    if (!open) {
+    if (open) {
+        now.value = Date.now();
+        startTicker();
+    } else {
+        stopTicker();
         filesExpanded.value = false;
         syncStore.clearSelection();
+    }
+}, { immediate: true });
+
+watch(run, (current) => {
+    if (current && !current.is_active) {
+        stopTicker();
+    } else if (isOpen.value) {
+        startTicker();
     }
 });
 </script>
@@ -148,6 +217,14 @@ watch(isOpen, (open) => {
             </dt>
             <dd class="text-ink">
               {{ documentTypes }}
+            </dd>
+          </div>
+          <div v-if="elapsedLabel">
+            <dt class="text-2xs uppercase tracking-wider text-faint">
+              {{ elapsedTitle }}
+            </dt>
+            <dd class="font-mono text-ink">
+              {{ elapsedLabel }}
             </dd>
           </div>
         </dl>
@@ -254,7 +331,7 @@ watch(isOpen, (open) => {
                 </p>
                 <p
                   v-if="file.error_message"
-                  class="truncate text-2xs text-danger-ink"
+                  class="truncate text-2xs text-ink"
                 >
                   {{ fileErrorLabel(file.error_code) }} · {{ file.error_message }}
                 </p>

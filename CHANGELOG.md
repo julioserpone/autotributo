@@ -78,6 +78,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - F2-09: el progreso en vivo no llegaba a Reverb en Docker local porque `app`/`queue`/`scheduler` usaban `REVERB_HOST=localhost`; ahora la red interna resuelve `reverb` y el navegador conserva `VITE_REVERB_HOST`. Además, `SriSyncProgressUpdated` resuelve la empresa sin `TenantScope`, para que el webhook del robot (sin contexto de tenant) también pueda publicar el evento.
 - Script `scripts/staging/ec2-control.sh`: al detener staging se hace polling del estado de RDS en lugar de usar el waiter inexistente `db-instance-stopped` de AWS CLI 2.x.
 - Validación del manifiesto S3 y de los archivos de claves antes de marcar un run como `parsing`.
+- Reconciliación periódica ahora intenta recuperar el paquete desde S3 (incluidos XML) en cada pasada, para que un run con TXT/JSON inválidos pero con XML publicados avance a `parsing` sin esperar al cierre por inactividad. El mensaje de error del TXT aclara los bytes declarados por el manifiesto frente a los del archivo, y el texto de error en la lista de archivos del monitor usa el mismo color que los nombres de archivo para ser legible.
+- El parser del TXT del robot soporta el formato real publicado (TSV con encabezado y columna `CLAVE_ACCESO`) además del formato histórico de una clave por línea, por lo que los TXT tabulares ya no se marcan como “sin claves válidas”.
+- `ReconcileSriRun` ignora un manifiesto generado antes de que se invocara el run (tolerancia de 5 min), evitando que una re-sincronización reutilice archivos viejos de S3 cuando el robot falló en la nueva ejecución. El timer del detalle del run muestra “Tiempo de ejecución del robot” cuando termina.
 
 ### Security
 

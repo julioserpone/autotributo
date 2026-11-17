@@ -16,11 +16,16 @@ use Throwable;
  *
  * El scheduler llama a esta acción cada 10 minutos. Cada run se reconcilia de
  * forma independiente; un fallo de un run no impide procesar los siguientes.
+ *
+ * Además de validar el manifiesto, intenta recuperar el paquete desde S3
+ * (incluidos los XML) para que un run con TXT/JSON inválidos pero con XML
+ * publicados avance a `parsing` sin esperar al cierre por inactividad.
  */
 final readonly class ReconcileSriRuns
 {
     public function __construct(
         private ReconcileSriRun $reconcile,
+        private RecoverSriRunFromS3 $recovery,
         private ResolveStaleSriRun $stale,
         private int $orphanAlertThreshold = 3,
     ) {
@@ -54,7 +59,9 @@ final readonly class ReconcileSriRuns
 
         foreach ($runs as $run) {
             try {
-                $reconciledRun = $this->stale->handle($this->reconcile->handle($run));
+                $reconciledRun = $this->reconcile->handle($run);
+                $reconciledRun = $this->recovery->handle($reconciledRun);
+                $reconciledRun = $this->stale->handle($reconciledRun);
                 $reconciled[] = $reconciledRun;
 
                 if ($reconciledRun->status === SriSyncRunStatus::Parsing) {
