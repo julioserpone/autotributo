@@ -53,4 +53,24 @@ enum SriDocumentType: string
             self::cases(),
         );
     }
+
+    /**
+     * Tipos que el robot puede descargar del portal de recibidos.
+     *
+     * La guía de remisión (06) existe en la ficha técnica y el parser la
+     * entiende, pero el portal del SRI no la ofrece en el desplegable de
+     * recibidos: si se envía, la invocación completa del robot falla.
+     *
+     * @return list<string>
+     */
+    public static function syncableCodes(): array
+    {
+        return [
+            self::Invoice->value,
+            self::PurchaseSettlement->value,
+            self::CreditNote->value,
+            self::DebitNote->value,
+            self::Withholding->value,
+        ];
+    }
 }

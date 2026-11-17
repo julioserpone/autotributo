@@ -13,6 +13,8 @@ use App\Domain\Sri\Enums\SriSyncRunFileStatus;
 use App\Domain\Sri\Exceptions\SriRobotObjectNotFound;
 use App\Domain\Sri\Models\SriSyncRun;
 use App\Domain\Sri\Models\SriSyncRunFile;
+use DOMDocument;
+use DOMElement;
 use JsonException;
 use Throwable;
 
@@ -146,7 +148,51 @@ final readonly class S3SriXmlRecovery implements SriXmlRecovery
 
     public function contents(SriXmlLocation $location): string
     {
-        return $this->store->read($location->key);
+        $raw = $this->store->read($location->key);
+
+        return $this->comprobanteInterior($raw);
+    }
+
+    /**
+     * El robot guarda la respuesta completa de autorización del SRI, cuya
+     * raíz es `autorizacion` y el comprobante va dentro de `<comprobante>`
+     * (en CDATA). El lector del paquete espera el comprobante interior, así
+     * que se desenvuelve aquí. Si el archivo ya es un comprobante (tests o
+     * paquetes antiguos), se devuelve tal cual.
+     */
+    private function comprobanteInterior(string $raw): string
+    {
+        if (trim($raw) === '' || ! str_contains($raw, '<comprobante')) {
+            return $raw;
+        }
+
+        $document = new DOMDocument;
+
+        try {
+            $loaded = @$document->loadXML($raw, LIBXML_NONET);
+        } catch (Throwable) {
+            return $raw;
+        }
+
+        if (! $loaded) {
+            return $raw;
+        }
+
+        $nodes = $document->getElementsByTagName('comprobante');
+
+        if ($nodes->length === 0) {
+            return $raw;
+        }
+
+        $node = $nodes->item(0);
+
+        if (! $node instanceof DOMElement) {
+            return $raw;
+        }
+
+        $inner = trim($node->textContent);
+
+        return $inner !== '' ? $inner : $raw;
     }
 
     public function mark(SriSyncRun $run, SriSyncRunFile $file, ?SriXmlLocation $location, array $totals): void

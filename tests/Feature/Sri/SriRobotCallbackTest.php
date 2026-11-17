@@ -157,7 +157,8 @@ it('marca el run como fallido cuando el robot informa failed', function (): void
     $run = $this->run->refresh();
 
     expect($run->status)->toBe(SriSyncRunStatus::Failed)
-        ->and($run->error_code)->toBe('robot_failed');
+        ->and($run->error_code)->toBe('robot_failed')
+        ->and($run->error_message)->toContain('el portal no respondió');
 });
 
 it('deja el run en parsing cuando el callback llega y el paquete ya está en S3', function (): void {
@@ -173,6 +174,22 @@ it('deja el run en parsing cuando el callback llega y el paquete ya está en S3'
         ProcessSriRunJob::class,
         fn (ProcessSriRunJob $job): bool => $job->runId === $this->run->id,
     );
+});
+
+it('recupera el paquete aunque el webhook llegue sin contexto de tenant', function (): void {
+    Queue::fake();
+    ReconcileFixtures::putPeriod($this->company, '2026-08');
+
+    // El webhook real no pasa por el middleware de tenant: se autentica con
+    // HMAC. Antes, la recuperación desde S3 fallaba con TenantContextNotSet y
+    // el run se quedaba en `downloading`.
+    $this->context->end();
+
+    enviarCallbackSri($this, sriCallbackBody(['ruc' => $this->company->ruc]))->assertStatus(202);
+
+    $this->context->initialize($this->tenant);
+
+    expect($this->run->refresh()->status)->toBe(SriSyncRunStatus::Parsing);
 });
 
 it('se queda en downloading cuando el callback llega pero S3 todavía no tiene el paquete', function (): void {

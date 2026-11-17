@@ -40,7 +40,7 @@ final readonly class BuildSriRobotRequest
         return new SriRobotRequest(
             ruc: $company->ruc,
             periods: $periods,
-            documentTypes: $documentTypes ?? SriDocumentType::codes(),
+            documentTypes: $documentTypes ?? SriDocumentType::syncableCodes(),
             force: $force,
             credentials: $credentials,
         );

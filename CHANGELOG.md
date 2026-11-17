@@ -67,6 +67,13 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ### Fixed
 
+- F4-06: el monitor ofrecía la guía de remisión (`06`) y el robot del portal no la soporta: una sincronización con ese tipo fallaba completa con `robot_failed`. Se añade `SriDocumentType::syncableCodes()` (01, 03, 04, 05, 07), se usa como valor por defecto y en la validación de `POST /api/v1/sync-runs` (la guía de remisión responde `422`), y el formulario ya no la ofrece.
+- F4-06: `monthsBetween` construía los períodos con `Date` y los interpretaba como UTC, así que en Ecuador un rango de octubre pedía septiembre. Ahora la aritmética es con enteros y el rango se valida (invertido o inválido devuelve vacío).
+- F4-06: el run fallido muestra el `error` que devuelve el robot (normalizado y acotado a 500 caracteres) en lugar del mensaje genérico, para que el monitor explique la causa real.
+- F4-06: cuando el robot publicaba los XML de un período pero no un TXT/JSON de claves válido (el portal devolvió el listado sin claves), el run se quedaba en `downloading` hasta `robot_timeout` aunque la descarga hubiera terminado. `RecoverSriRunFromS3` pasa el run a `parsing` cuando hay XML de todos los períodos y `ParseSriRun` arma el lote con las claves de los nombres de archivo, validando tipo y período (el RUC de la clave es el emisor/proveedor en los recibidos, no el de la empresa).
+- F4-06: los XML que publica el robot son la respuesta completa de autorización (`autorizacion` con el comprobante en CDATA); `S3SriXmlRecovery::contents()` desenvuelve el comprobante interior antes de parsear.
+- F4-06: el comprobante real usa `DOLAR` como moneda; el adaptador lo normaliza a `USD` para el campo `char(3)` de la tabla `invoices`.
+- F2-07: `PeriodBatchBuilder` ya no descarta claves cuyo RUC emisor difiere del RUC de la empresa, porque en los comprobantes recibidos ese RUC es el del proveedor. La empresa está garantizada por la carpeta del bucket y por el manifiesto.
 - F2-09: el progreso en vivo no llegaba a Reverb en Docker local porque `app`/`queue`/`scheduler` usaban `REVERB_HOST=localhost`; ahora la red interna resuelve `reverb` y el navegador conserva `VITE_REVERB_HOST`. Además, `SriSyncProgressUpdated` resuelve la empresa sin `TenantScope`, para que el webhook del robot (sin contexto de tenant) también pueda publicar el evento.
 - Script `scripts/staging/ec2-control.sh`: al detener staging se hace polling del estado de RDS en lugar de usar el waiter inexistente `db-instance-stopped` de AWS CLI 2.x.
 - Validación del manifiesto S3 y de los archivos de claves antes de marcar un run como `parsing`.

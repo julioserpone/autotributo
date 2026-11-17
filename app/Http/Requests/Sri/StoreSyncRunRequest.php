@@ -43,7 +43,7 @@ final class StoreSyncRunRequest extends FormRequest
             'periods' => ['required', 'array', 'min:1', 'max:12'],
             'periods.*' => ['string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
             'document_types' => ['sometimes', 'array', 'min:1'],
-            'document_types.*' => ['string', Rule::in(SriDocumentType::codes())],
+            'document_types.*' => ['string', Rule::in(SriDocumentType::syncableCodes())],
             'force' => ['sometimes', 'boolean'],
         ];
     }
@@ -55,7 +55,7 @@ final class StoreSyncRunRequest extends FormRequest
     {
         return [
             'periods.*.regex' => 'Cada período debe tener el formato AAAA-MM.',
-            'document_types.*.in' => 'Tipo de comprobante no soportado.',
+            'document_types.*.in' => 'Tipo de comprobante no disponible en el portal de recibidos del SRI.',
         ];
     }
 

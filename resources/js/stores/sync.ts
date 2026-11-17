@@ -208,19 +208,46 @@ export const useSyncStore = defineStore('sync', () => {
         }
     }
 
+    /**
+     * Devuelve los períodos `AAAA-MM` entre dos extremos, ambos incluidos.
+     *
+     * Se opera con enteros y no con `Date` a propósito: `new Date('2026-10-01')`
+     * se interpreta como UTC y, en zonas detrás de UTC (Ecuador), el mes local
+     * retrocede uno. Ese desfase hacía que una sincronización de octubre se
+     * pidiera como septiembre.
+     */
     function monthsBetween(from: string, to: string): string[] {
+        const start = /^(\d{4})-(\d{2})$/.exec(from.trim());
+        const end = /^(\d{4})-(\d{2})$/.exec(to.trim());
+
+        if (!start || !end) {
+            return [];
+        }
+
+        let year = Number(start[1]);
+        let month = Number(start[2]);
+        const endYear = Number(end[1]);
+        const endMonth = Number(end[2]);
+
+        if (month < 1 || month > 12 || endMonth < 1 || endMonth > 12) {
+            return [];
+        }
+
+        if (year * 12 + month > endYear * 12 + endMonth) {
+            return [];
+        }
+
         const result: string[] = [];
-        const start = new Date(`${from}-01`);
-        const end = new Date(`${to}-01`);
 
-        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return result;
+        while (year < endYear || (year === endYear && month <= endMonth)) {
+            result.push(`${year}-${String(month).padStart(2, '0')}`);
 
-        const cursor = new Date(start);
-        while (cursor <= end) {
-            const year = cursor.getFullYear();
-            const month = String(cursor.getMonth() + 1).padStart(2, '0');
-            result.push(`${year}-${month}`);
-            cursor.setMonth(cursor.getMonth() + 1);
+            month += 1;
+
+            if (month === 13) {
+                month = 1;
+                year += 1;
+            }
         }
 
         return result;

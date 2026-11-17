@@ -74,7 +74,7 @@ final readonly class PackageSriInvoiceParser implements SriInvoiceParser
             irbpnrCents: $data->irbpnrCentavos,
             tipCents: $data->propinaCentavos,
             totalCents: $data->totalCentavos,
-            currency: $data->moneda,
+            currency: $data->moneda === 'DOLAR' ? 'USD' : (strlen($data->moneda) === 3 ? $data->moneda : 'USD'),
             items: array_map($this->item(...), $data->items),
             taxes: array_map($this->tax(...), $data->impuestos),
             relatedAccessKeys: $data->clavesRelacionadas,

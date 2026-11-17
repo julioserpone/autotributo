@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 import AppShell from '@/layouts/AppShell.vue';
 import { useCompanyStore } from '@/stores/company';
@@ -8,26 +8,66 @@ import { useSyncStore } from '@/stores/sync';
 const companyStore = useCompanyStore();
 const syncStore = useSyncStore();
 
+const documentTypeOptions = [
+    { label: 'Facturas', value: '01' },
+    { label: 'Liquidaciones de compra', value: '03' },
+    { label: 'Notas de crédito', value: '04' },
+    { label: 'Notas de débito', value: '05' },
+    { label: 'Comprobantes de retención', value: '07' },
+];
+
+/** Período actual en formato `AAAA-MM`, usado como rango por defecto. */
+function currentPeriod(): string {
+    const now = new Date();
+
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
 const formCompanyId = ref('');
-const formFrom = ref('');
-const formTo = ref('');
+const formFrom = ref(currentPeriod());
+const formTo = ref(currentPeriod());
 const formForce = ref(false);
-const selectedTypes = ref<string[]>(['01', '03', '04', '05', '06', '07']);
+const selectedTypes = ref<string[]>(documentTypeOptions.map((type) => type.value));
 const starting = ref(false);
 const startError = ref<string | null>(null);
-const documentTypes = [
-    { code: '01', label: 'Facturas' },
-    { code: '03', label: 'Liquidaciones' },
-    { code: '04', label: 'Notas de crédito' },
-    { code: '05', label: 'Notas de débito' },
-    { code: '06', label: 'Guías de remisión' },
-    { code: '07', label: 'Retenciones' },
-];
 
 const companyOptions = computed(() => companyStore.companies.map((company) => ({
     label: company.trade_name || company.legal_name,
     value: company.id,
 })));
+
+const documentTypesSummary = computed(() => {
+    if (selectedTypes.value.length === 0) {
+        return 'Ningún tipo seleccionado';
+    }
+
+    if (selectedTypes.value.length === documentTypeOptions.length) {
+        return 'Todos los tipos';
+    }
+
+    if (selectedTypes.value.length === 1) {
+        const selected = documentTypeOptions.find((type) => type.value === selectedTypes.value[0]);
+
+        return selected?.label ?? '1 tipo seleccionado';
+    }
+
+    return `${selectedTypes.value.length} tipos seleccionados`;
+});
+
+// Preselecciona la empresa activa (o la primera) en cuanto el listado llega.
+watch(companyOptions, (options) => {
+    if (formCompanyId.value !== '' || options.length === 0) {
+        return;
+    }
+
+    const preferred = companyStore.activeId !== null && options.some((option) => option.value === companyStore.activeId)
+        ? companyStore.activeId
+        : options[0]?.value;
+
+    if (preferred) {
+        formCompanyId.value = preferred;
+    }
+}, { immediate: true });
 
 const progressPercent = computed(() => {
     const run = syncStore.selectedRun;
@@ -39,6 +79,11 @@ async function startSync(): Promise<void> {
     if (starting.value) return;
     if (!formCompanyId.value) {
         startError.value = 'Selecciona una empresa.';
+        return;
+    }
+
+    if (selectedTypes.value.length === 0) {
+        startError.value = 'Selecciona al menos un tipo de documento.';
         return;
     }
 
@@ -110,9 +155,27 @@ onUnmounted(() => {
           <USelect
             v-model="formCompanyId"
             :items="companyOptions"
+            placeholder="Selecciona una empresa"
             size="md"
             class="w-full"
           />
+        </UFormField>
+
+        <UFormField
+          label="Tipos de documento"
+          name="document_types"
+        >
+          <USelectMenu
+            v-model="selectedTypes"
+            :items="documentTypeOptions"
+            value-key="value"
+            multiple
+            :search-input="false"
+            size="md"
+            class="w-full"
+          >
+            <span class="truncate">{{ documentTypesSummary }}</span>
+          </USelectMenu>
         </UFormField>
 
         <UFormField
@@ -138,45 +201,37 @@ onUnmounted(() => {
             class="w-full"
           />
         </UFormField>
-
-        <div class="flex items-end">
-          <UButton
-            color="neutral"
-            variant="solid"
-            size="md"
-            icon="i-lucide-play"
-            label="Iniciar sincronización"
-            block
-            :loading="starting"
-            :disabled="starting"
-            @click="startSync"
-          />
-        </div>
       </div>
 
-      <div class="mt-3 flex flex-wrap gap-3">
-        <label
-          v-for="type in documentTypes"
-          :key="type.code"
-          class="flex items-center gap-2 text-xs text-muted"
-        >
-          <input
-            v-model="selectedTypes"
-            type="checkbox"
-            :value="type.code"
-            class="size-3.5 rounded border-line bg-elevated"
-          >
-          {{ type.label }}
-        </label>
-
-        <label class="ml-auto flex items-center gap-2 text-xs text-muted">
-          <input
+      <div class="mt-4 flex flex-wrap items-center gap-4">
+        <div class="flex items-center gap-1.5">
+          <UCheckbox
             v-model="formForce"
-            type="checkbox"
-            class="size-3.5 rounded border-line bg-elevated"
-          >
-          Forzar re-descarga
-        </label>
+            label="Forzar re-descarga"
+          />
+          <UTooltip text="Vuelve a descargar los comprobantes aunque ya se hayan importado. Úsalo si un archivo se importó mal o quedó incompleto; sin esta opción, los comprobantes ya registrados se omiten.">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              icon="i-lucide-info"
+              square
+              aria-label="Qué significa forzar re-descarga"
+            />
+          </UTooltip>
+        </div>
+
+        <UButton
+          color="neutral"
+          variant="solid"
+          size="md"
+          icon="i-lucide-play"
+          label="Iniciar sincronización"
+          class="sm:ml-auto"
+          :loading="starting"
+          :disabled="starting"
+          @click="startSync"
+        />
       </div>
 
       <UAlert

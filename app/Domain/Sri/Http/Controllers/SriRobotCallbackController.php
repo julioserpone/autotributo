@@ -18,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Recibe el callback firmado del robot y responde `202`.
@@ -107,7 +108,15 @@ final class SriRobotCallbackController extends Controller
         }
 
         if ($callback->isFailure()) {
-            $run->markFailed('robot_failed', 'El robot no pudo completar la descarga.');
+            // El `error` del robot explica el fallo (credenciales, captcha,
+            // tipo no soportado...). Se normaliza y se acota porque llega de
+            // fuera y se muestra en el monitor.
+            $detail = trim((string) preg_replace('/\s+/', ' ', (string) $callback->error));
+
+            $run->markFailed(
+                'robot_failed',
+                $detail !== '' ? Str::limit($detail, 500) : 'El robot no pudo completar la descarga.',
+            );
 
             return;
         }
@@ -118,9 +127,22 @@ final class SriRobotCallbackController extends Controller
 
         // Si el paquete ya está en S3, el run queda listo para importar sin
         // depender de que el callback vuelva a llegar ni de la próxima pasada
-        // del scheduler.
+        // del scheduler. El webhook se autentica con HMAC y no pasa por
+        // `tenant.context`, pero la recuperación consulta `Company`, que tiene
+        // `TenantScope`: sin activar el tenant del run, el run se quedaba
+        // colgado en `downloading`.
+        $tenant = $run->tenant()->first();
+
+        if ($tenant === null) {
+            Log::warning('no se pudo recuperar el run: no tiene tenant', [
+                'run_id' => $run->id,
+            ]);
+
+            return;
+        }
+
         try {
-            $this->recovery->handle($run);
+            app(TenantContext::class)->run($tenant, fn () => $this->recovery->handle($run));
         } catch (\Throwable $exception) {
             report($exception);
         }

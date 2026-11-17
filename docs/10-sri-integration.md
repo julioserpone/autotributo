@@ -209,9 +209,12 @@ La app solo lee el bucket del robot. El rol IAM del robot es el único que
 escribe; el usuario de la app no necesita `s3:PutObject` sobre `-sri`. Además
 de `s3:GetObject`/`s3:ListBucket` en el prefijo de salida, la identidad de la
 app necesita `lambda:InvokeFunction` sobre
-`arn:aws:lambda:us-east-2:076767082111:function:sri-txt-robot`. El usuario de
-despliegue (`sri-txt-robot-deployer`) no debe reutilizarse como credencial de la
-aplicación: tiene `AWSLambda_FullAccess` y permisos de más.
+`arn:aws:lambda:us-east-2:076767082111:function:sri-txt-robot`. El robot publica cada comprobante como la respuesta completa de autorización
+(`autorizacion`), con el comprobante dentro de `<comprobante>` (CDATA). La app
+desenvuelve el comprobante interior en `S3SriXmlRecovery::contents()`, por lo
+que el parser siempre recibe el XML del comprobante y no el sobre de
+autorización. Los paquetes antiguos que ya contenían el comprobante directo
+siguen funcionando: el desenvolvimiento solo actúa cuando el elemento existe.
 
 ### Orquestación de runs (F2-03)
 
@@ -393,7 +396,7 @@ sri:parse-run {run|public_id}   # manual; el scheduler lo hace en F2-09
 |---|---|
 | `SriAccessKey` | Decodifica fecha, tipo, RUC, ambiente, serie y secuencial; valida estructura y verificador |
 | `AccessKeyListParser` | Lee una clave por línea, tolera BOM/CRLF/espacios, devuelve líneas inválidas con motivo |
-| `PeriodBatchBuilder` | Cruza el TXT con el JSON de claves y descarta claves de otro tipo, período o RUC |
+| `PeriodBatchBuilder` | Cruza el TXT con el JSON de claves y descarta claves de otro tipo o período |
 | `SriPeriodBatch` | Lote listo para consultar: claves válidas, inválidas, faltantes y no declaradas |
 | `ParseSriRun` | Cierra el run en `completed`, `partial` o `failed` y marca los archivos `processed` |
 
@@ -401,12 +404,25 @@ Reglas:
 
 - Una línea inválida no invalida el archivo: se registra el motivo y el run
   queda `partial` si el resto es procesable.
+- El RUC de la clave de acceso es el **emisor** del comprobante. En los
+  comprobantes recibidos es el RUC del proveedor, no el de la empresa, así que
+  no se compara con el del run: la empresa está garantizada por la carpeta
+  `{ambiente}/{ruc}/{periodo}` y por el manifiesto que valida la reconciliación.
 - Un tipo solicitado en el run que no produjo ningún lote cuenta como paquete
   incompleto (`partial`), no como run completo.
 - Sin ninguna clave válida el run pasa a `failed` con
   `error_code=no_access_keys`.
 - Repetir el comando no duplica nada: solo se leen archivos `available` y un
   run final no se mueve.
+
+Si el robot descargó los XML pero no publicó un TXT o un JSON de claves
+válidos (el portal devolvió el listado sin claves), el TXT y las claves quedan
+`invalid`/`missing` y la reconciliación no puede completar el período. En ese
+caso `RecoverSriRunFromS3` pasa el run a `parsing` cuando hay XML de todos los
+períodos y `ParseSriRun` construye el lote con las claves de los nombres de
+archivo (`{clave}.xml`), validando igual que una línea del TXT: tipo, período y
+RUC del emisor. Los XML no sustituyen a un TXT válido; solo cubren los pares
+período/tipo que quedaron sin lote.
 
 ### XML del comprobante
 
@@ -456,6 +472,11 @@ crudo de la última respuesta y extrayendo `RespuestaAutorizacionComprobante`:
 La lectura la hace `ComprobanteReader` del paquete (v0.2.0). Soportado:
 factura (`01`), liquidación de compra (`03`), nota de crédito (`04`), nota de
 débito (`05`), guía de remisión (`06`) y comprobante de retención (`07`).
+
+El parser entiende la guía de remisión (`06`), pero el portal de recibidos no
+la ofrece en su desplegable. Por eso `SriDocumentType::syncableCodes()` la
+excluye del payload del robot: enviarla hace fallar la invocación completa y
+`POST /api/v1/sync-runs` la rechaza con `422`.
 El adaptador `PackageSriInvoiceParser` traduce al modelo de la app y aporta:
 
 - XXE desactivado (`LIBXML_NONET`, sin `LIBXML_NOENT`, sin DTD) y límite de

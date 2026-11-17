@@ -21,6 +21,8 @@ use Throwable;
  * un TXT o un XML:
  *
  * - `invoking` → `downloading` → `parsing` cuando hay lote y manifiesto.
+ * - Si el robot publicó los XML pero no un TXT/JSON de claves válidos, el
+ *   paquete se importa con los XML y el run también pasa a `parsing`.
  * - Si el robot terminó sin comprobantes (`sin_datos`, sin fallos), el run se
  *   cierra en `failed` con `error_code=no_documents` y `totals.found = 0`:
  *   no es un fallo técnico, pero tampoco hay nada que importar.
@@ -56,6 +58,18 @@ final readonly class RecoverSriRunFromS3
         // Reconciliar valida el manifiesto y el lote del período; da igual que
         // ya haya archivos registrados por la recuperación.
         $run = $this->reconcile->handle($run);
+
+        // El robot puede publicar los XML de todos los períodos y, aun así,
+        // dejar el TXT o el JSON de claves vacíos (el portal devolvió el
+        // listado sin claves). Los XML ya están verificados contra el
+        // manifiesto, así que el paquete se puede importar igual: el run no
+        // debe esperar hasta que `ResolveStaleSriRun` lo cierre por timeout.
+        if ($run->status === SriSyncRunStatus::Downloading
+            && $this->hasXmlFiles($run)
+            && $this->allPeriodsPublished($run)
+            && $run->status->canTransitionTo(SriSyncRunStatus::Parsing)) {
+            $run->transitionTo(SriSyncRunStatus::Parsing);
+        }
 
         // El robot terminó sin comprobantes: el run no tiene lote ni nada que
         // interpretar, así que se cierra con `no_documents`.
@@ -107,6 +121,78 @@ final readonly class RecoverSriRunFromS3
         return $run->files()
             ->whereIn('status', [SriSyncRunFileStatus::Available, SriSyncRunFileStatus::Processed])
             ->exists();
+    }
+
+    private function hasXmlFiles(SriSyncRun $run): bool
+    {
+        return $run->files()
+            ->whereIn('status', [SriSyncRunFileStatus::Available, SriSyncRunFileStatus::Processed])
+            ->where('s3_key', 'like', '%-xml/%')
+            ->exists();
+    }
+
+    /**
+     * El robot terminó todos los períodos del run: cada uno tiene un
+     * manifiesto del ambiente, RUC y período correctos. Evita importar un
+     * paquete a medias cuando el robot todavía está descargando otro mes.
+     */
+    private function allPeriodsPublished(SriSyncRun $run): bool
+    {
+        $ruc = (string) $run->company()->firstOrFail()->ruc;
+        $periods = $this->periods($run);
+
+        if ($periods === []) {
+            return false;
+        }
+
+        foreach ($periods as $period) {
+            $key = (new SriRobotObjectPath($this->environment, $ruc, $period))->manifest();
+
+            try {
+                if (! $this->store->exists($key)) {
+                    return false;
+                }
+
+                $data = json_decode($this->store->read($key), true, flags: JSON_THROW_ON_ERROR);
+            } catch (Throwable) {
+                return false;
+            }
+
+            if (! is_array($data)
+                || strtolower((string) ($data['ambiente'] ?? '')) !== $this->environment
+                || (string) ($data['ruc'] ?? '') !== $ruc
+                || (string) ($data['periodo'] ?? '') !== $period) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function periods(SriSyncRun $run): array
+    {
+        $periods = $run->periods;
+
+        if (is_array($periods) && $periods !== []) {
+            return array_values(array_map(
+                static fn (mixed $period): string => (string) $period,
+                $periods,
+            ));
+        }
+
+        $cursor = $run->date_from->toImmutable()->startOfMonth();
+        $last = $run->date_to->toImmutable()->startOfMonth();
+        $periods = [];
+
+        while ($cursor->lessThanOrEqualTo($last)) {
+            $periods[] = $cursor->format('Y-m');
+            $cursor = $cursor->addMonth();
+        }
+
+        return $periods;
     }
 
     /**
