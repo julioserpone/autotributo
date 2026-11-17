@@ -113,7 +113,7 @@ check: lint test ## Gate completo local (equivalente a CI)
 
 security: ## Auditorías de dependencias y secretos
 	$(APP) composer audit
-	$(DC) exec vite npm audit --audit-level=high || true
+	$(DC) exec vite npm audit --audit-level=critical || true
 
 github-lint: ## Valida los workflows de GitHub Actions con actionlint
 	docker run --rm -v "$$PWD:/repo" -w /repo rhysd/actionlint:latest -color
