@@ -38,7 +38,7 @@ final readonly class RecoverSriRunFromS3
         private string $environment,
     ) {}
 
-    public function handle(SriSyncRun $run): SriSyncRun
+    public function handle(SriSyncRun $run, bool $allowManual = false): SriSyncRun
     {
         // Un run en `parsing` ya tiene lote publicado; se deja tal cual.
         if (! in_array($run->status, [SriSyncRunStatus::Invoking, SriSyncRunStatus::Downloading], true)) {
@@ -57,7 +57,7 @@ final readonly class RecoverSriRunFromS3
 
         // Reconciliar valida el manifiesto y el lote del período; da igual que
         // ya haya archivos registrados por la recuperación.
-        $run = $this->reconcile->handle($run);
+        $run = $this->reconcile->handle($run, $allowManual);
 
         // El robot puede publicar los XML de todos los períodos y, aun así,
         // dejar el TXT o el JSON de claves vacíos (el portal devolvió el

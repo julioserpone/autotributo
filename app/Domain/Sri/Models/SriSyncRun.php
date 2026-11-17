@@ -35,6 +35,8 @@ use InvalidArgumentException;
  * @property string $idempotency_key
  * @property string|null $lambda_request_id
  * @property string|null $callback_event_id
+ * @property string|null $manifest_event_id
+ * @property \Illuminate\Support\Carbon|null $manifest_generated_at
  * @property string|null $s3_prefix
  * @property array<string, int>|null $totals
  * @property string|null $error_code
@@ -64,6 +66,7 @@ final class SriSyncRun extends Model
         'totals' => 'array',
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
+        'manifest_generated_at' => 'datetime',
     ];
 
     protected static function booted(): void
