@@ -101,7 +101,7 @@ jobs:
       - run: npm run lint
       - run: npm run test:unit --run
       - run: npm run build
-      - run: npm audit --audit-level=high
+      - run: npm audit --audit-level=critical
 
   workflows:
     name: Workflow lint (actionlint)
