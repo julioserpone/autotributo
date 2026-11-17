@@ -113,8 +113,8 @@
 | #70 | Design system dark-first y componentes base | F4-02 |
 | #71 | Layout Laravel Cloud sobre Nuxt UI, tema claro/oscuro y bandeja con vista previa | F4-04 |
 | #72 | Bandeja de comprobantes: endpoint cursor + filtros, drawer de detalle y selección | F4-05 |
-| #73 | Monitor de sincronización: progreso en vivo, polling y errores por archivo | F4-06 (mergeado) |
-| F4-06a | Refinamiento UI del monitor: textos legibles (`lib/sri.ts`), split en `components/sri/` (`SriSyncRunHistory`, `SriSyncRunDetailDrawer`), limpieza y loader al reabrir el drawer, top bar bajo el overlay y convención de carpetas de frontend en `docs/01` | F4-06 |
+| #73 | Monitor de sincronización: progreso en vivo, polling y errores por archivo | F4-06 (mergeado 2026-11-17) |
+| #74 | Refinamiento UI del monitor: textos legibles (`lib/sri.ts`), split en `components/sri/` (`SriSyncRunHistory`, `SriSyncRunDetailDrawer`), limpieza y loader al reabrir el drawer, top bar bajo el overlay y convención de carpetas de frontend en `docs/01` | F4-06 |
 
 ## Cómo actualizar
 
