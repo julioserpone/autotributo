@@ -179,7 +179,9 @@ app/
 
 resources/js/
 ├── app.ts  router/  stores/  lib/  composables/
-├── components/{ui,charts,tables,forms}/
+├── components/
+│   ├── ui/      charts/   tables/   forms/   # genéricos, sin dominio
+│   └── <dominio>/                             # invoices/, sri/, classification/…
 ├── layouts/  pages/
 └── types/                 # generados desde OpenAPI
 
@@ -188,6 +190,8 @@ docs/  docker/  database/{migrations,factories,seeders}
 ```
 
 **Regla de dependencias:** `Http` → `Domain`; `Domain` no conoce HTTP. `Domain` puede depender de contratos (`SriGateway`, `Classifier`, `Clock`), nunca de SDKs concretos. Los controladores solo orquestan una Action.
+
+**Regla de carpetas en `components/`:** cada carpeta agrupa componentes por dominio (`invoices/`, `sri/`, `classification/`…) y lleva el prefijo del dominio en el nombre del archivo (`SriSyncRunHistory.vue`, `InvoiceTable.vue`). Las carpetas transversales (`ui`, `charts`, `tables`, `forms`) solo contienen piezas sin conocimiento de dominio. Las páginas (`pages/`) se limitan a orquestar: llaman al store, componen componentes de dominio y no acumulan bloques de presentación reutilizables. Los textos de dominio (etiquetas de tipos, estados y errores) viven en `lib/`, no en la plantilla.
 
 ### Flujo de una petición
 

@@ -114,6 +114,7 @@
 | #71 | Layout Laravel Cloud sobre Nuxt UI, tema claro/oscuro y bandeja con vista previa | F4-04 |
 | #72 | Bandeja de comprobantes: endpoint cursor + filtros, drawer de detalle y selección | F4-05 |
 | #73 | Monitor de sincronización: progreso en vivo, polling y errores por archivo | F4-06 (pendiente de merge) |
+| #73a | Refinamiento UI del monitor: textos de error legibles (`lib/sri.ts`), split en `SyncRunHistory`/`SyncRunDetailDrawer`, limpieza y loader al reabrir el drawer | F4-06 |
 
 ## Cómo actualizar
 
