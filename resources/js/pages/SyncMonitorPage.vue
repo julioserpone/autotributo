@@ -8,6 +8,14 @@ import { useSyncStore } from '@/stores/sync';
 const companyStore = useCompanyStore();
 const syncStore = useSyncStore();
 
+const documentTypeLabels: Record<string, string> = {
+    '01': 'Facturas',
+    '03': 'Liquidaciones de compra',
+    '04': 'Notas de crédito',
+    '05': 'Notas de débito',
+    '07': 'Comprobantes de retención',
+};
+
 const documentTypeOptions = [
     { label: 'Facturas', value: '01' },
     { label: 'Liquidaciones de compra', value: '03' },
@@ -31,6 +39,9 @@ const selectedTypes = ref<string[]>(documentTypeOptions.map((type) => type.value
 const starting = ref(false);
 const startError = ref<string | null>(null);
 
+const detailOpen = ref(false);
+const filesExpanded = ref(false);
+
 const companyOptions = computed(() => companyStore.companies.map((company) => ({
     label: company.trade_name || company.legal_name,
     value: company.id,
@@ -47,7 +58,6 @@ const documentTypesSummary = computed(() => {
 
     if (selectedTypes.value.length === 1) {
         const selected = documentTypeOptions.find((type) => type.value === selectedTypes.value[0]);
-
         return selected?.label ?? '1 tipo seleccionado';
     }
 
@@ -72,8 +82,35 @@ watch(companyOptions, (options) => {
 const progressPercent = computed(() => {
     const run = syncStore.selectedRun;
     if (!run) return 0;
-    return run.progress ?? 0;
+
+    if (!run.is_active) {
+        return 100;
+    }
+
+    const files = syncStore.selectedFiles;
+    if (files.length > 0) {
+        const processed = files.filter((file) => ['processed', 'missing', 'invalid'].includes(file.status)).length;
+        return Math.round(Math.min(100, (processed / files.length) * 100));
+    }
+
+    switch (run.status) {
+        case 'invoking': return 8;
+        case 'downloading': return 20;
+        case 'parsing': return 45;
+        default: return 0;
+    }
 });
+
+const selectedRunPeriods = computed(() => syncStore.selectedRun?.periods?.join(', ') ?? '—');
+
+const selectedRunDocTypes = computed(() => {
+    const types = syncStore.selectedRun?.document_types ?? [];
+    if (types.length === 0) return 'Todos los tipos';
+    return types.map((code) => documentTypeLabels[code] ?? code).join(', ');
+});
+
+const failedFiles = computed(() => syncStore.selectedFiles.filter((file) => file.status === 'invalid' || file.error_code));
+const skippedFiles = computed(() => syncStore.selectedFiles.filter((file) => file.import_outcome === 'skipped'));
 
 async function startSync(): Promise<void> {
     if (starting.value) return;
@@ -109,22 +146,53 @@ async function startSync(): Promise<void> {
 
     if (!id) {
         startError.value = syncStore.error ?? 'No se pudo iniciar la sincronización.';
+    } else {
+        filesExpanded.value = false;
+        detailOpen.value = true;
     }
 }
 
 function selectRun(id: string): void {
+    filesExpanded.value = false;
+    detailOpen.value = true;
     void syncStore.loadRun(id);
 }
+
+function formatPeriods(run: { periods?: string[] | null; date_from?: string | null; date_to?: string | null }): string {
+    if (run.periods && run.periods.length > 0) {
+        return run.periods.join(', ');
+    }
+    return `${run.date_from ?? '—'} → ${run.date_to ?? '—'}`;
+}
+
+function formatDocTypes(run: { document_types?: string[] | null }): string {
+    const types = run.document_types ?? [];
+    if (types.length === 0) return 'Todos los tipos';
+    return types.map((code) => documentTypeLabels[code] ?? code).join(', ');
+}
+
+let historyTimer: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
     if (!companyStore.loaded) {
         void companyStore.fetchCompanies();
     }
     void syncStore.fetchRuns();
+
+    historyTimer = setInterval(() => {
+        const hasActive = syncStore.runs.some((run) => ['queued', 'invoking', 'downloading', 'parsing'].includes(run.status));
+        if (hasActive) {
+            void syncStore.fetchRuns();
+        }
+    }, 5000);
 });
 
 onUnmounted(() => {
     syncStore.stopPolling();
+    if (historyTimer) {
+        clearInterval(historyTimer);
+        historyTimer = null;
+    }
 });
 </script>
 
@@ -252,145 +320,6 @@ onUnmounted(() => {
       :description="syncStore.error"
     />
 
-    <!-- Detalle del run seleccionado -->
-    <section
-      v-if="syncStore.selectedRun"
-      class="rounded-lg border border-line bg-surface p-5 shadow-2xs dark:shadow-none"
-    >
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div class="flex items-center gap-2">
-            <h2 class="text-sm font-medium text-ink">
-              Run {{ syncStore.selectedRun.id.slice(0, 8) }}…
-            </h2>
-            <UBadge
-              :color="syncStore.statusColor(syncStore.selectedRun.status)"
-              variant="subtle"
-              size="xs"
-              class="gap-1.5 font-medium"
-            >
-              {{ syncStore.statusLabel(syncStore.selectedRun.status) }}
-            </UBadge>
-            <span
-              v-if="syncStore.polling"
-              class="text-2xs text-faint"
-            >
-              (actualizando…)
-            </span>
-          </div>
-          <p class="mt-1 text-xs text-muted">
-            {{ syncStore.selectedRun.date_from }} → {{ syncStore.selectedRun.date_to }}
-            · {{ syncStore.selectedRun.periods?.join(', ') }}
-          </p>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <div class="text-right">
-            <p class="text-2xs text-faint">
-              Progreso
-            </p>
-            <p class="font-mono text-sm font-semibold tabular-nums text-ink">
-              {{ progressPercent }}%
-            </p>
-          </div>
-          <div class="h-2 w-40 overflow-hidden rounded-full bg-elevated">
-            <div
-              class="h-full bg-accent transition-all"
-              :style="{ width: progressPercent + '%' }"
-            />
-          </div>
-        </div>
-      </div>
-
-      <UAlert
-        v-if="syncStore.selectedRun.error_message"
-        color="error"
-        variant="soft"
-        icon="i-lucide-alert-circle"
-        :title="syncStore.selectedRun.error_code ?? 'Error'"
-        :description="syncStore.selectedRun.error_message"
-        class="mt-3"
-      />
-
-      <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div class="rounded-md border border-line bg-canvas p-3">
-          <p class="text-2xs uppercase tracking-wider text-faint">
-            Encontrados
-          </p>
-          <p class="font-mono text-lg font-semibold tabular-nums text-ink">
-            {{ syncStore.selectedRun.totals.found }}
-          </p>
-        </div>
-        <div class="rounded-md border border-line bg-canvas p-3">
-          <p class="text-2xs uppercase tracking-wider text-faint">
-            Importados
-          </p>
-          <p class="font-mono text-lg font-semibold tabular-nums text-ink">
-            {{ syncStore.selectedRun.totals.imported }}
-          </p>
-        </div>
-        <div class="rounded-md border border-line bg-canvas p-3">
-          <p class="text-2xs uppercase tracking-wider text-faint">
-            Omitidos
-          </p>
-          <p class="font-mono text-lg font-semibold tabular-nums text-ink">
-            {{ syncStore.selectedRun.totals.skipped }}
-          </p>
-        </div>
-        <div class="rounded-md border border-line bg-canvas p-3">
-          <p class="text-2xs uppercase tracking-wider text-faint">
-            Fallidos
-          </p>
-          <p class="font-mono text-lg font-semibold tabular-nums text-ink">
-            {{ syncStore.selectedRun.totals.failed }}
-          </p>
-        </div>
-      </div>
-
-      <div
-        v-if="syncStore.selectedFiles.length > 0"
-        class="mt-4"
-      >
-        <h3 class="text-xs font-medium text-ink">
-          Archivos
-        </h3>
-        <ul class="mt-2 divide-y divide-line rounded-md border border-line">
-          <li
-            v-for="file in syncStore.selectedFiles"
-            :key="file.id"
-            class="flex items-center justify-between gap-3 px-3 py-2 text-xs"
-          >
-            <div class="min-w-0">
-              <p class="truncate font-mono text-ink">
-                {{ file.file_name }}
-              </p>
-              <p
-                v-if="file.error_message"
-                class="truncate text-2xs text-danger-ink"
-              >
-                {{ file.error_code }} · {{ file.error_message }}
-              </p>
-            </div>
-            <div class="flex items-center gap-2">
-              <UBadge
-                :color="file.status === 'completed' ? 'success' : file.status === 'failed' ? 'error' : 'neutral'"
-                variant="subtle"
-                size="xs"
-              >
-                {{ file.status }}
-              </UBadge>
-              <span
-                v-if="file.import_outcome"
-                class="text-2xs text-faint"
-              >
-                {{ file.import_outcome }}
-              </span>
-            </div>
-          </li>
-        </ul>
-      </div>
-    </section>
-
     <!-- Historial -->
     <section class="rounded-lg border border-line bg-surface shadow-2xs dark:shadow-none">
       <div class="border-b border-line px-4 py-3">
@@ -417,21 +346,32 @@ onUnmounted(() => {
           :class="{ 'bg-elevated/40': run.id === syncStore.selectedRunId }"
           @click="selectRun(run.id)"
         >
-          <div class="min-w-0">
-            <p class="font-mono text-xs text-ink">
-              {{ run.id.slice(0, 8) }}…
-            </p>
-            <p class="text-2xs text-faint">
-              {{ run.created_at ? new Date(run.created_at).toLocaleString('es-EC') : '—' }}
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <UIcon
+                v-if="['queued', 'invoking', 'downloading', 'parsing'].includes(run.status)"
+                name="i-lucide-loader-2"
+                class="size-3.5 animate-spin text-info-ink"
+              />
+              <p class="truncate text-xs font-medium text-ink">
+                {{ formatPeriods(run) }}
+              </p>
+            </div>
+            <p class="truncate text-2xs text-faint">
+              {{ formatDocTypes(run) }} · ID {{ run.id.slice(0, 8) }}…
             </p>
           </div>
           <div class="flex items-center gap-3">
             <UBadge
               :color="syncStore.statusColor(run.status)"
               variant="subtle"
-              size="xs"
+              size="sm"
               class="gap-1.5 font-medium"
             >
+              <span
+                v-if="['queued', 'invoking', 'downloading', 'parsing'].includes(run.status)"
+                class="size-1.5 animate-pulse rounded-full bg-current"
+              />
               {{ syncStore.statusLabel(run.status) }}
             </UBadge>
             <span class="font-mono text-xs tabular-nums text-muted">
@@ -448,5 +388,197 @@ onUnmounted(() => {
         Aún no hay sincronizaciones registradas.
       </div>
     </section>
+
+    <!-- Drawer de detalle del run -->
+    <USlideover
+      v-model:open="detailOpen"
+      side="right"
+      :ui="{ content: 'max-w-xl' }"
+      title="Detalle de la sincronización"
+    >
+      <template #body>
+        <div
+          v-if="syncStore.selectedRun"
+          class="space-y-4 text-sm"
+        >
+          <div class="flex items-center gap-2">
+            <UBadge
+              :color="syncStore.statusColor(syncStore.selectedRun.status)"
+              variant="subtle"
+              size="sm"
+              class="gap-1.5 font-medium"
+            >
+              <span
+                v-if="['queued', 'invoking', 'downloading', 'parsing'].includes(syncStore.selectedRun.status)"
+                class="size-1.5 animate-pulse rounded-full bg-current"
+              />
+              <UIcon
+                v-if="['queued', 'invoking', 'downloading', 'parsing'].includes(syncStore.selectedRun.status)"
+                name="i-lucide-loader-2"
+                class="size-3 animate-spin"
+              />
+              {{ syncStore.statusLabel(syncStore.selectedRun.status) }}
+            </UBadge>
+            <span
+              v-if="syncStore.polling"
+              class="text-2xs text-faint"
+            >
+              (actualizando…)
+            </span>
+          </div>
+
+          <div class="rounded-lg border border-line bg-canvas p-3">
+            <div class="flex items-baseline justify-between">
+              <span class="text-xs text-muted">Período consultado</span>
+              <span class="font-mono text-sm font-semibold text-ink">{{ selectedRunPeriods }}</span>
+            </div>
+            <div class="mt-1 flex items-baseline justify-between">
+              <span class="text-xs text-muted">Tipos de documento</span>
+              <span class="text-xs text-ink">{{ selectedRunDocTypes }}</span>
+            </div>
+            <div class="mt-1 flex items-baseline justify-between">
+              <span class="text-xs text-muted">Rango</span>
+              <span class="font-mono text-xs text-ink">{{ syncStore.selectedRun.date_from }} → {{ syncStore.selectedRun.date_to }}</span>
+            </div>
+            <div class="mt-1 flex items-baseline justify-between">
+              <span class="text-xs text-muted">ID</span>
+              <span class="font-mono text-2xs text-faint">{{ syncStore.selectedRun.id }}</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between">
+              <p class="text-2xs text-faint">
+                Progreso
+              </p>
+              <p class="font-mono text-sm font-semibold tabular-nums text-ink">
+                {{ progressPercent }}%
+              </p>
+            </div>
+            <div class="mt-1 h-2 w-full overflow-hidden rounded-full bg-elevated">
+              <div
+                class="h-full bg-accent transition-all duration-500"
+                :style="{ width: progressPercent + '%' }"
+              />
+            </div>
+          </div>
+
+          <UAlert
+            v-if="syncStore.selectedRun.error_message"
+            color="error"
+            variant="soft"
+            icon="i-lucide-alert-circle"
+            :title="syncStore.selectedRun.error_code ?? 'Error'"
+            :description="syncStore.selectedRun.error_message"
+          />
+
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div class="rounded-md border border-line bg-canvas p-3">
+              <p class="text-2xs uppercase tracking-wider text-faint">
+                Encontrados
+              </p>
+              <p class="font-mono text-lg font-semibold tabular-nums text-ink">
+                {{ syncStore.selectedRun.totals.found }}
+              </p>
+            </div>
+            <div class="rounded-md border border-line bg-canvas p-3">
+              <p class="text-2xs uppercase tracking-wider text-faint">
+                Importados
+              </p>
+              <p class="font-mono text-lg font-semibold tabular-nums text-ink">
+                {{ syncStore.selectedRun.totals.imported }}
+              </p>
+            </div>
+            <div class="rounded-md border border-line bg-canvas p-3">
+              <p class="text-2xs uppercase tracking-wider text-faint">
+                Omitidos
+              </p>
+              <p class="font-mono text-lg font-semibold tabular-nums text-ink">
+                {{ syncStore.selectedRun.totals.skipped }}
+              </p>
+              <p
+                v-if="skippedFiles.length > 0"
+                class="mt-1 text-2xs text-faint"
+              >
+                {{ skippedFiles.length }} archivo(s) ya registrados
+              </p>
+            </div>
+            <div class="rounded-md border border-line bg-canvas p-3">
+              <p class="text-2xs uppercase tracking-wider text-faint">
+                Fallidos
+              </p>
+              <p class="font-mono text-lg font-semibold tabular-nums text-ink">
+                {{ syncStore.selectedRun.totals.failed }}
+              </p>
+              <p
+                v-if="failedFiles.length > 0"
+                class="mt-1 text-2xs text-danger-ink"
+              >
+                {{ failedFiles.length }} con error
+              </p>
+            </div>
+          </div>
+
+          <div v-if="syncStore.selectedFiles.length > 0">
+            <button
+              type="button"
+              class="flex w-full items-center justify-between rounded-md border border-line bg-canvas px-3 py-2 text-xs font-medium text-ink transition hover:bg-elevated"
+              @click="filesExpanded = !filesExpanded"
+            >
+              <span>
+                Archivos ({{ syncStore.selectedFiles.length }})
+              </span>
+              <UIcon
+                :name="filesExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+                class="size-4 text-muted"
+              />
+            </button>
+            <ul
+              v-if="filesExpanded"
+              class="mt-2 divide-y divide-line rounded-md border border-line"
+            >
+              <li
+                v-for="file in syncStore.selectedFiles"
+                :key="file.id"
+                class="flex items-center justify-between gap-3 px-3 py-2 text-xs"
+              >
+                <div class="min-w-0">
+                  <p class="truncate font-mono text-ink">
+                    {{ file.file_name }}
+                  </p>
+                  <p
+                    v-if="file.error_message"
+                    class="truncate text-2xs text-danger-ink"
+                  >
+                    {{ file.error_code }} · {{ file.error_message }}
+                  </p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <UBadge
+                    :color="file.status === 'processed' ? 'success' : file.status === 'invalid' ? 'error' : 'neutral'"
+                    variant="subtle"
+                    size="xs"
+                  >
+                    {{ file.status }}
+                  </UBadge>
+                  <span
+                    v-if="file.import_outcome"
+                    class="text-2xs text-faint"
+                  >
+                    {{ file.import_outcome }}
+                  </span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div
+          v-else
+          class="text-xs text-muted"
+        >
+          Selecciona una sincronización del historial.
+        </div>
+      </template>
+    </USlideover>
   </AppShell>
 </template>

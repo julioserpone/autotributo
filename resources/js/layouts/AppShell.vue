@@ -38,7 +38,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-canvas text-ink">
+  <div class="flex h-screen overflow-hidden bg-canvas text-ink">
     <a
       href="#contenido"
       class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-control focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-accent-fg"
@@ -55,14 +55,14 @@ onMounted(() => {
 
     <!-- Sidebar: fija en móvil, estática en escritorio -->
     <div
-      class="fixed inset-y-0 left-0 z-40 w-64 -translate-x-full transform transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0"
+      class="fixed inset-y-0 left-0 z-40 w-64 -translate-x-full transform transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0 lg:shrink-0"
       :class="{ 'translate-x-0': mobileOpen }"
     >
       <AppSidebar class="h-full" />
     </div>
 
-    <div class="flex min-w-0 flex-1 flex-col">
-      <header class="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-line bg-surface/80 px-4 backdrop-blur-md lg:px-8">
+    <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <header class="shrink-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-line bg-surface/80 px-4 backdrop-blur-md lg:px-8">
         <div class="flex min-w-0 items-center gap-3">
           <button
             type="button"
@@ -93,7 +93,7 @@ onMounted(() => {
 
       <main
         id="contenido"
-        class="mx-auto w-full max-w-7xl flex-1 space-y-6 p-4 lg:p-8"
+        class="flex-1 overflow-y-auto mx-auto w-full max-w-7xl space-y-6 p-4 lg:p-8"
       >
         <slot />
       </main>
