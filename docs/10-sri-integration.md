@@ -366,6 +366,15 @@ valida que `ambiente`, `ruc` y `periodo` coincidan con el run, que el tipo sea
 conocido, que `bytes` coincida con el TXT, que `total` coincida con
 `count(clavesAcceso)` y que `archivo` sea el nombre del TXT.
 
+Desde el contrato v2 del manifiesto, cada publicación incluye un bloque
+`ejecucion` (`origen`, `event_id`, `run_id`, `iniciado_en`, `finalizado_en`,
+`estado`, `generadoEn`) y un histórico `ejecuciones[]` con todas las corridas
+del período. La app solo consume un manifiesto si `origen=autotributo` y su
+`event_id` coincide con el `callback_event_id` del run (o, si falta, si
+`generadoEn` es posterior a la invocación con una tolerancia de 5 minutos).
+Los manifiestos con `origen=manual` quedan para auditoría y solo se importan
+de forma explícita con `sri:import-manual`.
+
 Reglas de estado:
 
 | Situación | Estado del run |

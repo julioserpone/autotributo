@@ -12,6 +12,8 @@ use App\Domain\Sri\Enums\SriSyncRunStatus;
 use App\Domain\Sri\Exceptions\SriRobotObjectNotFound;
 use App\Domain\Sri\Models\SriSyncRun;
 use App\Domain\Sri\Models\SriSyncRunFile;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Carbon;
 use JsonException;
 
 /**
@@ -37,7 +39,7 @@ final readonly class ReconcileSriRun
         $this->environment = strtolower(trim($environment));
     }
 
-    public function handle(SriSyncRun $run): SriSyncRun
+    public function handle(SriSyncRun $run, bool $allowManual = false): SriSyncRun
     {
         if (! $run->isActive() || $run->status === SriSyncRunStatus::Queued) {
             return $run;
@@ -52,6 +54,8 @@ final readonly class ReconcileSriRun
 
         $manifestsFound = false;
         $allComplete = true;
+        $manifestEventId = null;
+        $manifestGeneratedAt = null;
 
         foreach ($periods as $period) {
             $path = new SriRobotObjectPath($this->environment, $company->ruc, $period);
@@ -74,6 +78,41 @@ final readonly class ReconcileSriRun
 
             $data = $manifest['data'];
 
+            // Evita reutilizar un manifiesto de una ejecución anterior del robot:
+            // si fue generado antes de que este run se invocara, se ignora como si
+            // no existiera. Así una re-sincronización no se "cuela" con archivos
+            // viejos cuando el robot falló en la nueva ejecución.
+            if (! $this->manifestIsFresh($data, $run)) {
+                $allComplete = false;
+
+                continue;
+            }
+
+            // Un manifiesto de una ejecución manual del robot no se consume
+            // automáticamente en un run de Autotributo: queda para auditoría.
+            $ejecucion = is_array($data['ejecucion'] ?? null) ? $data['ejecucion'] : null;
+            $origen = is_array($ejecucion) ? ($ejecucion['origen'] ?? null) : null;
+
+            if ($origen === 'manual' && ! $allowManual) {
+                $allComplete = false;
+
+                continue;
+            }
+
+            // Si el manifiesto declara un event_id, debe coincidir con el del run.
+            // Si no coincide, es de otra ejecución y no se reutiliza.
+            $manifestEvent = is_array($ejecucion) ? ($ejecucion['event_id'] ?? null) : null;
+
+            if (is_string($manifestEvent) && $manifestEvent !== ''
+                && is_string($run->callback_event_id) && $run->callback_event_id !== ''
+                && $manifestEvent !== $run->callback_event_id) {
+                $allComplete = false;
+
+                continue;
+            }
+
+            $generatedAt = $data['generadoEn'] ?? null;
+
             if (! $this->manifestMatches($data, $company->ruc, $period)) {
                 $this->recordFile(
                     $run,
@@ -95,6 +134,21 @@ final readonly class ReconcileSriRun
                 SriSyncRunFileStatus::Available,
                 $manifest['checksum'],
             );
+
+            if (is_string($manifestEvent) && $manifestEvent !== '') {
+                $manifestEventId = $manifestEvent;
+            }
+
+            if (is_string($generatedAt) && $generatedAt !== '') {
+                try {
+                    $candidate = new \DateTimeImmutable($generatedAt);
+
+                    if ($manifestGeneratedAt === null || $candidate > $manifestGeneratedAt) {
+                        $manifestGeneratedAt = $candidate;
+                    }
+                } catch (\Throwable) {
+                }
+            }
 
             $entries = $data['descargas'] ?? null;
 
@@ -151,6 +205,14 @@ final readonly class ReconcileSriRun
         }
 
         if ($manifestsFound && $allComplete && $run->status->canTransitionTo(SriSyncRunStatus::Parsing)) {
+            if (is_string($manifestEventId)) {
+                $run->manifest_event_id = $manifestEventId;
+            }
+
+            if ($manifestGeneratedAt instanceof \DateTimeInterface) {
+                $run->manifest_generated_at = Carbon::instance($manifestGeneratedAt);
+            }
+
             $run->transitionTo(SriSyncRunStatus::Parsing);
         }
 
@@ -229,7 +291,7 @@ final readonly class ReconcileSriRun
                 $type,
                 SriSyncRunFileStatus::Invalid,
                 hash('sha256', $contents),
-                "El TXT no coincide con los bytes del manifiesto ({$bytes}).",
+                "El manifiesto declara {$bytes} bytes para el TXT, pero el archivo tiene ".strlen($contents).' bytes.',
             );
 
             return false;
@@ -347,6 +409,40 @@ final readonly class ReconcileSriRun
         return strtolower((string) ($data['ambiente'] ?? '')) === $this->environment
             && ($data['ruc'] ?? null) === $ruc
             && ($data['periodo'] ?? null) === $period;
+    }
+
+    /**
+     * Un manifiesto solo es válido para este run si fue generado después de que
+     * se invocara el robot (con una tolerancia de 5 minutos para el desfase de
+     * reloj entre la app y la Lambda). Un manifiesto anterior pertenece a una
+     * ejecución previa y no debe reutilizarse.
+     */
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function manifestIsFresh(array $data, SriSyncRun $run): bool
+    {
+        $generatedAt = $data['generadoEn'] ?? null;
+
+        if (! is_string($generatedAt) || trim($generatedAt) === '') {
+            return true;
+        }
+
+        try {
+            $generated = new \DateTimeImmutable($generatedAt);
+        } catch (\Throwable) {
+            return true;
+        }
+
+        $reference = $run->started_at ?? $run->created_at;
+
+        if (! $reference instanceof \DateTimeInterface) {
+            return true;
+        }
+
+        $threshold = CarbonImmutable::instance($reference)->subMinutes(5);
+
+        return $generated >= $threshold;
     }
 
     /**

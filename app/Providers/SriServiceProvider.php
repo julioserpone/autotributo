@@ -153,6 +153,7 @@ final class SriServiceProvider extends ServiceProvider
         $this->app->singleton(ReconcileSriRuns::class, function (Application $app): ReconcileSriRuns {
             return new ReconcileSriRuns(
                 $app->make(ReconcileSriRun::class),
+                $app->make(RecoverSriRunFromS3::class),
                 $app->make(ResolveStaleSriRun::class),
                 (int) config('sri.sync.orphan_alert_threshold', 3),
             );

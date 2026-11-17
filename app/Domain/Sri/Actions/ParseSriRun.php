@@ -348,7 +348,7 @@ final readonly class ParseSriRun
         $this->mark(
             $file,
             $batch->isEmpty() ? SriSyncRunFileStatus::Invalid : SriSyncRunFileStatus::Processed,
-            $batch->isEmpty() ? 'El TXT no contiene claves válidas para el run.' : null,
+            $batch->isEmpty() ? 'El TXT no contiene líneas con claves de acceso de 49 dígitos; si hay XML publicados, la importación continúa con ellos.' : null,
         );
 
         return $batch;
