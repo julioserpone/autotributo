@@ -62,7 +62,7 @@ onMounted(() => {
     </div>
 
     <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
-      <header class="shrink-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-line bg-surface/80 px-4 backdrop-blur-md lg:px-8">
+      <header class="shrink-0 flex h-14 items-center justify-between gap-3 border-b border-line bg-surface/80 px-4 backdrop-blur-md lg:px-8">
         <div class="flex min-w-0 items-center gap-3">
           <button
             type="button"
