@@ -7,6 +7,7 @@ import InvoiceInboxPage from '@/pages/InvoiceInboxPage.vue';
 import LoginPage from '@/pages/LoginPage.vue';
 import NotFoundPage from '@/pages/NotFoundPage.vue';
 import ResetPasswordPage from '@/pages/ResetPasswordPage.vue';
+import SyncMonitorPage from '@/pages/SyncMonitorPage.vue';
 import TwoFactorChallengePage from '@/pages/TwoFactorChallengePage.vue';
 import TwoFactorSetupPage from '@/pages/TwoFactorSetupPage.vue';
 
@@ -54,6 +55,12 @@ const router = createRouter({
             name: 'invoices',
             component: InvoiceInboxPage,
             meta: { title: 'Comprobantes' },
+        },
+        {
+            path: '/sync',
+            name: 'sync',
+            component: SyncMonitorPage,
+            meta: { title: 'Sincronización' },
         },
         {
             path: '/:pathMatch(.*)*',

@@ -194,3 +194,14 @@ it('exige la clave de idempotencia al iniciar una sincronización', function ():
         ])
         ->assertForbidden();
 });
+
+it('rechaza los tipos de documento que el portal no ofrece al robot', function (): void {
+    $this->actingAs($this->owner)
+        ->postJson('/api/v1/sync-runs', [
+            'company_id' => $this->company->public_id,
+            'periods' => ['2026-10'],
+            'document_types' => ['06'],
+        ], ['Idempotency-Key' => 'guia-de-remision'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['document_types.0']);
+});

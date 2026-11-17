@@ -60,7 +60,6 @@ it('cruza el TXT con el JSON de claves del robot', function (): void {
         contents: "{$first}\n{$second}\n",
         period: '2026-09',
         documentType: SriDocumentType::Invoice,
-        ruc: '1758871873001',
         listedKeys: [$first, $second],
     );
 
@@ -77,7 +76,6 @@ it('reporta claves del JSON que no llegaron en el TXT', function (): void {
         contents: "{$first}\n",
         period: '2026-09',
         documentType: SriDocumentType::Invoice,
-        ruc: '1758871873001',
         listedKeys: [$first, $missing],
     );
 
@@ -93,7 +91,6 @@ it('reporta claves del TXT que el robot no declaró', function (): void {
         contents: "{$declared}\n{$extra}\n",
         period: '2026-09',
         documentType: SriDocumentType::Invoice,
-        ruc: '1758871873001',
         listedKeys: [$declared],
     );
 
@@ -101,22 +98,23 @@ it('reporta claves del TXT que el robot no declaró', function (): void {
         ->and($batch->accessKeys)->toHaveCount(2);
 });
 
-it('descarta claves de otro tipo, período o RUC', function (): void {
+it('descarta claves de otro tipo o período y acepta las de otro emisor', function (): void {
     $valid = AccessKeyFactory::make(sequential: '000000001');
     $creditNote = AccessKeyFactory::make(type: '04', sequential: '000000002');
     $otherPeriod = AccessKeyFactory::make(date: '10082026', sequential: '000000003');
-    $otherRuc = AccessKeyFactory::make(ruc: '0999999999001', sequential: '000000004');
+    // En los comprobantes recibidos el RUC de la clave es el del proveedor,
+    // no el de la empresa: es una clave válida del período.
+    $otherIssuer = AccessKeyFactory::make(ruc: '0999999999001', sequential: '000000004');
 
     $batch = (new PeriodBatchBuilder)->build(
-        contents: "{$valid}\n{$creditNote}\n{$otherPeriod}\n{$otherRuc}\n",
+        contents: "{$valid}\n{$creditNote}\n{$otherPeriod}\n{$otherIssuer}\n",
         period: '2026-09',
         documentType: SriDocumentType::Invoice,
-        ruc: '1758871873001',
-        listedKeys: [$valid],
+        listedKeys: [$valid, $otherIssuer],
     );
 
-    expect($batch->values())->toBe([$valid])
-        ->and($batch->invalidAccessKeys)->toBe([$creditNote, $otherPeriod, $otherRuc])
+    expect($batch->values())->toBe([$valid, $otherIssuer])
+        ->and($batch->invalidAccessKeys)->toBe([$creditNote, $otherPeriod])
         ->and($batch->isConsistent())->toBeTrue();
 });
 
@@ -125,7 +123,6 @@ it('queda vacío cuando el TXT no tiene ninguna clave válida', function (): voi
         contents: "basura\n",
         period: '2026-09',
         documentType: SriDocumentType::Invoice,
-        ruc: '1758871873001',
         listedKeys: [],
     );
 

@@ -218,6 +218,66 @@ it('marca missing el XML que el lote lista y el robot no guardó', function (): 
     expect($missing->status->value)->toBe('missing');
 });
 
+it('importa los XML aunque el robot no publique un TXT de claves válido', function (): void {
+    $path = ReconcileFixtures::path($this->company, '2026-09');
+    // Claves de comprobantes recibidos: el RUC de la clave es el del emisor
+    // (el proveedor), no el de la empresa.
+    [$first, $second] = [
+        AccessKeyFactory::make(ruc: '1791927966001', sequential: '000000101'),
+        AccessKeyFactory::make(ruc: '1791927966001', sequential: '000000102'),
+    ];
+
+    // El robot bajó los dos XML, pero el TXT del período es de una corrida
+    // anterior: el manifiesto nuevo declara 0 bytes y no hay JSON de claves.
+    foreach ([$first, $second] as $key) {
+        Storage::disk('sri')->put(
+            $path->xml(SriDocumentType::Invoice, $key),
+            str_replace('{{CLAVE}}', $key, $this->template),
+        );
+    }
+
+    Storage::disk('sri')->put($path->textReport(SriDocumentType::Invoice), "clave de una corrida anterior\n");
+
+    Storage::disk('sri')->put($path->manifest(), json_encode([
+        'ambiente' => 'dev',
+        'ruc' => $this->company->ruc,
+        'periodo' => '2026-09',
+        'generadoEn' => now()->toIso8601String(),
+        'descargas' => [[
+            'ruc' => $this->company->ruc,
+            'periodo' => '2026-09',
+            'tipo' => '01',
+            'tipoEtiqueta' => 'Factura',
+            'claveTxt' => $path->textReport(SriDocumentType::Invoice),
+            'bytes' => 0,
+            'totalClaves' => 0,
+            'tareaCaptcha' => 'navegador',
+            'xmlsDescargados' => 2,
+            'rutasXml' => [
+                $path->xml(SriDocumentType::Invoice, $first),
+                $path->xml(SriDocumentType::Invoice, $second),
+            ],
+        ]],
+        'totalClaves' => 0,
+    ], JSON_THROW_ON_ERROR));
+
+    gatewayQueNoDebeUsarse();
+
+    $run = app(RecoverSriRunFromS3::class)->handle(sriRun($this->company));
+
+    expect($run->status)->toBe(SriSyncRunStatus::Parsing)
+        ->and($run->totals['xml_found'])->toBe(2);
+
+    $result = app(ImportSriRun::class)->handle($run);
+
+    expect($result['run']->status)->toBe(SriSyncRunStatus::Completed)
+        ->and($result['report']->found)->toBe(2)
+        ->and($result['report']->imported)->toBe(2)
+        ->and($result['report']->failed)->toBe(0)
+        ->and($result['run']->totals['from_s3'])->toBe(2)
+        ->and(Invoice::query()->count())->toBe(2);
+});
+
 it('cierra el run cuando el robot terminó sin comprobantes para el período', function (): void {
     Storage::disk('sri')->put(
         ReconcileFixtures::path($this->company, '2026-09')->manifest(),

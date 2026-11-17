@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Sri\Actions;
 
 use App\Domain\Sri\Contracts\SriRobotObjectStore;
+use App\Domain\Sri\Data\SriAccessKey;
 use App\Domain\Sri\Data\SriPeriodBatch;
 use App\Domain\Sri\Data\SriRobotObjectPath;
 use App\Domain\Sri\Enums\SriDocumentType;
@@ -15,6 +16,7 @@ use App\Domain\Sri\Models\SriSyncRun;
 use App\Domain\Sri\Models\SriSyncRunFile;
 use App\Domain\Sri\Parsers\PeriodBatchBuilder;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 use Throwable;
 
 /**
@@ -73,7 +75,6 @@ final readonly class ParseSriRun
      */
     private function parse(SriSyncRun $run): array
     {
-        $ruc = (string) $run->company()->firstOrFail()->ruc;
         $files = $run->files()
             ->whereIn('status', [SriSyncRunFileStatus::Available, SriSyncRunFileStatus::Processed])
             ->whereNotNull('document_type')
@@ -84,7 +85,7 @@ final readonly class ParseSriRun
         $failures = 0;
 
         foreach ($files as $file) {
-            $batch = $this->parseFile($run, $file, $ruc);
+            $batch = $this->parseFile($run, $file);
 
             if ($batch === null) {
                 $failures++;
@@ -109,6 +110,14 @@ final readonly class ParseSriRun
                 ]);
             }
 
+            $batches[] = $batch;
+        }
+
+        // El robot puede descargar los XML de un período sin publicar un TXT o
+        // un JSON de claves válidos (el portal a veces devuelve el listado sin
+        // claves). En ese caso los XML ya están verificados contra el
+        // manifiesto y la importación puede continuar con ellos.
+        foreach ($this->xmlBatches($run, $batches) as $batch) {
             $batches[] = $batch;
         }
 
@@ -152,6 +161,118 @@ final readonly class ParseSriRun
     }
 
     /**
+     * Lotes para los períodos y tipos que no tienen TXT válido pero sí XML
+     * descargados por el robot.
+     *
+     * El nombre de cada XML es la clave de acceso del comprobante. Se valida
+     * igual que una línea del TXT: tipo y período deben coincidir con el run.
+     * El RUC de la clave es el emisor del comprobante (el proveedor en los
+     * recibidos), así que no se compara con el de la empresa: la carpeta del
+     * bucket y el manifiesto ya garantizan a quién pertenece la descarga. Los
+     * XML no reemplazan a un TXT válido: solo cubren los pares período/tipo
+     * que quedaron sin lote.
+     *
+     * @param  list<SriPeriodBatch>  $batches
+     * @return list<SriPeriodBatch>
+     */
+    private function xmlBatches(SriSyncRun $run, array $batches): array
+    {
+        $covered = [];
+
+        foreach ($batches as $batch) {
+            $covered[$batch->period.'|'.$batch->documentType->value] = true;
+        }
+
+        $requested = $run->document_types ?? [];
+
+        $files = $run->files()
+            ->whereIn('status', [SriSyncRunFileStatus::Available, SriSyncRunFileStatus::Processed])
+            ->where('s3_key', 'like', '%-xml/%')
+            ->get();
+
+        /** @var array<string, array{list<SriAccessKey>, list<string>}> $grouped */
+        $grouped = [];
+
+        foreach ($files as $file) {
+            $type = $file->document_type;
+
+            if (! $type instanceof SriDocumentType || $file->s3_key === null) {
+                continue;
+            }
+
+            if ($requested !== [] && ! in_array($type->value, $requested, true)) {
+                continue;
+            }
+
+            $period = $this->periodOfXmlKey($file->s3_key);
+
+            if ($period === null) {
+                continue;
+            }
+
+            $unit = $period.'|'.$type->value;
+
+            if (isset($covered[$unit])) {
+                continue;
+            }
+
+            $grouped[$unit] ??= [[], []];
+
+            $key = basename($file->s3_key, '.xml');
+
+            try {
+                $accessKey = new SriAccessKey($key);
+            } catch (InvalidArgumentException) {
+                $grouped[$unit][1][] = $key;
+
+                continue;
+            }
+
+            if ($accessKey->documentType !== $type
+                || $accessKey->period() !== substr($period, 0, 7)) {
+                $grouped[$unit][1][] = $key;
+
+                continue;
+            }
+
+            $grouped[$unit][0][] = $accessKey;
+        }
+
+        $result = [];
+
+        foreach ($grouped as $unit => [$keys, $invalid]) {
+            if ($keys === []) {
+                continue;
+            }
+
+            [$period, $typeCode] = explode('|', $unit, 2);
+            $type = SriDocumentType::tryFrom($typeCode);
+
+            if ($type === null) {
+                continue;
+            }
+
+            $result[] = new SriPeriodBatch(
+                period: $period,
+                documentType: $type,
+                accessKeys: $keys,
+                invalidAccessKeys: $invalid,
+                totalLines: count($keys) + count($invalid),
+            );
+        }
+
+        return $result;
+    }
+
+    private function periodOfXmlKey(string $s3Key): ?string
+    {
+        $pattern = '/\/(\d{4}-(?:0[1-9]|1[0-2]))\/'
+            .'[a-z-]+-recibidas-\d{4}-(?:0[1-9]|1[0-2])-xml\/\d{49}\.xml$/';
+
+        return preg_match($pattern, $s3Key, $matches) === 1 ? $matches[1] : null;
+    }
+
+    /**
      * @param  list<SriPeriodBatch>  $batches
      */
     private function finish(SriSyncRun $run, array $batches, int $failures): void
@@ -180,7 +301,7 @@ final readonly class ParseSriRun
         // haría que la importación encontrara el run final y no hiciera nada.
     }
 
-    private function parseFile(SriSyncRun $run, SriSyncRunFile $file, string $ruc): ?SriPeriodBatch
+    private function parseFile(SriSyncRun $run, SriSyncRunFile $file): ?SriPeriodBatch
     {
         $type = $file->document_type;
 
@@ -221,7 +342,6 @@ final readonly class ParseSriRun
             contents: $contents,
             period: $period,
             documentType: $type,
-            ruc: $ruc,
             listedKeys: $listed,
         );
 

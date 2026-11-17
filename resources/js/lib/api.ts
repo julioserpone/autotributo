@@ -28,7 +28,7 @@ function csrfToken(): string {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 }
 
-export async function postJson<T>(path: string, body: unknown): Promise<T> {
+export async function postJson<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
     const response = await fetch(path, {
         method: 'POST',
         credentials: 'same-origin',
@@ -37,6 +37,7 @@ export async function postJson<T>(path: string, body: unknown): Promise<T> {
             Accept: 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
             'X-CSRF-TOKEN': csrfToken(),
+            ...headers,
         },
         body: JSON.stringify(body),
     });

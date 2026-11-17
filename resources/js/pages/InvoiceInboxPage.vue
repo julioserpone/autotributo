@@ -233,7 +233,7 @@ onMounted(() => {
     <USlideover
       v-model:open="detailOpen"
       side="right"
-      :ui="{ content: 'max-w-xl', header: 'border-b-0' }"
+      :ui="{ content: 'max-w-xl z-30', header: 'border-b-0' }"
       title="Detalle del comprobante"
     >
       <template #body>
