@@ -15,6 +15,7 @@
 | Pieza | Decisión |
 |---|---|
 | Cómputo | 1 × EC2 `t3.micro` (Ubuntu 24.04, `us-east-2`, 30 GB gp3), **efímera** |
+| Imagen de app | `autotributo/php:staging`, construida sobre una base pública en GHCR (`autotributo-php-base:8.5`) para no compilar extensiones en la instancia |
 | Ciclo de vida | `scripts/staging/ec2-control.sh {create,destroy,status}` |
 | Orquestación | Docker Compose (`docker-compose.staging.yml`) |
 | Servicios | `app` (PHP-FPM 8.5), `queue`, `scheduler`, `reverb`, `web` (Caddy 2) |
@@ -120,6 +121,12 @@ El script hace todo el ciclo y no necesita consola de AWS:
 5. Fuerza la actualización de DuckDNS y **espera a que el registro A apunte a la
    IP nueva**.
 6. Ejecuta `deploy.sh` (assets, imagen, migraciones, healthchecks y `/up`).
+
+`deploy.sh` no compila PHP: tira de la imagen base pública
+`ghcr.io/julioserpone/autotributo-php-base:8.5` (construida por el workflow
+`build-php-base.yml`), así que el build de la app tarda ~1–2 minutos. Si cambias
+el Dockerfile base, vuelve a lanzar ese workflow y el siguiente `create` tomará
+la versión nueva automáticamente (`--pull`).
 
 Al terminar imprime la URL y el coste por hora. Tarda 20–30 minutos la primera
 vez de cada ciclo (build de assets e imagen incluidos).
@@ -477,7 +484,7 @@ Cuando se compre `autotributo.com` y se habilite Cloud:
 - [x] DuckDNS resuelve al hostname y el timer lo actualiza en cada `create`.
 - [x] Neon `staging` responde con `sslmode=require` y migraciones al día.
 - [x] `docker compose -f docker-compose.staging.yml config --quiet` sin errores.
-- [x] `deploy.sh` completa y `/up` devuelve 200 por HTTPS.
+- [x] `deploy.sh` completa y `/up` devuelve 200 por HTTPS (build de la app sobre la imagen base de GHCR, ~1–2 min).
 - [x] Certificado Let's Encrypt válido y renovable.
 - [x] `app`, `queue`, `scheduler`, `reverb` y `web` healthy.
 - [x] `app:provision` crea el estudio y el owner puede configurar 2FA.
