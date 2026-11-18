@@ -1,8 +1,12 @@
 name: Build PHP base image
 
-# Construye y publica la imagen base de PHP (PHP-FPM + extensiones) en GHCR.
-# La instancia de staging la usa como FROM para no compilar extensiones en la
-# t3.micro (ver ADR-0008 y docs/13, opcion 1).
+# Construye y publica en GHCR la imagen base de PHP (toolchain) de staging
+# (ver ADR-0008 y docs/13). Contiene PHP-FPM 8.5 + extensiones + Composer +
+# Node + git + rsync: es lo que no debe compilarse en una t3.micro nunca más.
+#
+# `build-staging-image.yml` también la publica antes de la imagen completa; este
+# workflow existe para poder refrescarla sola (por ejemplo, renovar Node o
+# aplicar parches de las extensiones) sin esperar a CI completo.
 #
 # La imagen se publica como PUBLICA para que las instancias efimeras puedan
 # hacer `docker pull` sin credenciales (capa gratuita e ilimitada de GHCR).

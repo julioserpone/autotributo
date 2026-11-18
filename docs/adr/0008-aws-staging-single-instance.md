@@ -77,9 +77,11 @@ requisitos de alta disponibilidad y un solo servidor es suficiente.
 
 - Punto único de fallo: sin HA, sin autoescalado, sin rolling deploy real.
 - 1 GB de RAM es ajustado. Se mitiga con 2 GB de swap, `pm.max_children=4`,
-  límites de memoria por servicio, un solo worker y builds de assets en el host.
-- Recrear el entorno tarda 20–30 minutos (assets + imagen + certificado), así
-  que no sirve para pruebas improvisadas de un minuto.
+  límites de memoria por servicio y un solo worker. Los assets ya no se compilan
+  en el host salvo cuando cambia el frontend (ver enmienda 2).
+- Recrear el entorno tarda ~4–6 minutos (arranque, `apt`, certificado y
+  `docker pull`), así que no sirve para pruebas improvisadas de un minuto.
+  Antes de la enmienda 2 tardaba 20–30 min.
 - El certificado de Let's Encrypt se vuelve a emitir en cada `create`; el límite
   de 5 duplicados por semana obliga a espaciar los ciclos.
 - Dependencia de DuckDNS (tercero) para DNS/TLS. Aceptable para staging;
@@ -140,3 +142,44 @@ facturando.
 **Consecuencia operativa.** Ya no existe `stop`/`start` como estrategia de
 ahorro: el ciclo es `create` → probar → `destroy --yes`. El detalle vive en
 `docs/13-aws-staging-deployment.md`.
+
+## Enmienda 2026-11-18 (2): la imagen de GHCR es el toolchain; el código sale de git
+
+**Motivo.** El primer intento de imagen completa no aceleraba `create` porque
+`docker-compose.staging.yml` seguía construyendo el target `staging` (con el
+stage `assets`: `npm ci` + Vite) en la t3.micro, y el flujo sin `APP_IMAGE`
+repetía ese build en cada ciclo y en cada instancia nueva. Resultado: 20–30 min
+por `create` en vez de los 4–6 esperados.
+
+**Cambios.**
+
+1. **La imagen base es el toolchain completo.** `autotributo-php-base:8.5` =
+   PHP 8.5 + extensiones compiladas + Composer 2 + Node 24 + git + rsync +
+   cliente de PostgreSQL. Se publica desde CI y se refresca por
+   `apk upgrade`/nuevo build, no por instancia.
+2. **La imagen completa es un snapshot, no la fuente del código.**
+   `autotributo-staging:staging` = toolchain + código + `vendor/` +
+   `public/build` del último `main`. La instancia la usa como semilla y para el
+   contenedor `app`, pero cada deploy hace `git fetch --depth 1` de
+   `origin/main`: la instancia sí recibe los cambios del repositorio después de
+   lanzarse.
+3. **Composer y Vite en caliente, solo cuando cambian.**
+   `scripts/staging/build-app.sh` ejecuta `composer install` si cambió
+   `composer.lock` (o falta `vendor/`) y `npm ci && npm run build` si cambió
+   `package-lock.json`, falta `public/build` o hay recursos más nuevos. Guarda
+   sellos en `storage/.deploy/stamps`, así que no se repite trabajo entre
+   deploys. La instancia nunca compila PHP ni instala Node/Composer: esas
+   herramientas ya están en la imagen.
+4. **Dos targets en `docker/php/Dockerfile`.** `app` (código sobre la base; lo
+   construye el compose, segundos) y `staging` (imagen completa publicada en
+   GHCR). El build del contenedor no ejecuta Composer, npm ni `artisan`.
+5. **`:staging` solo se publica con CI verde** (`workflow_run` de `CI`) y el
+   workflow publica primero la base y luego la imagen completa. `create`
+   verifica que el paquete sea descargable sin login antes de crear la instancia.
+6. **`scripts/staging/image-refresh.sh`** regenera la imagen desde un commit
+   reutilizando el toolchain (rsync + Composer/Vite condicionales +
+   `docker commit`), para no esperar un build completo por un cambio pequeño.
+
+**Límite aceptado.** La imagen solo garantiza el toolchain y un snapshot
+reproducible; la verdad del código es `origin/main`. Probar una rama exige
+publicar esa rama (`workflow_dispatch`) y apuntar `APP_IMAGE` a su tag `:<sha>`.
