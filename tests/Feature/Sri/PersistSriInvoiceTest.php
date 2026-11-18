@@ -6,12 +6,12 @@ use App\Domain\Companies\Models\Company;
 use App\Domain\Invoicing\Models\Invoice;
 use App\Domain\Invoicing\Models\InvoiceItem;
 use App\Domain\Sri\Actions\PersistSriInvoice;
-use App\Domain\Sri\Enums\SriSyncRunStatus;
-use App\Domain\Sri\Models\SriSyncRun;
 use App\Domain\Sri\Contracts\SriInvoiceParser;
 use App\Domain\Sri\Data\SriImportResult;
 use App\Domain\Sri\Enums\SriDocumentType;
 use App\Domain\Sri\Enums\SriImportOutcome;
+use App\Domain\Sri\Enums\SriSyncRunStatus;
+use App\Domain\Sri\Models\SriSyncRun;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -126,7 +126,7 @@ it('re-importa el comprobante cuando se fuerza aunque el XML no cambió', functi
         $data,
         $xml,
         null,
-        \App\Domain\Invoicing\Models\Invoice::SOURCE_SRI_ROBOT,
+        Invoice::SOURCE_SRI_ROBOT,
         true,
     );
 
