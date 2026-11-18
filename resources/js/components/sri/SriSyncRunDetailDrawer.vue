@@ -343,6 +343,9 @@ watch(run, (current) => {
               class="size-4 text-muted"
             />
           </button>
+          <p class="mt-1 text-2xs text-faint">
+            Estados: En S3 = XML en el bucket, aún no importado · Procesado = importado · No encontrado = no estaba en S3 · Inválido = XML malformado.
+          </p>
           <ul
             v-if="filesExpanded"
             class="mt-2 divide-y divide-line rounded-md border border-line"
