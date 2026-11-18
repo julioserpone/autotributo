@@ -63,6 +63,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ### Changed
 
+- F1-11: staging pasa a **efímero** para no consumir el crédito de AWS reservado a la BETA. `scripts/staging/ec2-control.sh` sustituye `stop`/`start`/`reboot` por `create`/`destroy --yes`/`status`: `destroy` respalda `.env` y `duckdns.env` en `~/.config/autotributo/` y termina la instancia (el EBS se borra con ella), mientras `create` reconstruye desde la AMI pública de Ubuntu 24.04 sin AMI propia, sin snapshot y sin Elastic IP, y ejecuta provisión, DuckDNS y deploy completos. La base sale de RDS y pasa a **Neon free tier** (host directo, `sslmode=require`) con dump/restore validado por conteos en 12 tablas; RDS se eliminó sin snapshot final. Coste en reposo: USD 0. Runbook (`docs/13`), ADR-0008 (enmienda 2026-11-18) y `.env.staging.example` alineados.
 - CI corregido: se eliminaron expresiones `hashFiles` no permitidas a nivel de job; se agregaron actionlint, cobertura y auditorías.
 - El merge del repositorio queda configurado como squash-only, con borrado automático de la rama.
 - Documentación de gobernanza alineada con PR obligatorio, sin pushes directos y sin aprobaciones obligatorias para el maintainer único.

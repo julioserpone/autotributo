@@ -73,7 +73,7 @@ npm ci --no-audit --no-fund
 npm run build
 
 log "construyendo imagen de la aplicación"
-docker compose -f "$COMPOSE_FILE" --env-file .env build app
+docker compose -f "$COMPOSE_FILE" --env-file .env build --pull app
 
 log "aplicando migraciones"
 docker compose -f "$COMPOSE_FILE" --env-file .env run --rm --no-deps app \

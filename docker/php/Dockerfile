@@ -95,8 +95,13 @@ CMD ["php-fpm"]
 #   contenedor en tiempo de ejecución y el entrypoint ejecuta `artisan optimize`.
 # - El entrypoint espera a Neon y prepara el cache antes de lanzar el proceso.
 # - PHP-FPM tiene un pool reducido (t3.micro con 1 GB de RAM).
+#
+# La base (PHP + extensiones) puede venir de una imagen pre-construida en GHCR
+# (`PHP_BASE_IMAGE=ghcr.io/.../autotributo-php-base:8.5`) para no compilar en
+# la instancia; por defecto usa la etapa `base` local (útil en desarrollo).
 # -----------------------------------------------------------------------------
-FROM base AS staging
+ARG BASE_IMAGE=base
+FROM ${BASE_IMAGE} AS staging
 
 COPY docker/php/php.staging.ini /usr/local/etc/php/conf.d/99-app.ini
 COPY docker/php/fpm-pool.staging.conf /usr/local/etc/php-fpm.d/zz-app.conf

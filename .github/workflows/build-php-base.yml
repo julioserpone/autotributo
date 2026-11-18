@@ -1,0 +1,57 @@
+name: Build PHP base image
+
+# Construye y publica la imagen base de PHP (PHP-FPM + extensiones) en GHCR.
+# La instancia de staging la usa como FROM para no compilar extensiones en la
+# t3.micro (ver ADR-0008 y docs/13, opcion 1).
+#
+# La imagen se publica como PUBLICA para que las instancias efimeras puedan
+# hacer `docker pull` sin credenciales (capa gratuita e ilimitada de GHCR).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'docker/php/Dockerfile'
+      - '.github/workflows/build-php-base.yml'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-base:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image name
+        id: image
+        run: |
+          echo "name=ghcr.io/${{ github.repository_owner }}/autotributo-php-base" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push base image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/php/Dockerfile
+          target: base
+          push: true
+          tags: |
+            ${{ steps.image.outputs.name }}:8.5
+            ${{ steps.image.outputs.name }}:${{ github.sha }}
+          build-args: |
+            PHP_VERSION=8.5
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
