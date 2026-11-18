@@ -12,10 +12,16 @@ const syncStore = useSyncStore();
 const isActive = computed(() => syncStore.activeStatuses.includes(props.run.status));
 
 /**
- * Comprobantes guardados. Los `updated` cuentan igual que los `imported`:
- * una re-descarga forzada actualiza el comprobante en vez de crearlo.
+ * Comprobantes procesados del run. Los `skipped` y `failed` cuentan igual que
+ * los `imported`/`updated`: ya se intentaron y no quedan pendientes.
  */
-const stored = computed(() => (props.run.totals.imported ?? 0) + (props.run.totals.updated ?? 0));
+const processed = computed(() => Math.min(
+    props.run.totals.found,
+    (props.run.totals.imported ?? 0)
+        + (props.run.totals.updated ?? 0)
+        + (props.run.totals.skipped ?? 0)
+        + (props.run.totals.failed ?? 0),
+));
 </script>
 
 <template>
@@ -33,7 +39,7 @@ const stored = computed(() => (props.run.totals.imported ?? 0) + (props.run.tota
       {{ syncStore.statusLabel(run.status) }}
     </UBadge>
     <span class="font-mono text-xs tabular-nums text-muted">
-      {{ stored }}/{{ run.totals.found }}
+      {{ processed }}/{{ run.totals.found }}
     </span>
   </div>
 </template>
