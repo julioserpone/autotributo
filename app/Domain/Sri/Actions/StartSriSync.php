@@ -13,6 +13,7 @@ use App\Domain\Sri\Enums\SriSyncRunStatus;
 use App\Domain\Sri\Exceptions\SriGatewayException;
 use App\Domain\Sri\Exceptions\SriRateLimitExceeded;
 use App\Domain\Sri\Exceptions\SriSyncAlreadyRunning;
+use App\Domain\Sri\Jobs\AwaitSriRobotResultJob;
 use App\Domain\Sri\Models\SriSyncRun;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -307,6 +308,10 @@ final readonly class StartSriSync
         }
 
         $run->markInvoking($dispatch->requestId, $dispatch->eventId);
+
+        if (config('sri.sync.await_robot_result', false)) {
+            AwaitSriRobotResultJob::dispatch($run->id);
+        }
 
         return $run->refresh();
     }

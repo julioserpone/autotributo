@@ -84,6 +84,10 @@ return [
         'stale_after_minutes' => (int) env('SRI_SYNC_STALE_AFTER_MINUTES', 30),
         // Alerta cuando una reconciliación cierra más de N runs huérfanos.
         'orphan_alert_threshold' => (int) env('SRI_SYNC_ORPHAN_ALERT_THRESHOLD', 3),
+        // Sondeo automático de S3 tras invocar el robot cuando no hay callback.
+        'await_robot_result' => (bool) env('SRI_SYNC_AWAIT_ROBOT_RESULT', false),
+        'await_robot_max_attempts' => (int) env('SRI_SYNC_AWAIT_ROBOT_MAX_ATTEMPTS', 30),
+        'await_robot_delay_seconds' => (int) env('SRI_SYNC_AWAIT_ROBOT_DELAY_SECONDS', 10),
     ],
 
     'robot' => [
