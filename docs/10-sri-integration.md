@@ -417,8 +417,11 @@ Reglas:
   comprobantes recibidos es el RUC del proveedor, no el de la empresa, así que
   no se compara con el del run: la empresa está garantizada por la carpeta
   `{ambiente}/{ruc}/{periodo}` y por el manifiesto que valida la reconciliación.
-- Un tipo solicitado en el run que no produjo ningún lote cuenta como paquete
-  incompleto (`partial`), no como run completo.
+- Un tipo **declarado en el manifiesto** que no produjo ningún lote cuenta como
+  paquete incompleto (`partial`), no como run completo. Un tipo solicitado que
+  el manifiesto no lista no es un faltante: el robot solo publica las descargas
+  con resultados, así que no tener comprobantes de ese tipo en el período es
+  normal.
 - Sin ninguna clave válida el run pasa a `failed` con
   `error_code=no_access_keys`.
 - Repetir el comando no duplica nada: solo se leen archivos `available` y un

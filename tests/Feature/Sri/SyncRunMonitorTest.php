@@ -115,6 +115,28 @@ it('muestra el estado del run con el intervalo de polling mientras sigue activo'
         ->assertJsonPath('data.progress', 30);
 });
 
+it('cuenta los comprobantes actualizados en el progreso', function (): void {
+    $run = makeSyncRun($this->tenant, $this->company, [
+        'totals' => ['found' => 10, 'imported' => 2, 'updated' => 3, 'skipped' => 1, 'failed' => 0],
+    ]);
+
+    $this->actingAs($this->viewer)
+        ->getJson('/api/v1/sync-runs/'.$run->public_id)
+        ->assertOk()
+        ->assertJsonPath('data.progress', 60);
+});
+
+it('no muestra 100 de progreso mientras el run sigue activo', function (): void {
+    $run = makeSyncRun($this->tenant, $this->company, [
+        'totals' => ['found' => 2, 'imported' => 2, 'updated' => 0, 'skipped' => 0, 'failed' => 0],
+    ]);
+
+    $this->actingAs($this->viewer)
+        ->getJson('/api/v1/sync-runs/'.$run->public_id)
+        ->assertOk()
+        ->assertJsonPath('data.progress', 99);
+});
+
 it('deja de indicar polling cuando el run es final', function (): void {
     $run = makeSyncRun($this->tenant, $this->company, [
         'status' => SriSyncRunStatus::Completed,

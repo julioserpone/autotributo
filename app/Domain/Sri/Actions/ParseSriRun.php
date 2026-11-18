@@ -138,17 +138,18 @@ final readonly class ParseSriRun
     }
 
     /**
-     * Tipos solicitados en el run para los que no se pudo interpretar ningún
-     * TXT. La ausencia de un tipo que el robot debía descargar es un paquete
-     * incompleto, no un run completo.
+     * Tipos que el manifiesto declaró y para los que no se pudo interpretar
+     * ningún lote. El manifiesto solo lista las descargas con resultados: un
+     * tipo solicitado sin comprobantes no aparece y no es un paquete
+     * incompleto. Solo un tipo declarado que quedó sin lote lo es.
      *
      * @param  list<SriPeriodBatch>  $batches
      */
     private function missingTypes(SriSyncRun $run, array $batches): int
     {
-        $requested = array_values(array_unique($run->document_types ?? []));
+        $declared = $this->declaredTypes($run);
 
-        if ($requested === []) {
+        if ($declared === []) {
             return 0;
         }
 
@@ -157,7 +158,78 @@ final readonly class ParseSriRun
             $batches,
         )));
 
-        return count(array_diff($requested, $parsedTypes));
+        return count(array_diff($declared, $parsedTypes));
+    }
+
+    /**
+     * Tipos de comprobante declarados en los manifiestos de los períodos del
+     * run. Es la lista de lo que el robot efectivamente intentó descargar.
+     *
+     * @return list<string>
+     */
+    private function declaredTypes(SriSyncRun $run): array
+    {
+        $company = $run->company()->firstOrFail();
+        $types = [];
+
+        foreach ($this->periods($run) as $period) {
+            $key = (new SriRobotObjectPath($this->environment, (string) $company->ruc, $period))->manifest();
+
+            try {
+                if (! $this->store->exists($key)) {
+                    continue;
+                }
+
+                $data = json_decode($this->store->read($key), true, flags: JSON_THROW_ON_ERROR);
+            } catch (Throwable $exception) {
+                report($exception);
+
+                continue;
+            }
+
+            $entries = is_array($data) ? ($data['descargas'] ?? null) : null;
+
+            if (! is_array($entries)) {
+                continue;
+            }
+
+            foreach ($entries as $entry) {
+                $code = is_array($entry) ? ($entry['tipo'] ?? null) : null;
+                $type = is_string($code) ? SriDocumentType::tryFrom($code) : null;
+
+                if ($type !== null) {
+                    $types[$type->value] = true;
+                }
+            }
+        }
+
+        return array_keys($types);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function periods(SriSyncRun $run): array
+    {
+        $periods = $run->periods;
+
+        if (is_array($periods) && $periods !== []) {
+            return array_values(array_map(
+                static fn (mixed $period): string => (string) $period,
+                $periods,
+            ));
+        }
+
+        $cursor = $run->date_from->toImmutable()->startOfMonth();
+        $last = $run->date_to->toImmutable()->startOfMonth();
+        $periods = [];
+
+        while ($cursor->lessThanOrEqualTo($last)) {
+            $periods[] = $cursor->format('Y-m');
+            $cursor = $cursor->addMonth();
+        }
+
+        return $periods;
     }
 
     /**

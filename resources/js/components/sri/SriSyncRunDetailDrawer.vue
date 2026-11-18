@@ -90,8 +90,12 @@ const failedFiles = computed(() => syncStore.selectedFiles.filter((file) => file
 const skippedFiles = computed(() => syncStore.selectedFiles.filter((file) => file.import_outcome === 'skipped'));
 
 /**
- * Porcentaje mostrado: si el run terminó es 100; si sigue activo se calcula con
- * los archivos procesados o, antes de que existan, con el estado del pipeline.
+ * Porcentaje mostrado por etapa del pipeline.
+ *
+ * Un archivo descubierto no es un archivo descargado: `missing` e `invalid` no
+ * cuentan como avance, solo `available` y `processed`. Así el progreso no se
+ * acerca al 100 % mientras los XML todavía no están en S3. Mientras el run
+ * sigue activo nunca llega a 100; solo lo hace al quedar `completed`/`partial`.
  */
 const progressPercent = computed(() => {
     const current = run.value;
@@ -100,21 +104,41 @@ const progressPercent = computed(() => {
         return 0;
     }
 
-    if (!current.is_active) {
+    if (current.status === 'completed' || current.status === 'partial') {
         return 100;
     }
 
-    const files = syncStore.selectedFiles;
-    if (files.length > 0) {
-        const processed = files.filter((file) => ['processed', 'missing', 'invalid'].includes(file.status)).length;
-        return Math.round(Math.min(100, (processed / files.length) * 100));
+    if (!current.is_active) {
+        return current.progress === null
+            ? 0
+            : Math.round(Math.min(100, Math.max(0, current.progress)));
     }
 
+    const files = syncStore.selectedFiles;
+
     switch (current.status) {
-        case 'invoking': return 8;
-        case 'downloading': return 20;
-        case 'parsing': return 45;
-        default: return 0;
+        case 'invoking':
+            return 8;
+        case 'downloading': {
+            if (files.length === 0) {
+                return 20;
+            }
+
+            const available = files.filter((file) => ['available', 'processed'].includes(file.status)).length;
+
+            return Math.min(44, Math.round(20 + (available / files.length) * 25));
+        }
+        case 'parsing': {
+            if (current.progress === null) {
+                return 45;
+            }
+
+            const imported = Math.min(100, Math.max(0, current.progress));
+
+            return Math.min(99, Math.round(45 + (imported / 100) * 54));
+        }
+        default:
+            return 0;
     }
 });
 
@@ -246,8 +270,11 @@ watch(run, (current) => {
           </div>
         </div>
 
+        <!-- El error del run es un veredicto final: mientras siga activo, el
+             parser puede dejar avisos transitorios (p. ej. `incomplete_package`)
+             que la importación todavía va a resolver. -->
         <UAlert
-          v-if="run.error_message"
+          v-if="run.error_message && !isActive"
           color="error"
           variant="soft"
           icon="i-lucide-alert-circle"
