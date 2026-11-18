@@ -101,7 +101,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY resources ./resources
-COPY vite.config.ts tsconfig.json auto-imports.d.ts components.d.ts ./
+COPY vite.config.ts tsconfig.json ./
 COPY public ./public
 
 RUN npm run build
