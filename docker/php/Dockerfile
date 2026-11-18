@@ -6,6 +6,7 @@
 # despliegue se define con build/deploy commands (ver docs/06).
 # =============================================================================
 ARG PHP_VERSION=8.5
+ARG BASE_IMAGE=base
 FROM php:${PHP_VERSION}-fpm-alpine AS base
 
 RUN apk add --no-cache \
@@ -100,7 +101,6 @@ CMD ["php-fpm"]
 # (`PHP_BASE_IMAGE=ghcr.io/.../autotributo-php-base:8.5`) para no compilar en
 # la instancia; por defecto usa la etapa `base` local (útil en desarrollo).
 # -----------------------------------------------------------------------------
-ARG BASE_IMAGE=base
 FROM ${BASE_IMAGE} AS staging
 
 COPY docker/php/php.staging.ini /usr/local/etc/php/conf.d/99-app.ini
