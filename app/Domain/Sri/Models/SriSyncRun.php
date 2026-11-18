@@ -67,6 +67,7 @@ final class SriSyncRun extends Model
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
         'manifest_generated_at' => 'datetime',
+        'force' => 'boolean',
     ];
 
     protected static function booted(): void

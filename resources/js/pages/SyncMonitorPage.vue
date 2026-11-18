@@ -225,7 +225,7 @@ onUnmounted(() => {
             v-model="formForce"
             label="Forzar re-descarga"
           />
-          <UTooltip text="Vuelve a descargar los comprobantes aunque ya se hayan importado. Úsalo si un archivo se importó mal o quedó incompleto; sin esta opción, los comprobantes ya registrados se omiten.">
+          <UTooltip text="Vuelve a descargar e importar los comprobantes aunque ya se hayan registrado. Úsalo si un archivo se importó mal o quedó incompleto; sin esta opción, los comprobantes ya registrados se omiten.">
             <UButton
               color="neutral"
               variant="ghost"
