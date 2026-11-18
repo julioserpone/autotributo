@@ -122,11 +122,14 @@ El script hace todo el ciclo y no necesita consola de AWS:
    IP nueva**.
 6. Ejecuta `deploy.sh` (assets, imagen, migraciones, healthchecks y `/up`).
 
-`deploy.sh` no compila PHP: tira de la imagen base pública
-`ghcr.io/julioserpone/autotributo-php-base:8.5` (construida por el workflow
-`build-php-base.yml`), así que el build de la app tarda ~1–2 minutos. Si cambias
-el Dockerfile base, vuelve a lanzar ese workflow y el siguiente `create` tomará
-la versión nueva automáticamente (`--pull`).
+`deploy.sh` no compila ni PHP ni assets: si `APP_IMAGE` está definido en el
+`.env` (por defecto `ghcr.io/julioserpone/autotributo-staging:staging`), hace
+`docker pull` de la imagen completa (construida por el workflow
+`build-staging-image.yml`) y extrae `public/` desde ella. El ciclo completo
+`create` tarda ~7–8 minutos. Si cambias código, el workflow se re-ejecuta en
+push a `main` y el siguiente `create` toma la versión nueva automáticamente
+(`--pull`). Si `APP_IMAGE` está vacío, `deploy.sh` vuelve al flujo anterior
+(npm + docker build) usando la imagen base `autotributo-php-base:8.5`.
 
 Al terminar imprime la URL y el coste por hora. Tarda 20–30 minutos la primera
 vez de cada ciclo (build de assets e imagen incluidos).
