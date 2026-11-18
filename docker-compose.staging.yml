@@ -22,6 +22,7 @@ x-app: &app
     args:
       UID: ${UID:-1000}
       GID: ${GID:-1000}
+      BASE_IMAGE: ${PHP_BASE_IMAGE:-base}
   image: autotributo/php:staging
   working_dir: /var/www/html
   user: "${UID:-1000}:${GID:-1000}"

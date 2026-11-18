@@ -1,6 +1,6 @@
 # ADR 0008: staging temporal en una instancia AWS EC2
 
-- **Estado:** aceptado
+- **Estado:** aceptado (enmendado 2026-11-18)
 - **Fecha:** 2026-11-10
 - **Ámbito:** solo `staging`. Producción sigue prevista en Laravel Cloud
   (`docs/06-laravel-cloud-deployment.md`).
@@ -30,56 +30,64 @@ requisitos de alta disponibilidad y un solo servidor es suficiente.
    - `scheduler` (`schedule:work`).
    - `reverb` (WebSockets en la red interna).
    - `web` (Caddy 2 con TLS automático y proxy a PHP-FPM/Reverb).
-   - Sin contenedor de base de datos ni Valkey: Postgres en **RDS**
-     (`db.t3.micro`, free tier) y
-     `CACHE_STORE`/`SESSION_DRIVER`/`QUEUE_CONNECTION=database`.
-3. **IP pública dinámica sin Route 53.** El hostname estable se obtiene con
-   **DuckDNS** (`autotributo-staging.duckdns.org`). Un timer de systemd actualiza
-   el registro A al arrancar y cada 5 minutos. Caddy emite y renueva el
-   certificado Let's Encrypt para ese hostname.
-4. **El callback del robot no cambia.** `SRI_ROBOT_CALLBACK_URL` apunta al
+   - Sin contenedor de base de datos ni Valkey: Postgres en **Neon** (free tier,
+     rama `staging`) y `CACHE_STORE`/`SESSION_DRIVER`/`QUEUE_CONNECTION=database`.
+3. **Instancia efímera, no 24/7.** `scripts/staging/ec2-control.sh create`
+   levanta el entorno desde la AMI pública de Ubuntu 24.04 y `destroy --yes`
+   termina la instancia y borra su volumen. La base vive en Neon y la
+   configuración en respaldos locales (`600`) fuera del repositorio; no se crean
+   AMI ni snapshots propios.
+4. **IP pública dinámica sin Route 53 ni Elastic IP.** El hostname estable se
+   obtiene con **DuckDNS** (`autotributo-staging.duckdns.org`). Un timer de
+   systemd actualiza el registro A al arrancar y cada 5 minutos. Caddy emite y
+   renueva el certificado Let's Encrypt para ese hostname.
+5. **El callback del robot no cambia.** `SRI_ROBOT_CALLBACK_URL` apunta al
    hostname de DuckDNS, no a la IP. La Lambda sigue llamando a la misma URL
-   aunque la instancia se apague y encienda. Para M1 se usa
+   aunque la instancia se destruya y se recree. Para M1 se usa
    `SRI_ROBOT_DRIVER=fake` y `SRI_ENVIRONMENT=1`; no se usan credenciales reales.
-5. Base de datos: proyecto/rama **Neon `staging`** separada. Nunca se comparte
-   con producción.
-6. Almacenamiento: volumen Docker local para M1. Al activar M2/robot real se
+6. Base de datos: proyecto **Neon `staging`** separado, host directo (sin
+   `-pooler`) y `DB_SSLMODE=require`. Nunca se comparte con producción.
+7. Almacenamiento: volumen Docker local para M1. Al activar M2/robot real se
    cambia a los buckets `autotributo-staging-app` y `autotributo-staging-sri`
    (`docs/aws-s3-setup.md`).
-7. Secretos: `.env` en el servidor con permisos `600`, nunca en git. El deploy
+8. Secretos: `.env` en el servidor con permisos `600`, nunca en git. El deploy
    por CI usa GitHub Secrets. `APP_KEY`, `SRI_CREDENTIALS_KEY`, secretos de
    Reverb y HMAC se generan para staging.
-8. Deploy: `scripts/staging/deploy.sh` (git pull, build de assets, imagen,
+9. Deploy: `scripts/staging/deploy.sh` (git pull, build de assets, imagen,
    migraciones y health check) y workflow manual `deploy-staging.yml`. Se puede
    activar en `push` a `main` cuando el entorno esté estable.
-9. Cuando se compre el dominio, staging pasará a
-   `staging.autotributo.com` con el DNS/TLS definitivo y se retirará DuckDNS.
-   La migración a Laravel Cloud es el destino de producción.
+10. Cuando se compre el dominio, staging pasará a
+    `staging.autotributo.com` con el DNS/TLS definitivo y se retirará DuckDNS.
+    La migración a Laravel Cloud es el destino de producción.
 
 ## Consecuencias
 
 **Positivas**
 
-- Coste muy bajo: compute cubierto por free tier (verificar vigencia); el gasto
-  fijo real es la IPv4 pública (~USD 3,65/mes) mientras la instancia está
-  encendida.
+- Coste en reposo **USD 0**: sin EC2, sin EBS y sin IPv4 no hay nada que
+  facturar. Encendida cuesta ~USD 0,019/h (compute + EBS + IPv4) y el free tier
+  de la organización puede cubrirlo; el modelo efímero no depende de eso.
 - Paridad razonable con producción: mismo PHP, Laravel, colas, scheduler,
   Reverb, migraciones y contrato OpenAPI.
 - Callback estable sin IP elástica ni Route 53.
-- Se puede apagar la instancia fuera del horario de UAT para ahorrar compute e
-  IPv4; al arrancar, DuckDNS vuelve a apuntar a la nueva IP.
+- Destruir la instancia es seguro: los datos están en Neon y la configuración
+  en respaldos locales, así que no se pierde nada al recrear.
 
 **Negativas y límites**
 
 - Punto único de fallo: sin HA, sin autoescalado, sin rolling deploy real.
 - 1 GB de RAM es ajustado. Se mitiga con 2 GB de swap, `pm.max_children=4`,
   límites de memoria por servicio, un solo worker y builds de assets en el host.
+- Recrear el entorno tarda 20–30 minutos (assets + imagen + certificado), así
+  que no sirve para pruebas improvisadas de un minuto.
+- El certificado de Let's Encrypt se vuelve a emitir en cada `create`; el límite
+  de 5 duplicados por semana obliga a espaciar los ciclos.
 - Dependencia de DuckDNS (tercero) para DNS/TLS. Aceptable para staging;
   inaceptable para producción.
 - Deriva respecto a Cloud: colas `database` en vez de SQS, Reverb propio en vez
   de cluster gestionado. El runbook debe probar los mismos flujos, no la misma
   infraestructura.
-- La IPv4 dinámica **también se cobra** mientras la instancia corre. No usar IP
+- La IPv4 pública **también se cobra** mientras la instancia corre. No usar IP
   elástica ahorra la IP reservada, no el cobro de IPv4 pública.
 - No se permiten datos reales, credenciales SRI de producción ni correos reales
   masivos. Staging usa datos sintéticos y el ambiente de pruebas del SRI.
@@ -104,3 +112,31 @@ requisitos de alta disponibilidad y un solo servidor es suficiente.
 - Los comandos de build/deploy y el contrato de variables se mantienen alineados
   con `docs/06` para que el traslado a Laravel Cloud sea principalmente de
   infraestructura.
+
+## Enmienda 2026-11-18: staging efímero y base en Neon
+
+**Motivo.** El crédito de AWS (~USD 177,92) está reservado para el lanzamiento
+BETA. El staging 24/7 consumía ~USD 29/mes entre RDS (~15), EC2, EBS e IPv4;
+`stop` no bastaba porque el volumen y la IPv4 de la instancia detenida siguen
+facturando.
+
+**Cambios.**
+
+1. **RDS eliminada.** La base se migró a un proyecto Neon free tier
+   (`autotributo_staging`, PostgreSQL 18, host directo) con `pg_dump`/`pg_restore`.
+   Se validaron los conteos de 12 tablas clave antes de borrar la instancia RDS
+   sin snapshot final. El esquema y los datos siguen versionados por migraciones;
+   el respaldo lógico local queda fuera de git.
+2. **`ec2-control.sh` pasa a `create` / `destroy` / `status`.** `destroy --yes`
+   respalda `.env` y `duckdns.env` en `~/.config/autotributo/` y termina la
+   instancia; al tener `DeleteOnTermination=true`, el EBS desaparece con ella.
+   `create` reconstruye desde la AMI pública de Ubuntu 24.04, sin AMI propia, sin
+   snapshot y sin Elastic IP, y ejecuta provisión + deploy completos.
+3. **Free tier y organización.** El free tier es uno por organización (cuenta
+   pagadora), no por cuenta miembro; se verifica en Billing desde el payer. El
+   modelo efímero hace que el coste sea USD 0 en reposo con independencia de esa
+   elegibilidad.
+
+**Consecuencia operativa.** Ya no existe `stop`/`start` como estrategia de
+ahorro: el ciclo es `create` → probar → `destroy --yes`. El detalle vive en
+`docs/13-aws-staging-deployment.md`.

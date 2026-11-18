@@ -9,7 +9,7 @@
 | Fase | Estado | Avance | Último hito |
 |---|---|---|---|
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
-| F1 · Núcleo tenant-ready | Completado | 11/11 | F1-11 · Staging en AWS (EC2, RDS, DuckDNS, TLS, deploy, smoke tests) |
+| F1 · Núcleo tenant-ready | Completado | 11/11 | F1-11 · Staging efímero en AWS (EC2, Neon, DuckDNS, TLS, deploy, smoke tests) |
 | F2 · Ingesta SRI | Completado | 12/12 + F2-13 | F2-13 · Carga manual de XML (`US-14`) |
 | F3 · Motor fiscal + IA | En curso | 6/9 | F3-05 · Revisión humana de clasificaciones |
 | F4 · Frontend | En curso | 1/11 + fundaciones/auth parciales | F4-02 · Design system (tokens, 11 componentes y Vitest) |
@@ -37,7 +37,7 @@
 | F1-08 | Reverb | Completado | — | `routes/channels.php` con `tenant.{tenantId}.company.{companyId}` y `tenant.{tenantId}.user.{userId}` (membresía + empresa del tenant) · `POST /api/v1/broadcasting/auth` · `GET /api/v1/realtime/status` sin secretos · `BroadcastServiceProvider` carga canales en `boot()` · 7 tests nuevos |
 | F1-09 | Convenciones de API | Completado | **P0** | `ProblemDetails` + handlers (incl. 403), filtros declarativos `filter[...]` con compatibilidad hacia atrás, OpenAPI Scramble versionado y test de sincronización, Pint/PHPStan en verde · base del contrato para F2-09 y F4 |
 | F1-10 | Provisión inicial | Completado | — | `app:provision` idempotente: tenant, cuatro roles por tenant, owner, membresía y enlace de contraseña; `--no-invite`/`--resend-invite`; valida slug en modo single · 6 tests / 27 assertions (#47) |
-| F1-11 | Deploy a staging | Completado | P1 | ADR-0008 (EC2 única, RDS, DuckDNS/TLS) · `docker-compose.staging.yml` (app, queue, scheduler, reverb, Caddy) · target `staging` del Dockerfile, entrypoint con espera de BD y `optimize` · `scripts/staging/{deploy,provision-host,duckdns-update,ec2-control}.sh` + timer systemd · `.env.staging.example` · workflow manual `deploy-staging.yml` · runbook `docs/13-aws-staging-deployment.md`. Provisionado en AWS (us-east-2): EC2 `t3.micro`, RDS `db.t3.micro`, DuckDNS, Let's Encrypt. Smoke tests OK: /up, login (2FA required), containers healthy, scheduler, queue, TLS válido |
+| F1-11 | Deploy a staging | Completado | P1 | ADR-0008 (EC2 única y efímera, Neon, DuckDNS/TLS) · `docker-compose.staging.yml` (app, queue, scheduler, reverb, Caddy) · target `staging` del Dockerfile, entrypoint con espera de BD y `optimize` · `scripts/staging/{deploy,provision-host,duckdns-update,ec2-control}.sh` + timer systemd · `.env.staging.example` · workflow manual `deploy-staging.yml` · runbook `docs/13-aws-staging-deployment.md`. Provisionado en AWS (us-east-2): EC2 `t3.micro`, base Neon free tier, DuckDNS, Let's Encrypt. Smoke tests OK: /up, login (2FA required), containers healthy, scheduler, queue, TLS válido. Ciclo `create`/`destroy` validado: coste USD 0 en reposo, sin AMI ni snapshots |
 
 ## Fase 2 · Ingesta SRI
 
