@@ -228,6 +228,7 @@ final readonly class StartSriSync
                 'periods' => $periods,
                 'document_types' => $request->documentTypes,
                 'idempotency_key' => $runKey,
+                'force' => $request->force,
                 'totals' => [
                     'found' => 0,
                     'imported' => 0,

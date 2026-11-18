@@ -127,6 +127,69 @@ describe("SriSyncRunDetailDrawer", () => {
     expect(drawer.text()).toContain("Completado");
   });
 
+  it("no cuenta como avance los XML que todavía no están en S3", async () => {
+    store.selectedRun = {
+      ...baseRun,
+      status: "downloading",
+      is_active: true,
+      poll_after_ms: 5000,
+      totals: { found: 0, imported: 0, skipped: 0, failed: 0 },
+      progress: null,
+      error_code: null,
+      error_message: null,
+    };
+    store.selectedFiles = [
+      { id: 1, status: "available", error_code: null, import_outcome: null },
+      { id: 2, status: "available", error_code: null, import_outcome: null },
+      ...Array.from({ length: 24 }, (_, index) => ({
+        id: index + 3,
+        status: "missing",
+        error_code: null,
+        import_outcome: null,
+      })),
+    ];
+
+    const drawer = await mountDrawer();
+
+    // 2 archivos disponibles de 26: la descarga va por 22 %, no por 92 %.
+    expect(drawer.text()).toContain("22%");
+    expect(drawer.text()).not.toContain("92%");
+  });
+
+  it("no muestra el aviso transitorio del parser mientras el run sigue activo", async () => {
+    store.selectedRun = {
+      ...baseRun,
+      status: "downloading",
+      is_active: true,
+      poll_after_ms: 5000,
+      error_code: "incomplete_package",
+      error_message: "El paquete del robot tiene archivos vacíos o claves inconsistentes.",
+    };
+
+    const drawer = await mountDrawer();
+
+    expect(drawer.alertTitle()?.textContent).toBe("Detalle de la sincronización");
+    expect(drawer.text()).not.toContain("Paquete del robot incompleto");
+  });
+
+  it("no marca 100 % un run fallido que no encontró comprobantes", async () => {
+    store.selectedRun = {
+      ...baseRun,
+      status: "failed",
+      is_active: false,
+      poll_after_ms: null,
+      totals: { found: 0, imported: 0, skipped: 0, failed: 0 },
+      progress: null,
+      error_code: "no_documents",
+      error_message: "El robot no encontró comprobantes recibidos para el período consultado.",
+    };
+
+    const drawer = await mountDrawer();
+
+    expect(drawer.text()).toContain("0%");
+    expect(drawer.text()).not.toContain("100%");
+  });
+
   it("muestra el loader mientras carga y no reutiliza el run anterior", async () => {
     store.selectedLoading = true;
 

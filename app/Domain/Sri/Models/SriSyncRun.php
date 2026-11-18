@@ -67,6 +67,7 @@ final class SriSyncRun extends Model
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
         'manifest_generated_at' => 'datetime',
+        'force' => 'boolean',
     ];
 
     protected static function booted(): void
@@ -123,7 +124,9 @@ final class SriSyncRun extends Model
     /**
      * Porcentaje procesado sobre los documentos encontrados.
      *
-     * `null` cuando el robot todavía no reportó cuántos documentos hay.
+     * `null` cuando el robot todavía no reportó cuántos documentos hay. Un run
+     * activo se queda en 99 aunque ya haya procesado todas las claves: el 100
+     * se reserva para el veredicto final.
      */
     public function progressPercentage(): ?float
     {
@@ -135,10 +138,13 @@ final class SriSyncRun extends Model
         }
 
         $processed = (int) ($totals['imported'] ?? 0)
+            + (int) ($totals['updated'] ?? 0)
             + (int) ($totals['skipped'] ?? 0)
             + (int) ($totals['failed'] ?? 0);
 
-        return round(min(100, ($processed / $found) * 100), 1);
+        $percentage = ($processed / $found) * 100;
+
+        return round(min($this->isActive() ? 99 : 100, $percentage), 1);
     }
 
     public function transitionTo(SriSyncRunStatus $next): void

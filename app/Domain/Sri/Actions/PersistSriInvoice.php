@@ -44,17 +44,18 @@ final readonly class PersistSriInvoice
         string $xml,
         ?SriSyncRun $run = null,
         string $source = Invoice::SOURCE_SRI_ROBOT,
+        bool $force = false,
     ): SriImportResult {
         $checksum = hash('sha256', $xml);
         $now = now();
 
-        $result = DB::transaction(function () use ($company, $data, $xml, $checksum, $run, $source, $now): SriImportResult {
+        $result = DB::transaction(function () use ($company, $data, $xml, $checksum, $run, $source, $now, $force): SriImportResult {
             $invoice = Invoice::query()
                 ->where('company_id', $company->id)
                 ->where('access_key', $data->accessKey)
                 ->first();
 
-            if ($invoice !== null && $invoice->xml_sha256 === $checksum) {
+            if ($invoice !== null && $invoice->xml_sha256 === $checksum && ! ($force || ($run instanceof SriSyncRun && $run->force))) {
                 return new SriImportResult($invoice, SriImportOutcome::Skipped);
             }
 

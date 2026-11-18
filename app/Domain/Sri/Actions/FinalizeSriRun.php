@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Domain\Sri\Actions;
 
 use App\Domain\Sri\Data\SriChunkImportResult;
+use App\Domain\Sri\Enums\SriDocumentType;
+use App\Domain\Sri\Enums\SriSyncRunFileStatus;
 use App\Domain\Sri\Enums\SriSyncRunStatus;
 use App\Domain\Sri\Models\SriSyncRun;
+use Throwable;
 
 /**
  * Cierra un run de sincronización basándose en el resultado acumulado o en
@@ -24,13 +27,36 @@ final readonly class FinalizeSriRun
             return $run;
         }
 
+        // Segunda pasada: los XML que llegaron a S3 después de que su bloque
+        // de importación ya había corrido quedaban como `available` sin
+        // importarse. Antes de cerrar, se reconcilia contra S3 y se importan
+        // esos archivos para que no se pierdan ni queden sin resultado. Es
+        // best-effort: si S3 no está disponible (p. ej. en tests), se omite.
+        if ($run->status === SriSyncRunStatus::Parsing || $run->status === SriSyncRunStatus::Downloading) {
+            try {
+                $reconcile = app(ReconcileSriRun::class);
+                $run = $reconcile->handle($run);
+
+                if ($run->status === SriSyncRunStatus::Parsing) {
+                    $this->importLateFiles($run, app(ImportSriKeys::class));
+                }
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        if ($run->status->isFinal()) {
+            return $run->refresh();
+        }
+
+        if ($run->status !== SriSyncRunStatus::Parsing) {
+            return $run->refresh();
+        }
+
         if ($result === null) {
             $result = $this->aggregateFromFiles($run);
         }
 
-        // `ParseSriRun` dejó en `totals.found` cuántas claves debía importar el
-        // run. Si el batch perdió un bloque, esas claves no tienen fila: el run
-        // no puede cerrarse como completo solo porque no hay fallos guardados.
         $expected = (int) ($run->totals['found'] ?? 0);
         $missing = max(0, $expected - $result->found);
         $failed = $result->failed + $missing;
@@ -70,6 +96,70 @@ final readonly class FinalizeSriRun
         $run->transitionTo($status);
 
         return $run->refresh();
+    }
+
+    /**
+     * Importa los XML que llegaron tarde a S3 y quedaron como `available` sin
+     * resultado. Evita que un comprobante válido se quede sin procesar solo
+     * porque su bloque ya había corrido.
+     */
+    private function importLateFiles(SriSyncRun $run, ImportSriKeys $keys): void
+    {
+        $files = $run->files()
+            ->where('s3_key', 'like', '%-xml/%')
+            ->where('status', SriSyncRunFileStatus::Available)
+            ->whereNull('import_outcome')
+            ->get();
+
+        if ($files->isEmpty()) {
+            return;
+        }
+
+        $groups = [];
+
+        foreach ($files as $file) {
+            $type = $file->document_type;
+
+            if (! $type instanceof SriDocumentType || $file->s3_key === null) {
+                continue;
+            }
+
+            $period = $this->periodOfXmlKey($file->s3_key);
+
+            if ($period === null) {
+                continue;
+            }
+
+            $accessKey = basename((string) $file->file_name, '.xml');
+
+            if ($accessKey === '' || $accessKey === '.xml') {
+                continue;
+            }
+
+            $groups[$period.'|'.$type->value] ??= [
+                'period' => $period,
+                'type' => $type,
+                'keys' => [],
+            ];
+
+            $groups[$period.'|'.$type->value]['keys'][] = $accessKey;
+        }
+
+        foreach ($groups as $group) {
+            try {
+                $keys->handle($run, $group['type'], $group['period'], $group['keys']);
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
+    }
+
+    private function periodOfXmlKey(string $s3Key): ?string
+    {
+        $pattern = '/\/(\d{4}-(?:0[1-9]|1[0-2]))\/'
+            .'[a-z-]+-recibidas-\d{4}-(?:0[1-9]|1[0-2])-xml\/\d{49}\.xml$/';
+
+        return preg_match($pattern, $s3Key, $matches) === 1 ? $matches[1] : null;
     }
 
     private function aggregateFromFiles(SriSyncRun $run): SriChunkImportResult

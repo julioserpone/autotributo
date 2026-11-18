@@ -104,10 +104,34 @@ it('primero reconcilia un run en downloading y luego lo interpreta', function ()
         ->and($result['batches'])->toHaveCount(1);
 });
 
-it('deja el run en partial cuando falta un tipo solicitado', function (): void {
+it('no marca incompleto un tipo solicitado que el manifiesto no declaró', function (): void {
     publishPeriod($this->company, '2026-09', SriDocumentType::Invoice);
 
     $run = ($this->parsedRun)(['01', '04']);
+
+    $result = $this->action->handle($run);
+
+    // El robot solo publica los tipos con resultados: no tener notas de crédito
+    // en el período no convierte el paquete en incompleto.
+    expect($result['run']->status)->toBe(SriSyncRunStatus::Parsing)
+        ->and($result['run']->error_code)->toBeNull()
+        ->and($result['batches'])->toHaveCount(1);
+});
+
+it('marca incompleto el tipo que el manifiesto declaró y no produjo lote', function (): void {
+    publishPeriod($this->company, '2026-09', SriDocumentType::Invoice);
+    $run = ($this->parsedRun)(['01', '04']);
+
+    // El manifiesto del período declara una nota de crédito, pero el robot no
+    // publicó ni TXT ni XML para ese tipo.
+    $path = ReconcileFixtures::path($this->company, '2026-09');
+    $manifest = json_decode(
+        Storage::disk('sri')->get($path->manifest()),
+        true,
+        flags: JSON_THROW_ON_ERROR,
+    );
+    $manifest['descargas'][] = ['tipo' => SriDocumentType::CreditNote->value];
+    Storage::disk('sri')->put($path->manifest(), json_encode($manifest, JSON_THROW_ON_ERROR));
 
     $result = $this->action->handle($run);
 

@@ -10,6 +10,8 @@ use App\Domain\Sri\Contracts\SriInvoiceParser;
 use App\Domain\Sri\Data\SriImportResult;
 use App\Domain\Sri\Enums\SriDocumentType;
 use App\Domain\Sri\Enums\SriImportOutcome;
+use App\Domain\Sri\Enums\SriSyncRunStatus;
+use App\Domain\Sri\Models\SriSyncRun;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -111,6 +113,27 @@ it('es idempotente: el mismo XML no duplica filas', function (): void {
         ->and(InvoiceItem::query()->where('invoice_id', $first->invoice->id)->count())->toBe(2);
 });
 
+it('re-importa el comprobante cuando se fuerza aunque el XML no cambió', function (): void {
+    $key = AccessKeyFactory::make();
+    $xml = str_replace('{{CLAVE}}', $key, (string) file_get_contents(
+        __DIR__.'/../../Fixtures/xml/invoice/factura.xml',
+    ));
+    $data = $this->parser->parse($xml);
+
+    $first = $this->persist->handle($this->company, $data, $xml);
+    $second = $this->persist->handle(
+        $this->company,
+        $data,
+        $xml,
+        null,
+        Invoice::SOURCE_SRI_ROBOT,
+        true,
+    );
+
+    expect($first->outcome)->toBe(SriImportOutcome::Created)
+        ->and($second->outcome)->toBe(SriImportOutcome::Updated)
+        ->and(Invoice::query()->where('access_key', $key)->count())->toBe(1);
+});
 it('actualiza el comprobante cuando el XML cambió', function (): void {
     $key = AccessKeyFactory::make();
     $original = str_replace('{{CLAVE}}', $key, (string) file_get_contents(
@@ -129,6 +152,32 @@ it('actualiza el comprobante cuando el XML cambió', function (): void {
         ->and($second->invoice->first_seen_at->equalTo($first->invoice->first_seen_at))->toBeTrue();
 });
 
+it('re-importa el comprobante cuando el run fue forzado aunque el XML no cambió', function (): void {
+    $key = AccessKeyFactory::make();
+    $xml = str_replace('{{CLAVE}}', $key, (string) file_get_contents(
+        __DIR__.'/../../Fixtures/xml/invoice/factura.xml',
+    ));
+    $data = $this->parser->parse($xml);
+
+    $run = SriSyncRun::query()->create([
+        'tenant_id' => $this->tenant->id,
+        'company_id' => $this->company->id,
+        'status' => SriSyncRunStatus::Parsing,
+        'date_from' => '2026-10-01',
+        'date_to' => '2026-10-31',
+        'periods' => ['2026-10'],
+        'document_types' => ['01'],
+        'idempotency_key' => 'forced-'.uniqid(),
+        'force' => true,
+        'totals' => ['found' => 1, 'imported' => 0, 'skipped' => 0, 'failed' => 0],
+    ]);
+
+    $first = $this->persist->handle($this->company, $data, $xml);
+    $second = $this->persist->handle($this->company, $data, $xml, $run);
+
+    expect($first->outcome)->toBe(SriImportOutcome::Created)
+        ->and($second->outcome)->toBe(SriImportOutcome::Updated);
+});
 it('marca los comprobantes con totales inconsistentes sin corregirlos', function (): void {
     $key = AccessKeyFactory::make();
     $xml = str_replace(

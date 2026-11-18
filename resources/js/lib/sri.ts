@@ -52,7 +52,8 @@ export function syncErrorLabel(code: string | null | undefined): string {
 /** Estados de archivo (`sri_sync_run_files.status`). */
 export const fileStatusLabels: Record<string, string> = {
     pending: 'Pendiente',
-    available: 'Disponible',
+    available: 'En S3',
+
     missing: 'No encontrado',
     invalid: 'Inválido',
     processed: 'Procesado',
