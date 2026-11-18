@@ -2,7 +2,7 @@
 
 > Tabla viva del proyecto. Se actualiza al cerrar cada tarea (una tarea = un commit/PR). La fuente de verdad del alcance sigue siendo `docs/02-implementation-plan.md`.
 
-**Última actualización:** 2026-11-16
+**Última actualización:** 2026-11-18
 
 ## Resumen por fase
 
@@ -114,6 +114,10 @@
 | #71 | Layout Laravel Cloud sobre Nuxt UI, tema claro/oscuro y bandeja con vista previa | F4-04 |
 | #72 | Bandeja de comprobantes: endpoint cursor + filtros, drawer de detalle y selección | F4-05 |
 | #73 | Monitor de sincronización: progreso en vivo, polling y errores por archivo | F4-06 |
+| #74 | Refinamiento del monitor SRI y textos de dominio | F4-06 |
+| #75 | Alineación de rutas de componentes del monitor | F4-06 |
+| #76 | Identidad de ejecución del robot, importación manual y sondeo sin callback | F2-10d |
+| #77 | Sondeo automático de S3 sin callback y reconciliación cada 5 min | F2-10d |
 
 ## Cómo actualizar
 

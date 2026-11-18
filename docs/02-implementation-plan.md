@@ -106,6 +106,7 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | F2-08 | Persistencia idempotente | 2 d | `upsert` por `access_key`; ítems, impuestos, retenciones; deduplicación; `source` |
 | F2-09 | Progreso en vivo | 1 d | **F2-09a (P0):** endpoint de estado con contadores + polling cada 5 s; entrega valor sin depender de Reverb. **F2-09b (P1):** eventos Reverb + canales privados. La tarea se cierra cuando ambas partes están verdes |
 | F2-10 | Resiliencia | 1,5 d | Reintentos con backoff, fallos parciales, archivos inválidos, timeouts, run `partial` |
+| F2-10d | Identidad de ejecución y sondeo sin callback | 1 d | Manifiesto v2 con `ejecucion`/`ejecuciones[]`, validación de `event_id` y frescura por `generadoEn`, comando `sri:import-manual`, `AwaitSriRobotResultJob` y reconciliación cada 5 min | F2-10c |
 | F2-11 | Límites y cuotas | 0,5 d | Concurrencia 1 por RUC, rate limit configurable, bloqueo de runs solapados |
 | F2-12 | Observabilidad | 0,5 d | Logs con `run_id`, métricas de duración/volumen, alerta de fallos |
 | F2-13 | Carga manual de XML (`US-14`) | 2 d | Upload de XML autorizado, validación de estructura/clave/totales, `source=manual_upload`, cuarentena si hay inconsistencias, límites XXE/zip bomb. **Nueva tarea derivada del backlog** |
