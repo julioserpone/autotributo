@@ -2,13 +2,14 @@
 # =============================================================================
 # Prepara una EC2 Ubuntu 24.04 recién creada para staging (ADR-0008).
 #
-# Ejecutar como root (sudo). Es idempotente: se puede repetir tras clonar el
+# Ejecutar como root (sudo). Es idempotent: se puede repetir tras clonar el
 # repositorio para instalar las unidades de systemd.
 #
 #   sudo ./scripts/staging/provision-host.sh
 #
-# Instala Docker, Node 24, swap, UFW y el timer de DuckDNS. No clona el repo ni
-# escribe secretos: eso lo hace el runbook (docs/13).
+# Instala Docker, swap, UFW y el timer de DuckDNS. No clona el repo ni
+# escribe secretos: eso lo hace el runbook (docs/13). Node/npm no se instalan
+# en el host: la app se sirve desde la imagen completa de GHCR (opcion E).
 # =============================================================================
 set -euo pipefail
 
@@ -63,12 +64,6 @@ if id "$DEPLOY_USER" >/dev/null 2>&1; then
     usermod -aG docker "$DEPLOY_USER"
 else
     log "el usuario ${DEPLOY_USER} no existe; ajusta DEPLOY_USER"
-fi
-
-log "instalando Node 24"
-if ! command -v node >/dev/null 2>&1 || [[ "$(node -v)" != v24* ]]; then
-    curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
-    apt-get install -y nodejs
 fi
 
 log "configurando swap (${SWAP_SIZE})"

@@ -89,6 +89,24 @@ EXPOSE 9000
 CMD ["php-fpm"]
 
 # -----------------------------------------------------------------------------
+# Assets: compila los assets de Vite (CSS/JS) en una imagen Node.
+# Se copian al stage `staging` para que la imagen final sea autocontenida y no
+# dependa de `npm` en la instancia (ADR-0008, opcion E).
+# -----------------------------------------------------------------------------
+FROM node:24-alpine AS assets
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
+COPY resources ./resources
+COPY vite.config.ts tsconfig.json auto-imports.d.ts components.d.ts ./
+COPY public ./public
+
+RUN npm run build
+
+# -----------------------------------------------------------------------------
 # Staging: imagen inmutable para la instancia EC2 (ADR-0008).
 #
 # Diferencias con `prod`:
@@ -112,6 +130,9 @@ COPY --chown=app:app composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction --no-progress
 
 COPY --chown=app:app . .
+# Assets compilados en el stage `assets` (Vite). Se copian despues del codigo
+# para que no queden ocultos por un `public/build` stale del contexto.
+COPY --from=assets --chown=app:app /app/public/build ./public/build
 # El contexto puede traer bootstrap/cache de desarrollo (ver .dockerignore).
 # Se regenera el manifiesto de paquetes dentro de la imagen sin caché de config.
 RUN rm -f bootstrap/cache/*.php \
