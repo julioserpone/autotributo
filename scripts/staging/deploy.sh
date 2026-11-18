@@ -9,14 +9,15 @@
 # Requisitos en el host:
 #   - Repositorio en /opt/autotributo (o APP_DIR).
 #   - `.env` de staging (copiado de `.env.staging.example` y completado).
-#   - Docker + Compose plugin, Node 24 y make/curl/git.
+#   - Docker + Compose plugin, curl, git.
 #
-# Pasos:
-#   1. Actualiza el código a origin/main (reset duro: staging no tiene cambios).
-#   2. Compila los assets en el host (`npm ci && npm run build`).
-#   3. Construye la imagen y aplica migraciones.
-#   4. Recrea los servicios y espera los healthchecks.
-#   5. Verifica https://STAGING_HOSTNAME/up.
+# Pasos (flujo por defecto, sin APP_IMAGE):
+#   1. Actualiza el código a origin/main.
+#   2. Construye la imagen (assets en el stage 'assets' de Docker, base en GHCR).
+#   3. Aplica migraciones, recrea servicios y verifica /up.
+#
+# Si APP_IMAGE está definido en .env, se usa el modo turbo: docker pull de la
+# imagen completa y extracción de public/ (sin git pull ni build).
 # =============================================================================
 set -euo pipefail
 
@@ -26,10 +27,13 @@ BRANCH="${BRANCH:-main}"
 LOCK_FILE="${LOCK_FILE:-/tmp/autotributo-staging-deploy.lock}"
 HEALTH_ATTEMPTS="${HEALTH_ATTEMPTS:-30}"
 HEALTH_SLEEP="${HEALTH_SLEEP:-5}"
+
+# Lee APP_IMAGE de .env si no viene por entorno (sin comillas).
 APP_IMAGE="${APP_IMAGE:-}"
-# Si .env define APP_IMAGE, usarla (imagen completa de la app en GHCR).
-if [[ -z "$APP_IMAGE" ]]; then
-    APP_IMAGE="$(grep -E '^APP_IMAGE=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d '\"' | tr -d \"'\" || true)"
+if [[ -z "$APP_IMAGE" && -f .env ]]; then
+    APP_IMAGE="$(sed -n 's/^APP_IMAGE=//p' .env | tail -n1)"
+    APP_IMAGE="${APP_IMAGE#\"}"; APP_IMAGE="${APP_IMAGE%\"}"
+    APP_IMAGE="${APP_IMAGE#\'}"; APP_IMAGE="${APP_IMAGE%\'}"
 fi
 
 log() {
@@ -52,28 +56,13 @@ if ! flock -n 9; then
     fail "hay otro deploy en curso (${LOCK_FILE})"
 fi
 
-STAGING_HOSTNAME="$(grep -E '^STAGING_HOSTNAME=' .env | tail -n1 | cut -d= -f2- | tr -d '"' | tr -d "'")"
+STAGING_HOSTNAME="$(sed -n 's/^STAGING_HOSTNAME=//p' .env | tail -n1)"
+STAGING_HOSTNAME="${STAGING_HOSTNAME#\"}"; STAGING_HOSTNAME="${STAGING_HOSTNAME%\"}"
+STAGING_HOSTNAME="${STAGING_HOSTNAME#\'}"; STAGING_HOSTNAME="${STAGING_HOSTNAME%\'}"
 [[ -n "$STAGING_HOSTNAME" ]] || fail "STAGING_HOSTNAME está vacío en .env"
 
-if [[ "$SKIP_GIT_PULL" == "1" ]]; then
-    log "SKIP_GIT_PULL=1: se usa el código ya presente (rollback manual)"
-else
-    log "actualizando código desde origin/${BRANCH}"
-    git fetch --prune origin "$BRANCH"
-    git reset --hard "origin/${BRANCH}"
-fi
-
-# Conserva secretos, storage, assets compilados y dependencias locales.
-git clean -fd \
-    -e .env \
-    -e storage \
-    -e public/build \
-    -e public/storage \
-    -e node_modules \
-    -e vendor
-
 if [[ -n "$APP_IMAGE" ]]; then
-    log "usando imagen completa de la app: ${APP_IMAGE}"
+    log "modo turbo: usando imagen completa ${APP_IMAGE}"
     log "descargando imagen"
     docker pull "$APP_IMAGE"
     docker tag "$APP_IMAGE" autotributo/php:staging
@@ -84,8 +73,24 @@ if [[ -n "$APP_IMAGE" ]]; then
     docker cp "$tmp_container:/var/www/html/public/." ./public/ 2>/dev/null || true
     docker rm "$tmp_container" >/dev/null 2>&1 || true
 else
-    log "compilando assets en el stage 'assets' de Docker (sin Node en el host)"
-    log "construyendo imagen de la aplicación"
+    if [[ "${SKIP_GIT_PULL:-0}" == "1" ]]; then
+        log "SKIP_GIT_PULL=1: se usa el código ya presente (rollback manual)"
+    else
+        log "actualizando código desde origin/${BRANCH}"
+        git fetch --prune origin "$BRANCH"
+        git reset --hard "origin/${BRANCH}"
+    fi
+
+    # Conserva secretos, storage, assets compilados y dependencias locales.
+    git clean -fd \
+        -e .env \
+        -e storage \
+        -e public/build \
+        -e public/storage \
+        -e node_modules \
+        -e vendor
+
+    log "construyendo imagen (assets en el stage 'assets' de Docker, base en GHCR)"
     docker compose -f "$COMPOSE_FILE" --env-file .env build --pull app
 fi
 
