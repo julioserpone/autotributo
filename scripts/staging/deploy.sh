@@ -84,10 +84,7 @@ if [[ -n "$APP_IMAGE" ]]; then
     docker cp "$tmp_container:/var/www/html/public/." ./public/ 2>/dev/null || true
     docker rm "$tmp_container" >/dev/null 2>&1 || true
 else
-    log "compilando assets"
-    npm ci --no-audit --no-fund
-    npm run build
-
+    log "compilando assets en el stage 'assets' de Docker (sin Node en el host)"
     log "construyendo imagen de la aplicación"
     docker compose -f "$COMPOSE_FILE" --env-file .env build --pull app
 fi
