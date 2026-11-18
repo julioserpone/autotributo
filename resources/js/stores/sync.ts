@@ -17,6 +17,8 @@ export type SyncRunStatus =
 export interface SyncRunTotals {
     found: number;
     imported: number;
+    /** Comprobantes que ya existían y se volvieron a importar con `force`. */
+    updated?: number;
     skipped: number;
     failed: number;
 }
@@ -98,8 +100,16 @@ export const useSyncStore = defineStore('sync', () => {
         }
     }
 
+    /**
+     * Carga el historial de runs.
+     *
+     * `loading` solo se activa en la primera carga, cuando no hay nada que
+     * mostrar. El monitor refresca la lista cada 5 s mientras haya un run
+     * activo: si ese refresco volviera a marcar `loading`, el historial se
+     * reemplazaría por «Cargando…» y parecería vaciarse en cada tick.
+     */
     async function fetchRuns(): Promise<void> {
-        loading.value = true;
+        loading.value = runs.value.length === 0;
         error.value = null;
 
         try {

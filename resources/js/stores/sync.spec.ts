@@ -1,11 +1,35 @@
 import { createPinia, setActivePinia } from 'pinia';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { getJson } = vi.hoisted(() => ({ getJson: vi.fn() }));
+
+vi.mock('@/lib/api', () => ({ getJson, postJson: vi.fn() }));
 
 import { useSyncStore } from '@/stores/sync';
 
-describe('useSyncStore.monthsBetween', () => {
+const runPayload = {
+    id: '01M7QJ2WTVR78F2H5D6SBJAF8N',
+    company_id: null,
+    status: 'downloading',
+    is_active: true,
+    poll_after_ms: 5000,
+    date_from: '2026-08-01',
+    date_to: '2026-08-31',
+    periods: ['2026-08'],
+    document_types: ['01'],
+    totals: { found: 24, imported: 20, skipped: 0, failed: 0 },
+    progress: 83.3,
+    error_code: null,
+    error_message: null,
+    started_at: null,
+    finished_at: null,
+    created_at: null,
+};
+
+describe('useSyncStore', () => {
     beforeEach(() => {
         setActivePinia(createPinia());
+        vi.clearAllMocks();
     });
 
     it('devuelve el mismo período cuando el rango es un solo mes', () => {
@@ -33,5 +57,37 @@ describe('useSyncStore.monthsBetween', () => {
         expect(store.monthsBetween('2026-13', '2026-14')).toEqual([]);
         expect(store.monthsBetween('', '2026-10')).toEqual([]);
         expect(store.monthsBetween('2026-10', 'octubre')).toEqual([]);
+    });
+
+    it('marca loading solo en la primera carga del historial', async () => {
+        let resolveFirst: (value: unknown) => void = () => {};
+        getJson.mockImplementationOnce(() => new Promise((resolve) => {
+            resolveFirst = resolve;
+        }));
+
+        const store = useSyncStore();
+        const first = store.fetchRuns();
+
+        expect(store.loading).toBe(true);
+
+        resolveFirst({ data: [runPayload] });
+        await first;
+
+        expect(store.loading).toBe(false);
+        expect(store.runs).toHaveLength(1);
+    });
+
+    it('no vuelve a loading cuando refresca un historial ya cargado', async () => {
+        getJson.mockResolvedValue({ data: [runPayload] });
+
+        const store = useSyncStore();
+        await store.fetchRuns();
+
+        const refresh = store.fetchRuns();
+
+        // La lista sigue en pantalla: el refresco es silencioso.
+        expect(store.loading).toBe(false);
+
+        await refresh;
     });
 });
