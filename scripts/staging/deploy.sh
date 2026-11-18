@@ -26,7 +26,11 @@ BRANCH="${BRANCH:-main}"
 LOCK_FILE="${LOCK_FILE:-/tmp/autotributo-staging-deploy.lock}"
 HEALTH_ATTEMPTS="${HEALTH_ATTEMPTS:-30}"
 HEALTH_SLEEP="${HEALTH_SLEEP:-5}"
-SKIP_GIT_PULL="${SKIP_GIT_PULL:-0}"
+APP_IMAGE="${APP_IMAGE:-}"
+# Si .env define APP_IMAGE, usarla (imagen completa de la app en GHCR).
+if [[ -z "$APP_IMAGE" ]]; then
+    APP_IMAGE="$(grep -E '^APP_IMAGE=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d '\"' | tr -d \"'\" || true)"
+fi
 
 log() {
     printf '[deploy] %s\n' "$*"
@@ -68,12 +72,25 @@ git clean -fd \
     -e node_modules \
     -e vendor
 
-log "compilando assets"
-npm ci --no-audit --no-fund
-npm run build
+if [[ -n "$APP_IMAGE" ]]; then
+    log "usando imagen completa de la app: ${APP_IMAGE}"
+    log "descargando imagen"
+    docker pull "$APP_IMAGE"
+    docker tag "$APP_IMAGE" autotributo/php:staging
 
-log "construyendo imagen de la aplicación"
-docker compose -f "$COMPOSE_FILE" --env-file .env build --pull app
+    log "extrayendo assets (public/) desde la imagen al host"
+    tmp_container="autotributo-public-extract-$$"
+    docker create --name "$tmp_container" "$APP_IMAGE" true >/dev/null
+    docker cp "$tmp_container:/var/www/html/public/." ./public/ 2>/dev/null || true
+    docker rm "$tmp_container" >/dev/null 2>&1 || true
+else
+    log "compilando assets"
+    npm ci --no-audit --no-fund
+    npm run build
+
+    log "construyendo imagen de la aplicación"
+    docker compose -f "$COMPOSE_FILE" --env-file .env build --pull app
+fi
 
 log "aplicando migraciones"
 docker compose -f "$COMPOSE_FILE" --env-file .env run --rm --no-deps app \
