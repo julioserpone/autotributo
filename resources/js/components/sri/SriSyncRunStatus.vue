@@ -12,15 +12,16 @@ const syncStore = useSyncStore();
 const isActive = computed(() => syncStore.activeStatuses.includes(props.run.status));
 
 /**
- * Comprobantes procesados del run. Los `skipped` y `failed` cuentan igual que
- * los `imported`/`updated`: ya se intentaron y no quedan pendientes.
+ * Comprobantes procesados con éxito. Los `skipped` cuentan igual que los
+ * `imported`/`updated` (ya se intentaron y no quedan pendientes); los
+ * `failed` se excluyen para que el avance refleje lo que realmente se
+ * importó/omitió y deje visible si hay archivos con error.
  */
 const processed = computed(() => Math.min(
     props.run.totals.found,
     (props.run.totals.imported ?? 0)
         + (props.run.totals.updated ?? 0)
-        + (props.run.totals.skipped ?? 0)
-        + (props.run.totals.failed ?? 0),
+        + (props.run.totals.skipped ?? 0),
 ));
 </script>
 
