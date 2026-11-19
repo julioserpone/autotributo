@@ -2,7 +2,7 @@
 
 > Tabla viva del proyecto. Se actualiza al cerrar cada tarea (una tarea = un commit/PR). La fuente de verdad del alcance sigue siendo `docs/02-implementation-plan.md`.
 
-**Última actualización:** 2026-11-18
+**Última actualización:** 2026-11-19
 
 ## Resumen por fase
 
@@ -12,7 +12,7 @@
 | F1 · Núcleo tenant-ready | Completado | 11/11 | F1-11 · Staging efímero en AWS (EC2, Neon, DuckDNS, TLS, deploy, smoke tests) |
 | F2 · Ingesta SRI | Completado | 12/12 + F2-13 | F2-13 · Carga manual de XML (`US-14`) |
 | F3 · Motor fiscal + IA | En curso | 6/9 | F3-05 · Revisión humana de clasificaciones |
-| F4 · Frontend | En curso | 1/11 + fundaciones/auth parciales | F4-02 · Design system (tokens, 11 componentes y Vitest) |
+| F4 · Frontend | En curso | 2/11 + fundaciones/auth parciales | F4-04 · Layout Dashboard de Nuxt UI con tema Mint (PR pendiente) |
 | F5 · Declaraciones | Pendiente | 0/8 | — |
 | F6 · Hardening y beta | Pendiente | 0/8 | — |
 
@@ -75,6 +75,7 @@
 | ID | Tarea | Estado | Prioridad | Evidencia |
 |---|---|---|---|---|
 | F4-01 | Fundaciones | Parcial | P1 | Vite, Vue 3.5 + TypeScript estricto, Tailwind 4, router, Pinia y cliente HTTP con CSRF/errores; F4-02 añade la base de shadcn-vue (`reka-ui`, `class-variance-authority`, `clsx`, `tailwind-merge`) y el entorno de Vitest con stubs de layout. **Pendiente:** TanStack Query e i18n |
+| F4-04 | Layout | Completado (PR pendiente) | **P0** | Template Dashboard de Nuxt UI 4.13 (`UDashboardGroup`, `UDashboardSidebar` colapsable/redimensionable, `UDashboardPanel/Navbar/Toolbar/Search`) y tema Mint: `primary: teal`, `neutral: olive`, radio `0.75rem`, botones/inputs píldora, Nunito Variable (500/600/700/800) y JetBrains Mono. `AppShell`, `AppPage`, `AppSidebar`, `AppWorkspaceMenu`, `AppUserMenu`, `AuthLayout` y `lib/navigation.ts` (nav + ⌘K); selector de tema en el menú de usuario. Páginas migradas a `bg-default`/`bg-elevated`/`border-default`/`text-highlighted`/`text-muted`/`text-dimmed`. `useTheme` conserva `colorMode: false`. ADR-0009 enmendado y `docs/14-design-system.md` reescrito · 43 tests, `vue-tsc` y ESLint en verde · verificado en navegador (login, panel, bandeja, monitor y paleta ⌘K; claro y oscuro). |
 | F4-02 | Design system | Completado | **P0** | Tokens semánticos dark-first en `resources/css/app.css` (`#09090b`, `#18181b`, `#27272a`, borde `#262626`, acentos violeta/rojo/verde, radios, sombras y `text-2xs`), tipografía del sistema, `prefers-reduced-motion` y foco visible; `AppField`, `AppButton`, `AppInput`, `AppSelect`, `AppCombobox`, `AppDateRange`, `AppTable` (loading/empty/error, slots y selección), `AppBadge`, `AppModal`, `AppToastHost` y `AppDrawer` con portal, foco atrapado y Escape; `useToast` y `AppToastHost` en `App.vue`; `AppLayout` con enlace de salto y `AppStatusBadge` migrados a tokens; páginas de auth migradas a las utilidades semánticas · 50 tests / 50 assertions · `docs/14-design-system.md`. Verificado en navegador: login dark, sin errores de consola. (#70) |
 
 ## Fases 3–6 · Estado resumido

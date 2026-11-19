@@ -1,125 +1,113 @@
 # 14 — Design system
 
-> Referencia de los tokens y componentes base de la SPA (F4-02, F4-04). La fuente de
-> verdad del alcance sigue siendo `docs/02-implementation-plan.md` §6.
+> Referencia de los tokens y componentes base de la SPA (F4-02, F4-04). La fuente
+> de verdad del alcance sigue siendo `docs/02-implementation-plan.md` §6.
 
 ## Base de componentes (F4-04)
 
-A partir de F4-04 la base de la SPA es **Nuxt UI 4** (`@nuxt/ui`), integrado con
-Vite sin framework Nuxt (ADR-0009). Los componentes se usan con el prefijo `U`
-(`UButton`, `UInput`, `UModal`, `UBadge`, `USlideover`, `UPopover`, `UAlert`,
-`UFormField`, `UCheckbox`, `UIcon`). Los wrappers propios (`AppStatusBadge`,
-`AppThemeToggle`, `AppSidebar`, `AppShell`, `AuthLayout`, `InvoiceTable`) se
-construyen sobre ellos. `reka-ui` se mantiene como dependencia transitiva de
-Nuxt UI, no directa.
+La SPA usa **Nuxt UI 4.13** (`@nuxt/ui`) integrado con Vite, sin framework Nuxt
+(ADR-0009). Los componentes se usan con el prefijo `U` (`UButton`, `UInput`,
+`UModal`, `UBadge`, `USlideover`, `UDropdownMenu`, `UNavigationMenu`, `UAlert`,
+`UFormField`, `UCheckbox`, `UIcon`) y el layout se apoya en los componentes
+`UDashboard*`. Los wrappers propios viven en `components/layout/` y
+`components/` (`AppShell`, `AppPage`, `AppSidebar`, `AppWorkspaceMenu`,
+`AppUserMenu`, `AuthLayout`, `AppStatusBadge`, `InvoiceTable`).
+
+## Tema «Mint»
+
+El tema replica el preset **Mint** del editor de temas de Nuxt UI:
+
+| Aspecto | Valor |
+|---|---|
+| Primario | `teal` |
+| Neutral | `olive` |
+| Radio base | `0.75rem` (`--ui-radius`) |
+| Tipografía | `Nunito Variable` (500/600/700/800) |
+| Monoespaciada | `JetBrains Mono Variable` |
+| Controles | Botones, inputs y selects tipo píldora (`rounded-full`) |
+| Inputs/selects | Variante `soft` por defecto |
+
+La configuración de color y variantes vive en el bloque `ui` de
+`vite.config.ts`. En `resources/css/app.css` solo quedan los overrides que el
+preset expresa en CSS: el lienzo claro tintado (fondo `neutral-50`, superficies
+suaves `neutral-100`), los pesos tipográficos y el radio.
 
 ## Principios
 
-- **Dark-first.** El producto se usa de noche y durante jornadas largas: el
-  lienzo `#09090b` reduce fatiga y hace que los importes y estados destaquen.
-- **Tokens semánticos, no colores crudos.** Los componentes usan `bg-surface`,
-  `border-line` o `text-muted`; nunca `zinc-800` o `violet-600`. Cambiar el tema
-  es editar `:root` en `resources/css/app.css`.
+- **Tokens semánticos, no colores crudos.** Los componentes usan
+  `bg-default`, `bg-elevated`, `border-default`, `text-highlighted`, `text-muted`
+  o `text-dimmed`; nunca `teal-500` u `olive-800`. Cambiar de tema es editar el
+  bloque `ui` de Vite y los overrides de `app.css`.
+- **Claro y oscuro con la misma jerarquía.** `useTheme` alterna `.dark`/`.light`
+  en `<html>`; el tema oscuro es el valor por defecto.
 - **Accesible por defecto.** Foco visible, etiquetas asociadas, `aria-invalid`,
   `role="alert"` en errores, contraste AA y `prefers-reduced-motion`.
 - **Sin lógica de negocio.** Los componentes reciben datos y emiten eventos;
   las decisiones fiscales viven en el backend.
 
-## Tokens
+## Layout
 
-Definidos en `resources/css/app.css` (`:root` + `@theme inline`).
+`AppShell` envuelve la aplicación autenticada:
 
-| Token | Valor | Uso |
-|---|---|---|
-| `--canvas` | `#09090b` | Fondo de la aplicación y de los controles |
-| `--surface` | `#18181b` | Tarjetas, cabecera, paneles y modales |
-| `--raised` | `#27272a` | Filas, botones secundarios y hover |
-| `--line` | `#262626` | Bordes por defecto |
-| `--line-strong` | `#3f3f46` | Bordes de controles y separadores fuertes |
-| `--ink` | `#fafafa` | Texto principal |
-| `--muted` | `#a1a1aa` | Texto secundario |
-| `--faint` | `#71717a` | Placeholders, ayudas y metadatos |
-| `--accent` | `#7c3aed` | Acción primaria y foco |
-| `--accent-hover` | `#6d28d9` | Hover de la acción primaria |
-| `--accent-soft` | `#2e1065` | Fondo de badges/avisos violeta |
-| `--accent-ink` | `#c4b5fd` | Texto violeta sobre fondo oscuro |
-| `--danger` | `#dc2626` | Acción destructiva y error |
-| `--danger-soft` | `#450a0a` | Fondo de error |
-| `--danger-ink` | `#fca5a5` | Texto de error sobre fondo oscuro |
-| `--success` | `#10b981` | Éxito y estados completados |
-| `--success-soft` | `#052e2b` | Fondo de éxito |
-| `--success-ink` | `#6ee7b7` | Texto de éxito |
-| `--warning` | `#f59e0b` | Advertencia y estados en curso |
-| `--warning-soft` | `#451a03` | Fondo de advertencia |
-| `--warning-ink` | `#fcd34d` | Texto de advertencia |
+```
+UDashboardGroup
+├── AppSidebar (UDashboardSidebar colapsable y redimensionable)
+│   ├── AppWorkspaceMenu (empresa activa)
+│   ├── UDashboardSearchButton
+│   ├── UNavigationMenu (plataforma)
+│   ├── UNavigationMenu (sistema, anclado abajo)
+│   └── AppUserMenu (tema + cerrar sesión)
+├── UDashboardSearch (⌘K, grupos desde lib/navigation.ts)
+└── <slot> → AppPage
+```
 
-Utilidades derivadas: `bg-canvas`, `bg-surface`, `bg-raised`, `border-line`,
-`text-ink`, `text-muted`, `text-accent-ink`, `rounded-control`,
-`rounded-card`, `shadow-panel` y `text-2xs`.
+`AppPage` (`components/layout/AppPage.vue`) aporta:
 
-La tipografía usa la pila del sistema con `Inter` al frente (`--font-sans`) y
-una monoespaciada para claves de acceso y códigos (`--font-mono`).
+- `UDashboardPanel` con `id` estable según el nombre de ruta.
+- `UDashboardNavbar` con título, `UDashboardSidebarCollapse`, acciones
+  (`#actions`) y `AppStatusBadge`.
+- `UDashboardToolbar` opcional (`#toolbar` / `#toolbar-right`).
+- `<main id="contenido">` como destino del enlace «Saltar al contenido».
 
-## Componentes
+La navegación compartida entre la barra lateral y la paleta de comandos está en
+`resources/js/lib/navigation.ts`; una entrada sin `route` se muestra con la
+etiqueta «Pronto» y deshabilitada.
+
+## Componentes propios
 
 | Componente | Archivo | Notas |
 |---|---|---|
-| `AppField` | `components/ui/AppField.vue` | Etiqueta, ayuda y error con `aria-describedby` compartido |
-| `AppButton` | `components/ui/AppButton.vue` | Variantes `primary`, `secondary`, `ghost`, `danger`; `loading` con `aria-busy` |
-| `AppInput` | `components/ui/AppInput.vue` | `v-model`, `label`, `hint`, `error`, `required`, `maxlength` |
-| `AppSelect` | `components/ui/AppSelect.vue` | Select nativo accesible; conserva el tipo del valor |
-| `AppCombobox` | `components/ui/AppCombobox.vue` | Búsqueda y filtrado con `reka-ui`; limpieza opcional |
-| `AppDateRange` | `components/ui/AppDateRange.vue` | Rango `{from,to}` con validación y botón Limpiar |
-| `AppTable` | `components/ui/AppTable.vue` | Estados loading/empty/error, slots por celda y selección múltiple |
-| `AppBadge` | `components/ui/AppBadge.vue` | Tonos `neutral`, `accent`, `success`, `warning`, `danger` |
-| `AppModal` | `components/ui/AppModal.vue` | Diálogo con foco atrapado, Escape y portal |
-| `AppDrawer` | `components/ui/AppDrawer.vue` | Panel lateral izquierdo/derecho sobre el mismo diálogo |
-| `AppToastHost` | `components/ui/AppToastHost.vue` | Pila de notificaciones; se monta una vez en `App.vue` |
+| `AppShell` | `layouts/AppShell.vue` | Grupo Dashboard, sidebar, paleta y skip link |
+| `AppPage` | `components/layout/AppPage.vue` | Panel + navbar + toolbar + `main` |
+| `AppSidebar` | `components/layout/AppSidebar.vue` | Menús, búsqueda y pie de usuario |
+| `AppWorkspaceMenu` | `components/layout/AppWorkspaceMenu.vue` | Selector de empresa activa |
+| `AppUserMenu` | `components/layout/AppUserMenu.vue` | Usuario, tema y cierre de sesión |
+| `AuthLayout` | `layouts/AuthLayout.vue` | Tarjeta centrada para login y 2FA |
+| `AppStatusBadge` | `components/AppStatusBadge.vue` | Estado de la API en la navbar |
+| `InvoiceTable` | `components/invoices/InvoiceTable.vue` | Tabla de comprobantes con filtros |
+| `SriSyncRun*` | `components/sri/` | Historial, estado y detalle de sincronizaciones |
 
-Los tipos compartidos (`Tone`, `TableColumn`, `DateRangeValue`, etc.) viven en
-`components/ui/types.ts` y se reexportan desde `components/ui/index.ts`.
-
-### Ejemplos
+### Ejemplo de página
 
 ```vue
-<AppInput
-  v-model="email"
-  label="Correo"
-  type="email"
-  autocomplete="username"
-  :error="errors.email"
-/>
+<template>
+  <AppShell>
+    <AppPage
+      title="Bandeja de comprobantes"
+      description="Comprobantes recibidos y emitidos ante el SRI."
+    >
+      <template #actions>
+        <UButton
+          color="primary"
+          icon="i-lucide-plus"
+          label="Nueva consulta"
+        />
+      </template>
 
-<AppTable
-  :columns="columns"
-  :rows="invoices"
-  :loading="loading"
-  :error="error"
-  selectable
-  @update:selected="selected = $event"
->
-  <template #cell-total="{ value }">
-    <span class="tabular-nums">{{ formatMoney(value) }}</span>
-  </template>
-</AppTable>
-
-<AppModal v-model:open="confirmOpen" title="Confirmar revisión">
-  <p>¿Aceptar la categoría sugerida?</p>
-  <template #footer>
-    <AppButton variant="ghost" @click="confirmOpen = false">Cancelar</AppButton>
-    <AppButton :loading="saving" @click="accept">Aceptar</AppButton>
-  </template>
-</AppModal>
-```
-
-Notificaciones:
-
-```ts
-import { useToast } from '@/lib/toast';
-
-const toast = useToast();
-toast.success('Comprobante importado', { description: 'Factura 001-001-000000123' });
-toast.error('No se pudo guardar la revisión');
+      <InvoiceTable :invoices="rows" />
+    </AppPage>
+  </AppShell>
+</template>
 ```
 
 ## Accesibilidad
@@ -127,27 +115,24 @@ toast.error('No se pudo guardar la revisión');
 - Todo control tiene etiqueta asociada (`for`/`id`) y el error se anuncia con
   `role="alert"`.
 - Los diálogos usan `role="dialog"`, `aria-modal`, título obligatorio y foco
-  atrapado; Escape y el backdrop cierran salvo `dismissible=false`.
+  atrapado; Escape y el backdrop cierran salvo configuración contraria.
 - Las notificaciones usan `role="status"`/`aria-live="polite"` y los errores
   `role="alert"`/`aria-live="assertive"`.
-- El foco visible usa el token `--accent` con `outline-offset: 2px`.
+- El foco visible usa el color primario con `outline-offset: 2px`.
 - `prefers-reduced-motion` reduce animaciones y transiciones a 0,01 ms.
-- La cabecera incluye un enlace «Saltar al contenido» visible al enfocar.
+- `AppShell` incluye un enlace «Saltar al contenido» visible al enfocar.
 
 ## Dependencias
 
-Se añadieron las bases de shadcn-vue que exige `docs/01-architecture.md`:
-
-- `reka-ui` (Radix Vue) para diálogos, portales y combobox accesibles.
-- `class-variance-authority` para variantes tipadas de Button y Badge.
-- `clsx` + `tailwind-merge` para el helper `cn()`.
-
-No se añade una librería de iconos: los pocos iconos necesarios son SVG
-inline y no engordan el bundle.
+- `@nuxt/ui@^4.13` (incluye Reka UI, Tailwind Variants y iconos como
+  dependencias internas).
+- `@fontsource-variable/nunito` y `@fontsource-variable/jetbrains-mono`.
+- `@iconify-json/lucide` para el set de iconos `i-lucide-*`.
+- `pinia`, `vue-router`, `uqr` (QR del 2FA).
 
 ## Pruebas
 
-`npm run test:unit -- --run` cubre 50 casos de componentes: variantes, estados
-loading/empty/error, validación, teclado, selección y cierre de overlays. El
-entorno de jsdom completa las APIs de layout que `reka-ui` necesita
-(`resources/js/test/setup.ts`).
+`npx vitest run` cubre layouts, páginas y componentes con jsdom. Las páginas se
+montan con `stubs: { AppSidebar: true, UDashboardSearch: true }` para aislar el
+contenido. `vitest.config.ts` amplía `testTimeout`/`hookTimeout` a 20 s porque
+los overlays de Nuxt UI tardan en montar bajo carga.
