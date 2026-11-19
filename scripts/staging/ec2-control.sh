@@ -7,7 +7,8 @@
 # instancia desaparecen el volumen EBS y la IPv4 pública.
 #
 # Uso:
-#   ./scripts/staging/ec2-control.sh create
+#   ./scripts/staging/ec2-control.sh create           # imagen completa (rápido)
+#   ./scripts/staging/ec2-control.sh create --source   # build en la instancia
 #   ./scripts/staging/ec2-control.sh status
 #   ./scripts/staging/ec2-control.sh destroy --yes
 #
@@ -15,7 +16,7 @@
 #   - Nunca asigna Elastic IP: la subnet asigna una IPv4 pública temporal que
 #     se libera al terminar la instancia.
 #   - Nunca crea AMI ni snapshot: cada "create" parte de la AMI pública de
-#     Ubuntu 24.04.
+#     Ubuntu 24.04 y del código de la imagen `autotributo-staging:staging`.
 #   - El volumen raíz es DeleteOnTermination=true y se borra con la instancia.
 #   - t3.micro en modo "standard" para no pagar CPU credits extra.
 #
@@ -40,6 +41,13 @@ SSH_USER="${SSH_USER:-ubuntu}"
 APP_DIR="${APP_DIR:-/opt/autotributo}"
 REPO_URL="${REPO_URL:-https://github.com/julioserpone/autotributo.git}"
 BACKUP_DIR="${BACKUP_DIR:-$HOME/.config/autotributo}"
+# Imagen completa de GHCR (código + vendor + assets). `create` la usa por defecto.
+APP_IMAGE_DEFAULT="${APP_IMAGE_DEFAULT:-ghcr.io/julioserpone/autotributo-staging:staging}"
+# `--source` despliega el código del repositorio sin imagen: solo para depurar
+# el build del contenedor en la instancia.
+DEPLOY_SOURCE="${DEPLOY_SOURCE:-0}"
+APP_IMAGE_PATH=""
+APP_IMAGE_TAG=""
 AMI_OWNER="${AMI_OWNER:-099720109477}"
 AMI_NAME_FILTER="${AMI_NAME_FILTER:-ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*}"
 
@@ -95,6 +103,26 @@ resolve_subnet() {
 staging_hostname() {
     sed -n 's/^STAGING_HOSTNAME=//p' "$BACKUP_DIR/staging.env" \
         | tail -n1 | tr -d '"' | tr -d "'"
+}
+
+parse_app_image() {
+    local remainder tag
+    remainder="${1#ghcr.io/}"
+    tag="latest"
+    if [[ "$remainder" == *:* ]]; then
+        tag="${remainder##*:}"
+        remainder="${remainder%%:*}"
+    fi
+    APP_IMAGE_PATH="$remainder"
+    APP_IMAGE_TAG="$tag"
+}
+
+# Imagen completa efectiva: la del respaldo o la de GHCR por defecto.
+staging_app_image() {
+    local image
+    image="$(sed -n 's/^APP_IMAGE=//p' "$BACKUP_DIR/staging.env" \
+        | tail -n1 | tr -d '"' | tr -d "'")"
+    printf '%s' "${image:-$APP_IMAGE_DEFAULT}"
 }
 
 wait_ssh() {
@@ -170,7 +198,7 @@ install -m 600 /tmp/staging.env "$APP_DIR/.env"
 rm -f /tmp/staging.env
 REMOTE
 
-    log "provisionando el host (Docker, Node, swap, UFW, DuckDNS)"
+    log "provisionando el host (Docker, swap, UFW, DuckDNS)"
     # shellcheck disable=SC2029
     ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
         "sudo $APP_DIR/scripts/staging/provision-host.sh"
@@ -183,11 +211,46 @@ REMOTE
     log "desplegando la aplicación"
     # shellcheck disable=SC2029
     ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
-        "cd $APP_DIR && ./scripts/staging/deploy.sh"
+        "cd $APP_DIR && APP_IMAGE='$(staging_app_image)' ./scripts/staging/deploy.sh"
 }
 
 cmd_create() {
     [[ -f "$KEY_FILE" ]] || fail "no existe la clave SSH: $KEY_FILE"
+
+    case "${1:-}" in
+        --source) DEPLOY_SOURCE=1 ;;
+        "") ;;
+        *) fail "argumento desconocido para create: $1 (usa --source o nada)" ;;
+    esac
+
+    mkdir -p "$BACKUP_DIR"
+    chmod 700 "$BACKUP_DIR"
+    [[ -f "$BACKUP_DIR/staging.env" ]] \
+        || fail "falta $BACKUP_DIR/staging.env (respaldo del .env de staging)"
+
+    local app_image
+    app_image=""
+    if [[ "$DEPLOY_SOURCE" != "1" ]]; then
+        app_image="$(staging_app_image)"
+        # Una imagen privada rompería el bootstrap a mitad: la instancia no tiene
+        # credenciales de GHCR. Se comprueba que el manifiesto sea anónimo.
+        local anonymous_token status
+        parse_app_image "$app_image"
+        anonymous_token="$(curl -sS --max-time 20 \
+            "https://ghcr.io/token?scope=repository:${APP_IMAGE_PATH}:pull&service=ghcr.io" \
+            2>/dev/null | sed -n 's/.*"token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' || true)"
+        status="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
+            -H "Authorization: Bearer ${anonymous_token}" \
+            -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
+            "https://ghcr.io/v2/${APP_IMAGE_PATH}/manifests/${APP_IMAGE_TAG}" \
+            2>/dev/null || true)"
+        if [[ "$status" != "200" ]]; then
+            fail "${app_image} no se puede descargar sin login (HTTP ${status:-000}): haz el paquete público en GitHub Packages, o usa 'create --source'"
+        fi
+        log "imagen ${app_image} descargable sin login"
+    else
+        log "create --source: sin imagen; la instancia solo construye el contenedor"
+    fi
 
     local existing
     existing="$(find_instance)"
@@ -195,10 +258,6 @@ cmd_create() {
         fail "ya existe la instancia $existing; ejecuta 'destroy --yes' antes de crear otra"
     fi
 
-    mkdir -p "$BACKUP_DIR"
-    chmod 700 "$BACKUP_DIR"
-    [[ -f "$BACKUP_DIR/staging.env" ]] \
-        || fail "falta $BACKUP_DIR/staging.env (respaldo del .env de staging)"
     [[ -f "$BACKUP_DIR/duckdns.env" ]] \
         || fail "falta $BACKUP_DIR/duckdns.env (respaldo del token DuckDNS)"
     [[ -n "$(staging_hostname)" ]] \
@@ -336,11 +395,11 @@ cmd_status() {
 }
 
 case "${1:-}" in
-    create)  cmd_create ;;
+    create)  shift; cmd_create "${1:-}" ;;
     destroy) shift; cmd_destroy "${1:-}" ;;
     status)  cmd_status ;;
     *)
-        printf 'Uso: %s {create|destroy --yes|status}\n' "$0" >&2
+        printf 'Uso: %s {create [--source]|destroy --yes|status}\n' "$0" >&2
         exit 1
         ;;
 esac

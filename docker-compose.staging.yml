@@ -18,7 +18,9 @@ x-app: &app
   build:
     context: .
     dockerfile: docker/php/Dockerfile
-    target: staging
+    # Target `app`: solo copia el código sobre la base de GHCR (PHP + Node +
+    # Composer ya instalados). Este build NO ejecuta Composer, npm ni artisan.
+    target: app
     args:
       UID: ${UID:-1000}
       GID: ${GID:-1000}
@@ -34,9 +36,12 @@ x-app: &app
   volumes:
     # Persistente y compartido: logs, sesiones, caché, vistas y adjuntos.
     # El usuario del contenedor (UID 1000) es el mismo que el usuario ubuntu.
+    # También guarda los sellos de Composer/assets (storage/.deploy), que son
+    # los que evitan reinstalar dependencias en cada deploy.
     - ./storage:/var/www/html/storage
     # Assets de Vite y enlace de storage creados en el host. Laravel lee
-    # public/build/manifest.json desde el contenedor `app`.
+    # public/build/manifest.json desde el contenedor `app`. La imagen de GHCR ya
+    # trae `public/build`; el bind mount lo usa para recompilar en caliente.
     - ./public:/var/www/html/public
   networks:
     - autotributo

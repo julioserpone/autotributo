@@ -15,13 +15,13 @@
 | Pieza | Decisión |
 |---|---|
 | Cómputo | 1 × EC2 `t3.micro` (Ubuntu 24.04, `us-east-2`, 30 GB gp3), **efímera** |
-| Imagen de app | `autotributo/php:staging`, construida sobre una base pública en GHCR (`autotributo-php-base:8.5`) para no compilar extensiones en la instancia |
+| Imagen de app | `autotributo/autotributo-staging:staging` (GHCR, pública): código + assets ya compilados; la instancia solo descarga y monta |
 | Ciclo de vida | `scripts/staging/ec2-control.sh {create,destroy,status}` |
 | Orquestación | Docker Compose (`docker-compose.staging.yml`) |
 | Servicios | `app` (PHP-FPM 8.5), `queue`, `scheduler`, `reverb`, `web` (Caddy 2) |
 | Base de datos | **Neon** free tier (PostgreSQL 18, host directo, `sslmode=require`), proyecto `autotributo-staging` |
 | Caché / sesiones / colas | Postgres (`database`) — sin Valkey |
-| Assets | `npm ci && npm run build` en el host; `public/` se monta en `app` y Caddy |
+| Assets | compilados en CI (imagen de GHCR) o en caliente con `npm run build` dentro del contenedor; `public/` se monta en `app` y Caddy |
 | WebSockets | Reverb en la red interna; Caddy hace proxy de `/app/*` y `/apps/*` |
 | TLS | Let's Encrypt automático de Caddy |
 | DNS | DuckDNS (`autotributo-staging.duckdns.org`), IP dinámica |
@@ -106,7 +106,8 @@ Crea **AWS Budgets** con alarmas a USD 5 y USD 10 antes de provisionar.
 ### 4.2 Crear la instancia
 
 ```bash
-./scripts/staging/ec2-control.sh create
+./scripts/staging/ec2-control.sh create           # imagen de GHCR + código de main
+./scripts/staging/ec2-control.sh create --source # sin imagen: build en la instancia
 ```
 
 El script hace todo el ciclo y no necesita consola de AWS:
@@ -114,25 +115,74 @@ El script hace todo el ciclo y no necesita consola de AWS:
 1. Resuelve la **AMI pública más reciente** de Ubuntu 24.04 (`ami-…`) y la
    subred por defecto de `us-east-2a`.
 2. Crea una `t3.micro` con 30 GB gp3 cifrado y `DeleteOnTermination=true`,
-   `CpuCredits=standard`, IMDSv2 obligatorio y sin Elastic IP.
+   `CpuCredits=standard`, IMDSv2 obligatorio y sin Elastic IP. Antes comprueba
+   que la imagen de GHCR se pueda descargar sin login (el paquete es público).
 3. Espera SSH, clona el repositorio en `/opt/autotributo`, copia el `.env` y el
    token de DuckDNS desde `~/.config/autotributo/`.
-4. Ejecuta `provision-host.sh` (Docker, Node 24, swap, UFW, timer DuckDNS).
+4. Ejecuta `provision-host.sh` (Docker, swap, UFW, timer DuckDNS). Ni Node ni
+   Composer se instalan en el host: viven en la imagen.
 5. Fuerza la actualización de DuckDNS y **espera a que el registro A apunte a la
    IP nueva**.
-6. Ejecuta `deploy.sh` (assets, imagen, migraciones, healthchecks y `/up`).
+6. Ejecuta `deploy.sh` (pull de la imagen, Composer/Vite en caliente si hace
+   falta, migraciones, healthchecks y `/up`).
 
-`deploy.sh` no compila ni PHP ni assets: si `APP_IMAGE` está definido en el
-`.env` (por defecto `ghcr.io/julioserpone/autotributo-staging:staging`), hace
-`docker pull` de la imagen completa (construida por el workflow
-`build-staging-image.yml`) y extrae `public/` desde ella. El ciclo completo
-`create` tarda ~7–8 minutos. Si cambias código, el workflow se re-ejecuta en
-push a `main` y el siguiente `create` toma la versión nueva automáticamente
-(`--pull`). Si `APP_IMAGE` está vacío, `deploy.sh` vuelve al flujo anterior
-(npm + docker build) usando la imagen base `autotributo-php-base:8.5`.
+### 4.2.1 Qué hace exactamente `deploy.sh`
 
-Al terminar imprime la URL y el coste por hora. Tarda 20–30 minutos la primera
-vez de cada ciclo (build de assets e imagen incluidos).
+Nunca compila PHP ni instala Node o Composer en la instancia. La imagen base
+(`autotributo-php-base:8.5`) ya es el toolchain completo: PHP 8.5 + extensiones
+compiladas + Composer 2 + Node 24 + git + rsync.
+
+1. `git fetch --depth 1 origin main` + `git reset --hard`: el código servido es
+   siempre el de `origin/main`, así que una instancia nueva recibe los cambios
+   nuevos del repositorio sin que tú hagas nada. `storage/` no se toca (git lo
+   ignora) y `build-app.sh` recrea las carpetas de escritura si el volume nace
+   vacío.
+2. `docker pull` de `APP_IMAGE`: se usa como semilla (trae `vendor/` y
+   `public/build` del último commit publicado) y para el contenedor `app`. Si el
+   host no tiene `vendor/`, se siembra desde la imagen.
+3. `scripts/staging/build-app.sh`, dentro del contenedor (como root, porque
+   escribe en el bind mount) y solo si hace falta:
+   - `composer install` si cambió `composer.lock` o falta `vendor/`;
+   - `rm -rf node_modules && npm ci && npm run build` si cambió
+     `package-lock.json`, falta `public/build` o hay recursos más nuevos que el
+     último deploy;
+   - `php artisan package:discover` + `php artisan optimize`.
+   Los sellos se guardan en `storage/.deploy/stamps` (volumen), así que un deploy
+   que solo toca PHP no recompila assets y uno que solo toca el frontend no
+   reinstala Composer. Al final se normalizan permisos (`public/` legible para
+   PHP-FPM, `node_modules` escribible).
+4. Migraciones, recrea servicios y verifica `/up`.
+
+El ciclo `create` completo tarda ~4–6 minutos la primera vez de la imagen y
+unos 2 si todo está caliente; un `deploy.sh` sobre una instancia existente,
+~30 s si solo cambió PHP y ~1–2 min si hubo que recompilar Vite.
+
+**Sobre «traer los cambios después de la imagen»:** sí. La imagen es solo el
+punto de partida (toolchain + último snapshot); el código se actualiza con
+`git fetch` contra `origin/main` en cada deploy y Composer/Vite corren en
+caliente con las herramientas que ya trae la imagen. Para probar un commit sin
+fusionar: publica el repo en una rama y usa `REPO_URL`/`BRANCH`, o construye la
+imagen con `workflow_dispatch` desde esa rama y apunta `APP_IMAGE` a su tag `:<sha>`.
+
+`build-staging-image.yml` publica primero la base (toolchain) y después la
+imagen completa, y solo cuando **CI terminó en verde** (`workflow_run`). Si `CI`
+no ha corrido desde un cambio de `docker/php/Dockerfile`, ejecuta
+`build-php-base.yml` a mano antes de `create`.
+
+### 4.2.2 Refrescar la imagen sin reconstruir el toolchain
+
+Para publicar un código nuevo en la imagen sin pagar la instalación de PHP
+extensiones o Node (`scripts/staging/image-refresh.sh`, se ejecuta en tu máquina):
+
+```bash
+REF=main IMAGE_TAG_REF=ghcr.io/julioserpone/autotributo-staging:main \
+  PUSH=1 ./scripts/staging/image-refresh.sh
+```
+
+Abre la imagen `:staging` como contenedor, sincroniza el código con `rsync`,
+ejecuta Composer/Vite solo si los locks cambiaron y hace `docker commit` del
+delta. Cambiar una línea de PHP cuesta segundos; un cambio de frontend, un par de
+minutos de Vite. La instancia lo consume con `APP_IMAGE=…:main ./scripts/staging/deploy.sh`.
 
 Referencia del security group `autotributo-staging-sg` (ya creado; el script lo
 reutiliza):
@@ -149,6 +199,56 @@ actualiza la regla 22 antes de `create`: sin ella el script no puede provisionar
 
 **No asignes Elastic IP.** La instancia recibe una IPv4 pública temporal que se
 libera al destruirla; DuckDNS la actualiza.
+
+### 4.2.3 Si el sitio no carga desde tu máquina
+
+Un `create` puede terminar bien y el sitio no abrir. Casi siempre es la **red de
+origen**, no la instancia ni DuckDNS. Orden de diagnóstico (de dentro hacia fuera):
+
+```bash
+# 1. ¿DuckDNS apunta a la IP de la instancia?
+dig +short autotributo-staging.duckdns.org @1.1.1.1
+./scripts/staging/ec2-control.sh status      # IP real
+
+# 2. ¿Responde dentro de la instancia? (descarta la app, Caddy y el certificado)
+ssh ubuntu@<IP> 'curl -s -o /dev/null -w "%{http_code}\n" \
+  --resolve autotributo-staging.duckdns.org:443:127.0.0.1 \
+  https://autotributo-staging.duckdns.org/up'
+
+# 3. ¿Sale tráfico desde tu red? Si esto se cuelga, el problema es de origen
+nc -z -G 8 <IP> 443; echo "tcp=\$?"
+curl -sS -m 20 -o /dev/null -w '%{http_code}\n' https://autotributo-staging.duckdns.org/up
+```
+
+Interpretación:
+
+| Síntoma | Causa | Acción |
+|---|---|---|
+| `dig` devuelve otra IP | DuckDNS no se actualizó | `sudo systemctl start autotributo-duckdns.service` y espera |
+| Paso 2 falla | app/Caddy/certificado | `docker compose … ps` y logs de `web`/`app` |
+| Paso 3 se cuelga pero el 2 funciona | **tu red de origen bloquea o rompe la ruta** | Cambia de red (datos móviles) o usa otra salida |
+| SSH entra y web no (o al revés) | regla 22 con la IP vieja | actualiza la regla 22 del SG |
+
+**Caso real (2026-11-18):** el sitio no cargaba desde la oficina y sí desde datos
+móviles. DuckDNS resolvía bien, el SG tenía 80/443 abiertos a `0.0.0.0/0`, el
+certificado estaba emitido y `/up` daba 200 dentro de la instancia: era la red
+de origen. No es un fallo del despliegue ni de DuckDNS.
+
+**Caso real (2026-11-18, SSH):** `create` falló a mitad porque la **IP pública
+del operador cambió** (WiFi → nueva sesión) y la regla 22 permitía solo la
+anterior. Síntoma: `ssh: connect to host … port 22: Operation timed out`. El SG
+de staging solo permite `RevokeSecurityGroupIngress` desde un usuario admin;
+con el usuario de staging hay que **añadir** la IP nueva y revocar la vieja
+manualmente:
+
+```bash
+MYIP=$(curl -s https://api.ipify.org)
+aws ec2 authorize-security-group-ingress --group-id "$SG_ID" \
+  --protocol tcp --port 22 --cidr "$MYIP/32"
+```
+
+Para evitar el problema, ejecuta `create` desde la misma red en la que vas a
+usar el entorno, o abre temporalmente 22 desde una IP administrativa fija.
 
 ### 4.3 DuckDNS
 
@@ -211,9 +311,9 @@ sudo ./scripts/staging/provision-host.sh
 ./scripts/staging/deploy.sh
 ```
 
-`provision-host.sh` instala Docker, Node 24, 2 GB de swap, UFW (22/80/443) y el
-timer de DuckDNS. `deploy.sh` actualiza el código, compila assets, construye la
-imagen, aplica migraciones, recrea los servicios y comprueba `/up`.
+`provision-host.sh` instala Docker, 2 GB de swap, UFW (22/80/443) y el timer de
+DuckDNS. `deploy.sh` actualiza el código, aplica migraciones, recrea los
+servicios y comprueba `/up`.
 
 En el `.env`, además de `DB_*` (Neon), ajusta:
 
@@ -259,9 +359,11 @@ docker compose -f docker-compose.staging.yml --env-file .env config --quiet
 
 El script:
 
-1. Actualiza el código a `origin/main`.
-2. Compila los assets (`npm ci && npm run build`).
-3. Construye la imagen `autotributo/php:staging`.
+1. Actualiza el código a `origin/main` (`git fetch --depth 1`).
+2. Descarga la imagen de GHCR (`APP_IMAGE`) o construye el contenedor `app`
+   sobre el toolchain de GHCR (segundos).
+3. Ejecuta Composer y Vite en caliente **solo si** cambió el lock o los recursos
+   (`scripts/staging/build-app.sh`).
 4. Aplica migraciones con `migrate --force`.
 5. Recrea los servicios y espera los healthchecks.
 6. Verifica `https://autotributo-staging.duckdns.org/up`.
@@ -323,10 +425,13 @@ Reverb se consulta con `GET /api/v1/realtime/status` autenticado.
 Staging no se apaga: se destruye. Desde tu máquina local, sin consola de AWS:
 
 ```bash
-./scripts/staging/ec2-control.sh create       # crear y desplegar (20–30 min)
-./scripts/staging/ec2-control.sh status       # estado, IP, AZ y coste/h
-./scripts/staging/ec2-control.sh destroy --yes  # respaldar .env y terminar todo
+./scripts/staging/ec2-control.sh create           # crear y desplegar (~4–6 min)
+./scripts/staging/ec2-control.sh status           # estado, IP, AZ y coste/h
+./scripts/staging/ec2-control.sh destroy --yes    # respaldar .env y terminar todo
 ```
+
+`create --source` despliega el código del repositorio (build del target `app` en
+la instancia): úsalo solo para depurar un commit que aún no está en GHCR.
 
 `destroy` exige `--yes` porque borra la instancia **y su disco**. Antes de
 terminar, copia el `.env` de la instancia y el token de DuckDNS a
@@ -404,7 +509,8 @@ docker builder prune -f
 
 ## 8. Rollback
 
-El deploy normal siempre va a `origin/main`. Para volver a un commit anterior:
+El código servido es el de `origin/main` (o `BRANCH`). Para volver a un commit
+anterior en la instancia:
 
 ```bash
 cd /opt/autotributo
@@ -413,12 +519,22 @@ git reset --hard <sha-anterior>
 SKIP_GIT_PULL=1 ./scripts/staging/deploy.sh
 ```
 
+El SHA desplegado se anuncia en `GET /api/v1/health` (`version`). Si `vendor/` o
+`public/build` quedaron de otro commit, `build-app.sh` los regenera solo (los
+sellos de `storage/.deploy` no coinciden con el lock nuevo).
+
+Si quieres que la instancia arranque directamente desde una imagen concreta,
+publica su tag `:<sha>` y ejecuta
+`APP_IMAGE=ghcr.io/…/autotributo-staging:<sha> SKIP_GIT_PULL=1 ./scripts/staging/deploy.sh`.
+
 Las migraciones son expand/contract (`docs/03`): no se revierte una migración
 destructiva; se corrige hacia adelante.
 
 ## 9. Seguridad
 
-- SSH solo desde tu IP; usuario `ubuntu` con clave, sin contraseña.
+- SSH solo desde tu IP; usuario `ubuntu` con clave, sin contraseña. Si cambia tu
+  IP pública (otra red, reinicio del router), actualiza la regla 22 antes de
+  volver a usar `create`/`destroy` (ver 4.2.3).
 - Sin usuario root para operar; MFA en la cuenta AWS.
 - `APP_DEBUG=false`, `APP_ENV=staging`, `SESSION_SECURE_COOKIE=true`.
 - `.env` con permisos `600`; secretos fuera del repositorio y de las capturas.
@@ -488,6 +604,9 @@ Cuando se compre `autotributo.com` y se habilite Cloud:
 - [x] Neon `staging` responde con `sslmode=require` y migraciones al día.
 - [x] `docker compose -f docker-compose.staging.yml config --quiet` sin errores.
 - [x] `deploy.sh` completa y `/up` devuelve 200 por HTTPS (build de la app sobre la imagen base de GHCR, ~1–2 min).
+- [ ] `create` en menos de 10 min, sin compilar PHP ni instalar Node/Composer en
+      la instancia, con `/api/v1/health` devolviendo el SHA de `origin/main`
+      (pendiente de validar con la imagen nueva).
 - [x] Certificado Let's Encrypt válido y renovable.
 - [x] `app`, `queue`, `scheduler`, `reverb` y `web` healthy.
 - [x] `app:provision` crea el estudio y el owner puede configurar 2FA.

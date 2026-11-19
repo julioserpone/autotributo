@@ -35,6 +35,7 @@ apt-get install -y --no-install-recommends \
     curl \
     git \
     gnupg \
+    rsync \
     unzip \
     ufw
 
@@ -75,6 +76,13 @@ if ! swapon --show | grep -q '/swapfile'; then
     grep -q '^/swapfile' /etc/fstab \
         || printf '/swapfile none swap sw 0 0\n' >> /etc/fstab
 fi
+
+# Composer y Vite corren dentro del contenedor (que ya trae PHP, Composer y
+# Node), así que aquí no se instala nada de eso: solo swap para el pico de
+# memoria del build de assets y del pull.
+log "ajustando swappiness"
+printf 'vm.swappiness=10\n' > /etc/sysctl.d/99-autotributo.conf
+sysctl -q -p /etc/sysctl.d/99-autotributo.conf
 
 log "configurando firewall (22, 80, 443)"
 ufw allow OpenSSH
