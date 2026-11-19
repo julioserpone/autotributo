@@ -19,12 +19,12 @@ Por eso el parseo entra como **puerto + adaptador**:
 
 | Pieza | Rol |
 |---|---|
-| `SriInvoiceParser` (contrato) | Lo que consume el dominio; no menciona el paquete ni DOM |
-| `App\Integrations\Sri\PackageSriInvoiceParser` | Adaptador registrado en `SriServiceProvider` |
+| `SriFiscalDocumentParser` (contrato) | Lo que consume el dominio; no menciona el paquete ni DOM |
+| `App\Integrations\Sri\PackageSriFiscalDocumentParser` | Adaptador registrado en `SriServiceProvider` |
 | `JulioSerpone\SriComprobantes\Comprobante\ComprobanteReader` | Implementación v0.2.0 del paquete (01, 03, 04, 05, 06, 07) |
 
 **Migrado:** desde `v0.2.0` el paquete incluye `ComprobanteReader` y la app ya
-no tiene parser propio; `PackageSriInvoiceParser` solo traduce el DTO del
+no tiene parser propio; `PackageSriFiscalDocumentParser` solo traduce el DTO del
 paquete al del dominio. Lo mismo aplica
 a `SriAccessKey`, que ya delega el módulo 11 en
 `JulioSerpone\SriComprobantes\AccessKey\AccessKeyGenerator`.
@@ -489,13 +489,13 @@ El parser entiende la guía de remisión (`06`), pero el portal de recibidos no
 la ofrece en su desplegable. Por eso `SriDocumentType::syncableCodes()` la
 excluye del payload del robot: enviarla hace fallar la invocación completa y
 `POST /api/v1/sync-runs` la rechaza con `422`.
-El adaptador `PackageSriInvoiceParser` traduce al modelo de la app y aporta:
+El adaptador `PackageSriFiscalDocumentParser` traduce al modelo de la app y aporta:
 
 - XXE desactivado (`LIBXML_NONET`, sin `LIBXML_NOENT`, sin DTD) y límite de
   5 MiB.
 - Montos a centavos con aritmética de cadenas (sin `float`), redondeo al
   centavo.
-- Los totales inconsistentes **no se corrigen**: `SriInvoiceData::totalsMismatch()`
+- Los totales inconsistentes **no se corrigen**: `SriFiscalDocumentData::totalsMismatch()`
   queda en `true` para que F2-08 los registre como hallazgo.
 - `normalizedDescription` (sin acentos, mayúsculas, espacios colapsados) se
   calcula aquí porque es la clave de las reglas y la caché de IA.
@@ -519,7 +519,7 @@ XML en este orden:
    el respaldo desactivado, y respaldo cuando el SRI falla o no entrega el XML.
    Solo usa el archivo registrado si el período está verificado.
 
-Luego lo interpreta y lo guarda con `PersistSriInvoice`. El run guarda
+Luego lo interpreta y lo guarda con `PersistSriFiscalDocument`. El run guarda
 `totals.from_s3` y `totals.from_sri` para auditar el origen de cada corrida:
 
 ```text
@@ -691,7 +691,7 @@ En local, `SRI_AUTHORIZATION_DRIVER=fake` evita golpear el SRI y
 | `tests/Unit/Sri/AccessKeyListParserTest.php` | TXT con BOM/CRLF, líneas inválidas, duplicados y cruce con el JSON de claves |
 | `tests/Feature/Sri/ParseSriRunTest.php` | Run `completed`/`partial`/`failed`, marca de archivos, idempotencia y comando |
 | `tests/Unit/Sri/ComprobanteReaderIntegrationTest.php` | Los seis tipos por el adaptador: totales, ítems, impuestos, retenciones, XXE, tamaño y XML malformado |
-| `tests/Feature/Sri/PersistSriInvoiceTest.php` | Creación, hijos, idempotencia, actualización, aislamiento por empresa y retenciones |
+| `tests/Feature/Sri/PersistSriFiscalDocumentTest.php` | Creación, hijos, idempotencia, actualización, aislamiento por empresa y retenciones |
 | `tests/Feature/Sri/ImportSriRunTest.php` | Importación completa, reimportación sin duplicados, `partial`, `failed`, XML corrupto y comando |
 | `tests/Feature/Sri/ProcessSriRunJobTest.php` | Reparto en lotes según `chunk_size`, importación en cola de extremo a extremo, run fuera de `parsing`, run inexistente, unicidad y cierre tras agotar reintentos |
 | `tests/Feature/Sri/ImportSriChunksTest.php` | Resultado por comprobante, fallos aislados (`invalid_xml`, `sri_unavailable`), lectura desde S3 y job de bloque |

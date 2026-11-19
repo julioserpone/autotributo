@@ -21,7 +21,7 @@ StartSriSync → Lambda (Event) → callback firmado → run en downloading
 ```
 
 Nadie consume el estado `parsing`. Los runs se quedan ahí, y no existe todavía
-la tabla `invoices`. En la práctica:
+la tabla `fiscal_documents`. En la práctica:
 
 | Tarea | ¿Se puede hacer ya? | Motivo |
 |---|---|---|
@@ -65,11 +65,11 @@ La siguiente etapa es **cerrar el tramo de parsing de F2**, empezando por
 | 6 | `sri:parse-run {run}` | Comando idempotente para operar un run puntual sin depender del scheduler | Feature |
 | 7 | Lector de comprobantes (paquete v0.2.0) | 01, 03, 04, 05, 06 y 07 → DTO con cabecera, ítems, impuestos, retenciones y totales; XXE deshabilitado; XML malformado lanza `SriXmlException` sin perder el motivo | Unit en el paquete + integración en la app |
 | 8 | Validación de totales | `total = subtotal − descuento + impuestos + ICE + IRBPNR + propina`; si no cuadra, el DTO expone `totalsMismatch` en lugar de corregirlo | Tabla de casos |
-| 9 | Factories y fixtures | `tests/Fixtures/xml/{invoice,credit_note,debit_note}` con `README.md` por carpeta | — |
+| 9 | Factories y fixtures | `tests/Fixtures/xml/{fiscal_document,credit_note,debit_note}` con `README.md` por carpeta | — |
 | 10 | Documentación | `docs/10-sri-integration.md` actualizado, `docs/09-progress.md` con evidencia | — |
 
 **Fuera de esta rama (siguiente PR):** liquidación de compra y comprobantes de
-retención (F2-06 b), persistencia `invoices`/`invoice_items` (F2-08), consulta al
+retención (F2-06 b), persistencia `fiscal_documents`/`fiscal_document_items` (F2-08), consulta al
 SRI por clave (`SriAuthorizationGateway`) dentro del flujo.
 
 ## 3.1 Decisión sobre `sri-comprobantes-php`
@@ -90,8 +90,8 @@ de la aplicación, y así cualquier consumidor del paquete reutiliza la lectura.
 | Capa | Módulo | Dependencia del paquete |
 |---|---|---|
 | Dominio | `SriAccessKey` | **Sí**: delega el módulo 11 en `AccessKeyGenerator` |
-| Dominio | `SriInvoiceParser` (contrato) | No |
-| Integración | `PackageSriInvoiceParser` | **Sí**: punto único de sustitución |
+| Dominio | `SriFiscalDocumentParser` (contrato) | No |
+| Integración | `PackageSriFiscalDocumentParser` | **Sí**: punto único de sustitución |
 | Implementación | `JulioSerpone\SriComprobantes\Comprobante\ComprobanteReader` (paquete) | **Sí** |
 
 Los tests del lector viven ahora en el paquete

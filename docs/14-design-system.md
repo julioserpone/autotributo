@@ -11,7 +11,7 @@ La SPA usa **Nuxt UI 4.13** (`@nuxt/ui`) integrado con Vite, sin framework Nuxt
 `UFormField`, `UCheckbox`, `UIcon`) y el layout se apoya en los componentes
 `UDashboard*`. Los wrappers propios viven en `components/layout/` y
 `components/` (`AppShell`, `AppPage`, `AppSidebar`, `AppWorkspaceMenu`,
-`AppUserMenu`, `AuthLayout`, `AppStatusBadge`, `InvoiceTable`).
+`AppUserMenu`, `AuthLayout`, `AppStatusBadge`, `FiscalDocumentTable`).
 
 ## Tema «Mint»
 
@@ -84,7 +84,7 @@ etiqueta «Pronto» y deshabilitada.
 | `AppUserMenu` | `components/layout/AppUserMenu.vue` | Usuario, tema y cierre de sesión |
 | `AuthLayout` | `layouts/AuthLayout.vue` | Tarjeta centrada para login y 2FA |
 | `AppStatusBadge` | `components/AppStatusBadge.vue` | Estado de la API en la navbar |
-| `InvoiceTable` | `components/invoices/InvoiceTable.vue` | Tabla de comprobantes con filtros |
+| `FiscalDocumentTable` | `components/fiscal_documents/FiscalDocumentTable.vue` | Tabla de comprobantes con filtros |
 | `SriSyncRun*` | `components/sri/` | Historial, estado y detalle de sincronizaciones |
 
 ### Ejemplo de página
@@ -104,7 +104,7 @@ etiqueta «Pronto» y deshabilitada.
         />
       </template>
 
-      <InvoiceTable :invoices="rows" />
+      <FiscalDocumentTable :fiscal_documents="rows" />
     </AppPage>
   </AppShell>
 </template>

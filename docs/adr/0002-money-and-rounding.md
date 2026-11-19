@@ -43,7 +43,7 @@ Ecuador está dollarizado: no hay conversión de moneda en el MVP.
 ## Reglas de implementación
 
 - Columna: `total_cents bigint not null`.
-- Nunca `$invoice->total / 100` sin formateador; usar `Money::ofMinor($cents, 'USD')`.
+- Nunca `$fiscal_document->total / 100` sin formateador; usar `Money::ofMinor($cents, 'USD')`.
 - Los campos de entrada del usuario en USD se convierten a centavos en el borde (FormRequest/DTO).
 - Los tests de calculadoras incluyen casos de `0.005`, `0.015` y valores con seis decimales.
 
