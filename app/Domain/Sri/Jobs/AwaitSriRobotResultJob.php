@@ -23,7 +23,7 @@ final class AwaitSriRobotResultJob implements ShouldQueue
 {
     use Queueable, TenantAware;
 
-    public int $tries = 1;
+    public int $tries = 31;
 
     public int $timeout = 60;
 
@@ -32,6 +32,10 @@ final class AwaitSriRobotResultJob implements ShouldQueue
         public int $attemptsRemaining = 30,
     ) {
         $this->queue = (string) config('sri.sync.import_queue', 'sri');
+        // El job se re-encola con `release()` hasta agotar `attemptsRemaining`;
+        // `tries` debe cubrir todos esos reintentos, si no el worker lo descarta
+        // a la primera re-encolación.
+        $this->tries = max(1, $attemptsRemaining + 1);
     }
 
     protected function handleInTenant(TenantContext $context): void
