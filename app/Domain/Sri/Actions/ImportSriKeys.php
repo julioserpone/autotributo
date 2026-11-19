@@ -173,8 +173,37 @@ final readonly class ImportSriKeys
      */
     private function fromS3(SriSyncRun $run, ?SriSyncRunFile $file, string $accessKey): array
     {
-        if ($file === null || ! $file->document_type instanceof SriDocumentType) {
-            throw SriXmlException::unreadable();
+        // El archivo en `sri_sync_run_files` puede no estar registrado todavía
+        // (carrera entre la reconciliación y los jobs de importación). En ese
+        // caso se construye en memoria a partir de la clave de acceso para no
+        // descartar un XML que sí existe en S3.
+        $dbFile = $file;
+
+        $type = $file instanceof SriSyncRunFile && $file->document_type instanceof SriDocumentType
+            ? $file->document_type
+            : null;
+
+        if ($type === null) {
+            try {
+                $type = (new SriAccessKey($accessKey))->documentType;
+            } catch (InvalidArgumentException) {
+                throw SriXmlException::unreadable();
+            }
+        }
+
+        if (! $file instanceof SriSyncRunFile || ! is_string($file->s3_key)) {
+            try {
+                $issuedPeriod = (new SriAccessKey($accessKey))->period();
+            } catch (InvalidArgumentException) {
+                throw SriXmlException::unreadable();
+            }
+
+            $company = $run->company()->firstOrFail();
+
+            $file = new SriSyncRunFile([
+                's3_key' => (new SriRobotObjectPath($this->environment, (string) $company->ruc, $issuedPeriod))->xml($type, $accessKey),
+                'document_type' => $type,
+            ]);
         }
 
         try {
