@@ -59,7 +59,7 @@ it('cruza el TXT con el JSON de claves del robot', function (): void {
     $batch = (new PeriodBatchBuilder)->build(
         contents: "{$first}\n{$second}\n",
         period: '2026-09',
-        documentType: SriDocumentType::Invoice,
+        documentType: SriDocumentType::FiscalDocument,
         listedKeys: [$first, $second],
     );
 
@@ -75,7 +75,7 @@ it('reporta claves del JSON que no llegaron en el TXT', function (): void {
     $batch = (new PeriodBatchBuilder)->build(
         contents: "{$first}\n",
         period: '2026-09',
-        documentType: SriDocumentType::Invoice,
+        documentType: SriDocumentType::FiscalDocument,
         listedKeys: [$first, $missing],
     );
 
@@ -90,7 +90,7 @@ it('reporta claves del TXT que el robot no declaró', function (): void {
     $batch = (new PeriodBatchBuilder)->build(
         contents: "{$declared}\n{$extra}\n",
         period: '2026-09',
-        documentType: SriDocumentType::Invoice,
+        documentType: SriDocumentType::FiscalDocument,
         listedKeys: [$declared],
     );
 
@@ -109,7 +109,7 @@ it('descarta claves de otro tipo o período y acepta las de otro emisor', functi
     $batch = (new PeriodBatchBuilder)->build(
         contents: "{$valid}\n{$creditNote}\n{$otherPeriod}\n{$otherIssuer}\n",
         period: '2026-09',
-        documentType: SriDocumentType::Invoice,
+        documentType: SriDocumentType::FiscalDocument,
         listedKeys: [$valid, $otherIssuer],
     );
 
@@ -122,7 +122,7 @@ it('queda vacío cuando el TXT no tiene ninguna clave válida', function (): voi
     $batch = (new PeriodBatchBuilder)->build(
         contents: "basura\n",
         period: '2026-09',
-        documentType: SriDocumentType::Invoice,
+        documentType: SriDocumentType::FiscalDocument,
         listedKeys: [],
     );
 

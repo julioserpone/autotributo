@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Domain\Classification\Enums\MatchType;
 use App\Domain\Classification\Models\ClassificationRule;
 use App\Domain\Classification\Services\ClassificationRuleMatcher;
-use App\Domain\Invoicing\Models\InvoiceItem;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
 
 /**
  * Construye una regla sin persistirla: el matcher solo lee atributos.
@@ -31,9 +31,9 @@ function matcherRule(MatchType $type, string $pattern, array $overrides = []): C
 /**
  * Construye un ítem sin persistirlo.
  */
-function matcherItem(string $description, ?string $mainCode = null, ?string $auxiliaryCode = null): InvoiceItem
+function matcherItem(string $description, ?string $mainCode = null, ?string $auxiliaryCode = null): FiscalDocumentItem
 {
-    $item = new InvoiceItem;
+    $item = new FiscalDocumentItem;
     $item->forceFill([
         'description' => $description,
         'main_code' => $mainCode,

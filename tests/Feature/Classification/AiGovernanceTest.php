@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Domain\Classification\Actions\ClassifyInvoiceItems;
+use App\Domain\Classification\Actions\ClassifyFiscalDocumentItems;
 use App\Domain\Classification\Actions\SyncExpenseCategories;
 use App\Domain\Classification\Contracts\Classifier;
 use App\Domain\Classification\Data\ClassificationSuggestion;
@@ -17,8 +17,8 @@ use App\Domain\Classification\Models\ExpenseCategory;
 use App\Domain\Classification\Models\LlmCall;
 use App\Domain\Classification\Services\LlmCallRecorder;
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
-use App\Domain\Invoicing\Models\InvoiceItem;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
 use App\Integrations\Ai\FakeClassifier;
@@ -29,20 +29,20 @@ uses(RefreshDatabase::class);
 /**
  * @param  array<string, mixed>  $overrides
  */
-function governanceInvoice(int $tenantId, int $companyId, array $overrides = []): Invoice
+function governanceFiscalDocument(int $tenantId, int $companyId, array $overrides = []): FiscalDocument
 {
-    return Invoice::factory()->create([
+    return FiscalDocument::factory()->create([
         'tenant_id' => $tenantId,
         'company_id' => $companyId,
         ...$overrides,
     ]);
 }
 
-function governanceItem(Invoice $invoice, int $line, string $description): InvoiceItem
+function governanceItem(FiscalDocument $fiscal_document, int $line, string $description): FiscalDocumentItem
 {
-    return InvoiceItem::query()->create([
-        'tenant_id' => $invoice->tenant_id,
-        'invoice_id' => $invoice->id,
+    return FiscalDocumentItem::query()->create([
+        'tenant_id' => $fiscal_document->tenant_id,
+        'fiscal_document_id' => $fiscal_document->id,
         'line_number' => $line,
         'description' => $description,
         'normalized_description' => mb_strtoupper($description),
@@ -60,12 +60,12 @@ beforeEach(function (): void {
     app(SyncExpenseCategories::class)->handle();
 
     $this->fake = app(FakeClassifier::class);
-    $this->classify = app(ClassifyInvoiceItems::class);
+    $this->classify = app(ClassifyFiscalDocumentItems::class);
 });
 
 it('registra la llamada con modelo, prompt, tokens, coste y latencia', function (): void {
-    $invoice = governanceInvoice($this->tenant->id, $this->company->id);
-    governanceItem($invoice, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
+    $fiscal_document = governanceFiscalDocument($this->tenant->id, $this->company->id);
+    governanceItem($fiscal_document, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
 
     $this->fake->push(new ClassifierResult(
         suggestion: new ClassificationSuggestion('operativo', 0.95, 'Servicios profesionales'),
@@ -77,7 +77,7 @@ it('registra la llamada con modelo, prompt, tokens, coste y latencia', function 
         provider: 'openai',
     ));
 
-    expect($this->classify->handle($invoice))->toBe(1);
+    expect($this->classify->handle($fiscal_document))->toBe(1);
 
     $call = LlmCall::query()->sole();
     $classification = Classification::query()->sole();
@@ -98,7 +98,7 @@ it('registra la llamada con modelo, prompt, tokens, coste y latencia', function 
 });
 
 it('reutiliza la caché sin volver a llamar al proveedor', function (): void {
-    $first = governanceInvoice($this->tenant->id, $this->company->id);
+    $first = governanceFiscalDocument($this->tenant->id, $this->company->id);
     $firstItem = governanceItem($first, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
 
     $this->fake->pushSuggestion('operativo', 0.95, 'Servicios profesionales');
@@ -107,7 +107,7 @@ it('reutiliza la caché sin volver a llamar al proveedor', function (): void {
 
     $original = LlmCall::query()->sole();
 
-    $second = governanceInvoice($this->tenant->id, $this->company->id);
+    $second = governanceFiscalDocument($this->tenant->id, $this->company->id);
     $secondItem = governanceItem($second, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
 
     expect($this->classify->handle($second))->toBe(1)
@@ -115,11 +115,11 @@ it('reutiliza la caché sin volver a llamar al proveedor', function (): void {
         ->and(LlmCall::query()->count())->toBe(1);
 
     $cached = Classification::query()
-        ->where('invoice_item_id', $secondItem->id)
+        ->where('fiscal_document_item_id', $secondItem->id)
         ->sole();
 
-    expect($firstItem->refresh()->classification_status)->toBe(InvoiceItem::STATUS_AUTO)
-        ->and($secondItem->refresh()->classification_status)->toBe(InvoiceItem::STATUS_AUTO)
+    expect($firstItem->refresh()->classification_status)->toBe(FiscalDocumentItem::STATUS_AUTO)
+        ->and($secondItem->refresh()->classification_status)->toBe(FiscalDocumentItem::STATUS_AUTO)
         ->and($cached->method)->toBe(ClassificationMethod::Cache)
         ->and($cached->llm_call_id)->toBe($original->id)
         ->and($cached->confidence)->toBe(0.95)
@@ -127,7 +127,7 @@ it('reutiliza la caché sin volver a llamar al proveedor', function (): void {
 });
 
 it('no reutiliza la caché cuando cambia la descripción', function (): void {
-    $first = governanceInvoice($this->tenant->id, $this->company->id);
+    $first = governanceFiscalDocument($this->tenant->id, $this->company->id);
     governanceItem($first, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
 
     $this->fake->pushSuggestion('operativo', 0.95)
@@ -135,7 +135,7 @@ it('no reutiliza la caché cuando cambia la descripción', function (): void {
 
     $this->classify->handle($first);
 
-    $second = governanceInvoice($this->tenant->id, $this->company->id);
+    $second = governanceFiscalDocument($this->tenant->id, $this->company->id);
     governanceItem($second, 1, 'ALMUERZO DE TRABAJO');
 
     expect($this->classify->handle($second))->toBe(1)
@@ -146,10 +146,10 @@ it('no reutiliza la caché cuando cambia la descripción', function (): void {
 it('se puede desactivar la caché por configuración', function (): void {
     config(['ai.cache.enabled' => false]);
     app()->forgetInstance(Classifier::class);
-    app()->forgetInstance(ClassifyInvoiceItems::class);
-    $classify = app(ClassifyInvoiceItems::class);
+    app()->forgetInstance(ClassifyFiscalDocumentItems::class);
+    $classify = app(ClassifyFiscalDocumentItems::class);
 
-    $first = governanceInvoice($this->tenant->id, $this->company->id);
+    $first = governanceFiscalDocument($this->tenant->id, $this->company->id);
     governanceItem($first, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
 
     $this->fake->pushSuggestion('operativo', 0.95)
@@ -157,7 +157,7 @@ it('se puede desactivar la caché por configuración', function (): void {
 
     $classify->handle($first);
 
-    $second = governanceInvoice($this->tenant->id, $this->company->id);
+    $second = governanceFiscalDocument($this->tenant->id, $this->company->id);
     governanceItem($second, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
 
     expect($classify->handle($second))->toBe(1)
@@ -168,8 +168,8 @@ it('se puede desactivar la caché por configuración', function (): void {
 it('corta la clasificación automática cuando el presupuesto está agotado', function (): void {
     config(['ai.budget.monthly_usd' => 0.001]);
     app()->forgetInstance(Classifier::class);
-    app()->forgetInstance(ClassifyInvoiceItems::class);
-    $classify = app(ClassifyInvoiceItems::class);
+    app()->forgetInstance(ClassifyFiscalDocumentItems::class);
+    $classify = app(ClassifyFiscalDocumentItems::class);
 
     app(LlmCallRecorder::class)->record(new LlmCallRecord(
         tenantId: (int) $this->tenant->id,
@@ -182,14 +182,14 @@ it('corta la clasificación automática cuando el presupuesto está agotado', fu
         costMicros: 1_000,
     ));
 
-    $invoice = governanceInvoice($this->tenant->id, $this->company->id);
-    $item = governanceItem($invoice, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
+    $fiscal_document = governanceFiscalDocument($this->tenant->id, $this->company->id);
+    $item = governanceItem($fiscal_document, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
 
     $this->fake->pushSuggestion('operativo', 0.95);
 
-    expect($classify->handle($invoice))->toBe(0)
+    expect($classify->handle($fiscal_document))->toBe(0)
         ->and($this->fake->requests)->toBeEmpty()
-        ->and($item->refresh()->classification_status)->toBe(InvoiceItem::STATUS_REVIEW)
+        ->and($item->refresh()->classification_status)->toBe(FiscalDocumentItem::STATUS_REVIEW)
         ->and($item->expense_category_id)->toBeNull()
         ->and(Classification::query()->count())->toBe(0);
 
@@ -203,8 +203,8 @@ it('corta la clasificación automática cuando el presupuesto está agotado', fu
 it('solo suma al presupuesto el coste del mes en curso', function (): void {
     config(['ai.budget.monthly_usd' => 0.001]);
     app()->forgetInstance(Classifier::class);
-    app()->forgetInstance(ClassifyInvoiceItems::class);
-    $classify = app(ClassifyInvoiceItems::class);
+    app()->forgetInstance(ClassifyFiscalDocumentItems::class);
+    $classify = app(ClassifyFiscalDocumentItems::class);
 
     $recorder = app(LlmCallRecorder::class);
 
@@ -220,23 +220,23 @@ it('solo suma al presupuesto el coste del mes en curso', function (): void {
     ));
     $previousMonth->forceFill(['created_at' => now()->subMonthNoOverflow()])->save();
 
-    $invoice = governanceInvoice($this->tenant->id, $this->company->id);
-    governanceItem($invoice, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
+    $fiscal_document = governanceFiscalDocument($this->tenant->id, $this->company->id);
+    governanceItem($fiscal_document, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
 
     $this->fake->pushSuggestion('operativo', 0.95);
 
-    expect($classify->handle($invoice))->toBe(1)
+    expect($classify->handle($fiscal_document))->toBe(1)
         ->and($this->fake->requests)->toHaveCount(1)
         ->and(LlmCall::query()->where('status', LlmCallStatus::Success->value)->count())->toBe(2);
 });
 
 it('registra el motivo cuando el proveedor no está disponible', function (): void {
-    $invoice = governanceInvoice($this->tenant->id, $this->company->id);
-    $item = governanceItem($invoice, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
+    $fiscal_document = governanceFiscalDocument($this->tenant->id, $this->company->id);
+    $item = governanceItem($fiscal_document, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
 
     $this->fake->pushException(ClassifierUnavailable::rateLimited());
 
-    expect($this->classify->handle($invoice))->toBe(0);
+    expect($this->classify->handle($fiscal_document))->toBe(0);
 
     $call = LlmCall::query()->sole();
 
@@ -244,17 +244,17 @@ it('registra el motivo cuando el proveedor no está disponible', function (): vo
         ->and($call->error_code)->toBe('rate_limited')
         ->and($call->provider)->toBe('fake')
         ->and($call->cost_micros)->toBe(0)
-        ->and($item->refresh()->classification_status)->toBe(InvoiceItem::STATUS_REVIEW);
+        ->and($item->refresh()->classification_status)->toBe(FiscalDocumentItem::STATUS_REVIEW);
 });
 
 it('registra la salida inválida tras agotar el reintento', function (): void {
-    $invoice = governanceInvoice($this->tenant->id, $this->company->id);
-    governanceItem($invoice, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
+    $fiscal_document = governanceFiscalDocument($this->tenant->id, $this->company->id);
+    governanceItem($fiscal_document, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
 
     $this->fake->pushException(InvalidClassifierOutput::malformedJson())
         ->pushException(InvalidClassifierOutput::unexpectedShape());
 
-    expect($this->classify->handle($invoice))->toBe(0);
+    expect($this->classify->handle($fiscal_document))->toBe(0);
 
     $call = LlmCall::query()->sole();
 
@@ -264,7 +264,7 @@ it('registra la salida inválida tras agotar el reintento', function (): void {
 });
 
 it('mantiene la caché y el presupuesto separados entre tenants', function (): void {
-    $first = governanceInvoice($this->tenant->id, $this->company->id);
+    $first = governanceFiscalDocument($this->tenant->id, $this->company->id);
     governanceItem($first, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
 
     $this->fake->pushSuggestion('operativo', 0.95);
@@ -275,12 +275,12 @@ it('mantiene la caché y el presupuesto separados entre tenants', function (): v
     app(TenantContext::class)->initialize($otherTenant);
 
     $otherCompany = Company::factory()->create(['tenant_id' => $otherTenant->id]);
-    $otherInvoice = governanceInvoice($otherTenant->id, $otherCompany->id);
-    $otherItem = governanceItem($otherInvoice, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
+    $otherFiscalDocument = governanceFiscalDocument($otherTenant->id, $otherCompany->id);
+    $otherItem = governanceItem($otherFiscalDocument, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
 
     $this->fake->pushSuggestion('alimentacion', 0.90);
 
-    expect($this->classify->handle($otherInvoice))->toBe(1)
+    expect($this->classify->handle($otherFiscalDocument))->toBe(1)
         ->and($this->fake->requests)->toHaveCount(2)
         ->and(LlmCall::withoutGlobalScopes()->count())->toBe(2)
         ->and($otherItem->refresh()->expense_category_id)

@@ -60,7 +60,7 @@ afterEach(function (): void {
 function publishPeriod(
     Company $company,
     string $period,
-    SriDocumentType $type = SriDocumentType::Invoice,
+    SriDocumentType $type = SriDocumentType::FiscalDocument,
     ?array $keys = null,
     ?string $txt = null,
 ): void {
@@ -86,7 +86,7 @@ it('interpreta el TXT de un run en parsing y lo deja listo para importar', funct
         ->and($result['run']->error_code)->toBeNull();
 
     $txt = $result['run']->files()
-        ->where('document_type', SriDocumentType::Invoice->value)
+        ->where('document_type', SriDocumentType::FiscalDocument->value)
         ->where('s3_key', 'like', '%.txt')
         ->firstOrFail();
 
@@ -105,7 +105,7 @@ it('primero reconcilia un run en downloading y luego lo interpreta', function ()
 });
 
 it('no marca incompleto un tipo solicitado que el manifiesto no declaró', function (): void {
-    publishPeriod($this->company, '2026-09', SriDocumentType::Invoice);
+    publishPeriod($this->company, '2026-09', SriDocumentType::FiscalDocument);
 
     $run = ($this->parsedRun)(['01', '04']);
 
@@ -119,7 +119,7 @@ it('no marca incompleto un tipo solicitado que el manifiesto no declaró', funct
 });
 
 it('marca incompleto el tipo que el manifiesto declaró y no produjo lote', function (): void {
-    publishPeriod($this->company, '2026-09', SriDocumentType::Invoice);
+    publishPeriod($this->company, '2026-09', SriDocumentType::FiscalDocument);
     $run = ($this->parsedRun)(['01', '04']);
 
     // El manifiesto del período declara una nota de crédito, pero el robot no

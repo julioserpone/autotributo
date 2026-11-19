@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\Sri\Actions\ImportSriRun;
 use App\Domain\Sri\Actions\RecoverSriRunFromS3;
 use App\Domain\Sri\Actions\S3SriXmlRecovery;
@@ -46,7 +46,7 @@ beforeEach(function (): void {
     // Claves fuera de la ventana del SRI (emitidas hace más de 45 días): el
     // XML solo puede venir de S3.
     $this->travelTo(CarbonImmutable::parse('2026-12-01 12:00:00'));
-    $this->template = (string) file_get_contents(__DIR__.'/../../Fixtures/xml/invoice/factura.xml');
+    $this->template = (string) file_get_contents(__DIR__.'/../../Fixtures/xml/fiscal_document/factura.xml');
     $this->keys = [
         AccessKeyFactory::make(sequential: '000000001'),
         AccessKeyFactory::make(sequential: '000000002'),
@@ -64,7 +64,7 @@ afterEach(function (): void {
  */
 function publishRobotPackage(Company $company, string $period, array $keys, array $withXml, string $template): void
 {
-    ReconcileFixtures::putPeriod($company, $period, SriDocumentType::Invoice, implode("\n", $keys)."\n", $keys);
+    ReconcileFixtures::putPeriod($company, $period, SriDocumentType::FiscalDocument, implode("\n", $keys)."\n", $keys);
 
     foreach ($withXml as $key) {
         ReconcileFixtures::putXml($company, $period, $key, str_replace('{{CLAVE}}', $key, $template));
@@ -111,7 +111,7 @@ it('importa los XML desde S3 sin consultar el SRI', function (): void {
         ->and($result['run']->status)->toBe(SriSyncRunStatus::Completed)
         ->and($result['report']->imported)->toBe(2)
         ->and($result['report']->failed)->toBe(0)
-        ->and(Invoice::query()->count())->toBe(2)
+        ->and(FiscalDocument::query()->count())->toBe(2)
         ->and($result['run']->totals['from_s3'])->toBe(2);
 
     $files = $result['run']->files()->where('s3_key', 'like', '%-xml/%')->get();
@@ -174,7 +174,7 @@ it('importa desde un run en invoking aunque no haya callback ni reconciliación 
     $result = app(ImportSriRun::class)->handle(sriRun($this->company));
 
     expect($result['run']->status)->toBe(SriSyncRunStatus::Completed)
-        ->and(Invoice::query()->count())->toBe(2);
+        ->and(FiscalDocument::query()->count())->toBe(2);
 });
 
 it('no lee XML de un período que el run no pidió aunque exista en el bucket', function (): void {
@@ -190,7 +190,7 @@ it('no lee XML de un período que el run no pidió aunque exista en el bucket', 
     $result = app(ImportSriRun::class)->handle($recovered);
 
     expect($result['report']->found)->toBe(0)
-        ->and(Invoice::query()->count())->toBe(0);
+        ->and(FiscalDocument::query()->count())->toBe(0);
 });
 
 it('ignora un manifiesto de otro RUC y no recupera nada', function (): void {
@@ -231,12 +231,12 @@ it('importa los XML aunque el robot no publique un TXT de claves válido', funct
     // anterior: el manifiesto nuevo declara 0 bytes y no hay JSON de claves.
     foreach ([$first, $second] as $key) {
         Storage::disk('sri')->put(
-            $path->xml(SriDocumentType::Invoice, $key),
+            $path->xml(SriDocumentType::FiscalDocument, $key),
             str_replace('{{CLAVE}}', $key, $this->template),
         );
     }
 
-    Storage::disk('sri')->put($path->textReport(SriDocumentType::Invoice), "clave de una corrida anterior\n");
+    Storage::disk('sri')->put($path->textReport(SriDocumentType::FiscalDocument), "clave de una corrida anterior\n");
 
     Storage::disk('sri')->put($path->manifest(), json_encode([
         'ambiente' => 'dev',
@@ -248,14 +248,14 @@ it('importa los XML aunque el robot no publique un TXT de claves válido', funct
             'periodo' => '2026-09',
             'tipo' => '01',
             'tipoEtiqueta' => 'Factura',
-            'claveTxt' => $path->textReport(SriDocumentType::Invoice),
+            'claveTxt' => $path->textReport(SriDocumentType::FiscalDocument),
             'bytes' => 0,
             'totalClaves' => 0,
             'tareaCaptcha' => 'navegador',
             'xmlsDescargados' => 2,
             'rutasXml' => [
-                $path->xml(SriDocumentType::Invoice, $first),
-                $path->xml(SriDocumentType::Invoice, $second),
+                $path->xml(SriDocumentType::FiscalDocument, $first),
+                $path->xml(SriDocumentType::FiscalDocument, $second),
             ],
         ]],
         'totalClaves' => 0,
@@ -275,7 +275,7 @@ it('importa los XML aunque el robot no publique un TXT de claves válido', funct
         ->and($result['report']->imported)->toBe(2)
         ->and($result['report']->failed)->toBe(0)
         ->and($result['run']->totals['from_s3'])->toBe(2)
-        ->and(Invoice::query()->count())->toBe(2);
+        ->and(FiscalDocument::query()->count())->toBe(2);
 });
 
 it('cierra el run cuando el robot terminó sin comprobantes para el período', function (): void {
@@ -296,7 +296,7 @@ it('cierra el run cuando el robot terminó sin comprobantes para el período', f
     expect($recovered->status)->toBe(SriSyncRunStatus::Failed)
         ->and($recovered->error_code)->toBe('no_documents')
         ->and($recovered->totals['found'])->toBe(0)
-        ->and(Invoice::query()->count())->toBe(0);
+        ->and(FiscalDocument::query()->count())->toBe(0);
 });
 
 it('el comando sri:recover-run recupera e importa un run sin callback', function (): void {
@@ -310,7 +310,7 @@ it('el comando sri:recover-run recupera e importa un run sin callback', function
         ->assertSuccessful();
 
     expect($run->refresh()->status)->toBe(SriSyncRunStatus::Completed)
-        ->and(Invoice::query()->count())->toBe(2);
+        ->and(FiscalDocument::query()->count())->toBe(2);
 });
 
 it('el comando sri:recover-run informa cuando el paquete todavía no está en S3', function (): void {

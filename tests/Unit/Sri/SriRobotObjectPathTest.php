@@ -10,9 +10,9 @@ it('construye el layout real que publica sri-txt-robot', function (): void {
 
     expect($path->directory())->toBe('produccion/1758871873001/2026-08')
         ->and($path->prefix())->toBe('produccion/1758871873001/2026-08/')
-        ->and($path->textReport(SriDocumentType::Invoice))
+        ->and($path->textReport(SriDocumentType::FiscalDocument))
         ->toBe('produccion/1758871873001/2026-08/facturas-recibidas-2026-08.txt')
-        ->and($path->accessKeys(SriDocumentType::Invoice))
+        ->and($path->accessKeys(SriDocumentType::FiscalDocument))
         ->toBe('produccion/1758871873001/2026-08/facturas-recibidas-2026-08-claves.json')
         ->and($path->manifest())
         ->toBe('produccion/1758871873001/2026-08/manifest.json');
@@ -22,7 +22,7 @@ it('usa los slugs exactos de todos los tipos del robot', function (): void {
     $path = new SriRobotObjectPath('test', '1758871873001', '2026-08');
 
     expect(SriDocumentType::codes())->toBe(['01', '03', '04', '05', '06', '07'])
-        ->and($path->textReport(SriDocumentType::Invoice))->toContain('/facturas-recibidas-')
+        ->and($path->textReport(SriDocumentType::FiscalDocument))->toContain('/facturas-recibidas-')
         ->and($path->textReport(SriDocumentType::PurchaseSettlement))->toContain('/liquidaciones-compra-recibidas-')
         ->and($path->textReport(SriDocumentType::CreditNote))->toContain('/notas-credito-recibidas-')
         ->and($path->textReport(SriDocumentType::DebitNote))->toContain('/notas-debito-recibidas-')
@@ -47,7 +47,7 @@ it('rechaza componentes inválidos de la ruta', function (string $environment, s
 ]);
 
 it('expone etiquetas legibles sin acoplar el dominio al portal', function (): void {
-    expect(SriDocumentType::Invoice->label())->toBe('Factura')
+    expect(SriDocumentType::FiscalDocument->label())->toBe('Factura')
         ->and(SriDocumentType::Withholding->label())->toBe('Comprobante de retención')
-        ->and(SriDocumentType::Invoice->slug())->toBe('facturas');
+        ->and(SriDocumentType::FiscalDocument->slug())->toBe('facturas');
 });

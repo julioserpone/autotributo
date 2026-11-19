@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
-use App\Domain\Invoicing\Models\InvoiceItem;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
 use App\Domain\Tenancy\Enums\MembershipRole;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
@@ -46,12 +46,12 @@ beforeEach(function (): void {
     $this->viewer = $makeUser(MembershipRole::Viewer);
 });
 
-function manualInvoiceUrl(Company $company): string
+function manualFiscalDocumentUrl(Company $company): string
 {
-    return '/api/v1/companies/'.$company->public_id.'/invoices/manual';
+    return '/api/v1/companies/'.$company->public_id.'/fiscal_documents/manual';
 }
 
-function manualInvoiceXml(string $fixture, string $key): string
+function manualFiscalDocumentXml(string $fixture, string $key): string
 {
     $xml = file_get_contents(__DIR__.'/../../Fixtures/xml/'.$fixture);
 
@@ -62,10 +62,10 @@ function manualInvoiceXml(string $fixture, string $key): string
     return str_replace('{{CLAVE}}', $key, $xml);
 }
 
-function uploadManualInvoice(TestCase $test, Company $company, string $xml): TestResponse
+function uploadManualFiscalDocument(TestCase $test, Company $company, string $xml): TestResponse
 {
     return $test->actingAs($test->owner)->post(
-        manualInvoiceUrl($company),
+        manualFiscalDocumentUrl($company),
         ['file' => UploadedFile::fake()->createWithContent('factura.xml', $xml)],
         ['Accept' => 'application/json'],
     );
@@ -73,64 +73,64 @@ function uploadManualInvoice(TestCase $test, Company $company, string $xml): Tes
 
 it('importa un XML autorizado con source manual_upload', function (): void {
     $key = AccessKeyFactory::make();
-    $xml = manualInvoiceXml('invoice/factura.xml', $key);
+    $xml = manualFiscalDocumentXml('fiscal_document/factura.xml', $key);
 
-    $response = uploadManualInvoice($this, $this->company, $xml);
+    $response = uploadManualFiscalDocument($this, $this->company, $xml);
 
     $response->assertCreated()
-        ->assertJsonPath('data.source', Invoice::SOURCE_MANUAL_UPLOAD)
+        ->assertJsonPath('data.source', FiscalDocument::SOURCE_MANUAL_UPLOAD)
         ->assertJsonPath('data.access_key', $key)
         ->assertJsonPath('data.totals_mismatch', false)
         ->assertJsonPath('meta.outcome', 'created');
 
-    expect(Invoice::query()->count())->toBe(1)
-        ->and(InvoiceItem::query()->count())->toBe(2)
-        ->and(Invoice::query()->firstOrFail()->source)->toBe(Invoice::SOURCE_MANUAL_UPLOAD);
+    expect(FiscalDocument::query()->count())->toBe(1)
+        ->and(FiscalDocumentItem::query()->count())->toBe(2)
+        ->and(FiscalDocument::query()->firstOrFail()->source)->toBe(FiscalDocument::SOURCE_MANUAL_UPLOAD);
 });
 
 it('es idempotente al subir dos veces el mismo XML', function (): void {
-    $xml = manualInvoiceXml('invoice/factura.xml', AccessKeyFactory::make());
+    $xml = manualFiscalDocumentXml('fiscal_document/factura.xml', AccessKeyFactory::make());
 
-    uploadManualInvoice($this, $this->company, $xml)->assertCreated();
+    uploadManualFiscalDocument($this, $this->company, $xml)->assertCreated();
 
-    uploadManualInvoice($this, $this->company, $xml)
+    uploadManualFiscalDocument($this, $this->company, $xml)
         ->assertOk()
         ->assertJsonPath('meta.outcome', 'skipped');
 
-    expect(Invoice::query()->count())->toBe(1)
-        ->and(InvoiceItem::query()->count())->toBe(2);
+    expect(FiscalDocument::query()->count())->toBe(1)
+        ->and(FiscalDocumentItem::query()->count())->toBe(2);
 });
 
 it('marca los totales inconsistentes sin corregirlos', function (): void {
     $xml = str_replace(
         '<importeTotal>103.50</importeTotal>',
         '<importeTotal>104.00</importeTotal>',
-        manualInvoiceXml('invoice/factura.xml', AccessKeyFactory::make()),
+        manualFiscalDocumentXml('fiscal_document/factura.xml', AccessKeyFactory::make()),
     );
 
-    uploadManualInvoice($this, $this->company, $xml)
+    uploadManualFiscalDocument($this, $this->company, $xml)
         ->assertCreated()
         ->assertJsonPath('data.totals_mismatch', true)
         ->assertJsonPath('data.total_cents', 10_400);
 });
 
 it('rechaza un XML malformado sin persistir nada', function (): void {
-    uploadManualInvoice($this, $this->company, '<factura>')
+    uploadManualFiscalDocument($this, $this->company, '<factura>')
         ->assertStatus(422)
         ->assertHeader('Content-Type', 'application/problem+json')
         ->assertJsonPath('type', 'https://autotributo.com/problems/invalid-sri-xml');
 
-    expect(Invoice::query()->count())->toBe(0);
+    expect(FiscalDocument::query()->count())->toBe(0);
 });
 
 it('rechaza una clave de acceso con verificador inválido', function (): void {
-    $xml = manualInvoiceXml('invoice/factura.xml', AccessKeyFactory::withBrokenCheckDigit());
+    $xml = manualFiscalDocumentXml('fiscal_document/factura.xml', AccessKeyFactory::withBrokenCheckDigit());
 
-    uploadManualInvoice($this, $this->company, $xml)
+    uploadManualFiscalDocument($this, $this->company, $xml)
         ->assertStatus(422)
         ->assertHeader('Content-Type', 'application/problem+json');
 
-    expect(Invoice::query()->count())->toBe(0);
+    expect(FiscalDocument::query()->count())->toBe(0);
 });
 
 it('rechaza un XML con declaraciones XXE', function (): void {
@@ -140,22 +140,22 @@ it('rechaza un XML con declaraciones XXE', function (): void {
 <factura><infoTributaria><ruc>&xxe;</ruc></infoTributaria></factura>
 XML;
 
-    uploadManualInvoice($this, $this->company, $xml)
+    uploadManualFiscalDocument($this, $this->company, $xml)
         ->assertStatus(422)
         ->assertJsonPath('type', 'https://autotributo.com/problems/invalid-sri-xml')
         ->assertJsonPath('detail', 'El XML contiene declaraciones no permitidas.');
 
-    expect(Invoice::query()->count())->toBe(0);
+    expect(FiscalDocument::query()->count())->toBe(0);
 });
 
 it('rechaza archivos que superan el límite de tamaño', function (): void {
     $xml = str_repeat('A', 2_100_000);
 
-    uploadManualInvoice($this, $this->company, $xml)
+    uploadManualFiscalDocument($this, $this->company, $xml)
         ->assertStatus(422)
         ->assertJsonValidationErrors('file');
 
-    expect(Invoice::query()->count())->toBe(0);
+    expect(FiscalDocument::query()->count())->toBe(0);
 });
 
 it('aísla la carga entre tenants', function (): void {
@@ -171,19 +171,19 @@ it('aísla la carga entre tenants', function (): void {
 
     $this->actingAs($this->owner)
         ->post(
-            manualInvoiceUrl($foreign),
-            ['file' => UploadedFile::fake()->createWithContent('factura.xml', manualInvoiceXml('invoice/factura.xml', AccessKeyFactory::make()))],
+            manualFiscalDocumentUrl($foreign),
+            ['file' => UploadedFile::fake()->createWithContent('factura.xml', manualFiscalDocumentXml('fiscal_document/factura.xml', AccessKeyFactory::make()))],
             ['Accept' => 'application/json'],
         )
         ->assertNotFound();
 });
 
 it('permite la carga a assistant y la bloquea a viewer', function (): void {
-    $xml = manualInvoiceXml('invoice/factura.xml', AccessKeyFactory::make());
+    $xml = manualFiscalDocumentXml('fiscal_document/factura.xml', AccessKeyFactory::make());
 
     $this->actingAs($this->viewer)
         ->post(
-            manualInvoiceUrl($this->company),
+            manualFiscalDocumentUrl($this->company),
             ['file' => UploadedFile::fake()->createWithContent('factura.xml', $xml)],
             ['Accept' => 'application/json'],
         )
@@ -191,11 +191,11 @@ it('permite la carga a assistant y la bloquea a viewer', function (): void {
 
     $this->actingAs($this->assistant)
         ->post(
-            manualInvoiceUrl($this->company),
+            manualFiscalDocumentUrl($this->company),
             ['file' => UploadedFile::fake()->createWithContent('factura.xml', $xml)],
             ['Accept' => 'application/json'],
         )
         ->assertCreated();
 
-    expect(Invoice::query()->count())->toBe(1);
+    expect(FiscalDocument::query()->count())->toBe(1);
 });

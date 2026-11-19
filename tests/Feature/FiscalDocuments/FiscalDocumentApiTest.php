@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\Tenancy\Enums\MembershipRole;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
@@ -31,24 +31,24 @@ beforeEach(function (): void {
         'ruc' => '0990000018001',
     ]);
 
-    Invoice::factory()->create([
+    FiscalDocument::factory()->create([
         'tenant_id' => $this->tenant->id,
         'company_id' => $this->company->id,
-        'status' => Invoice::STATUS_AUTHORIZED,
+        'status' => FiscalDocument::STATUS_AUTHORIZED,
         'issuer_name' => 'PROVEEDOR UNO S.A.',
     ]);
 
-    Invoice::factory()->create([
+    FiscalDocument::factory()->create([
         'tenant_id' => $this->tenant->id,
         'company_id' => $this->company->id,
-        'status' => Invoice::STATUS_AUTHORIZED,
+        'status' => FiscalDocument::STATUS_AUTHORIZED,
         'issuer_name' => 'PROVEEDOR DOS S.A.',
     ]);
 });
 
 it('lista los comprobantes del tenant activo', function (): void {
     $this->actingAs($this->owner)
-        ->getJson('/api/v1/invoices')
+        ->getJson('/api/v1/fiscal_documents')
         ->assertOk()
         ->assertJsonCount(2, 'data')
         ->assertJsonStructure(['data', 'links', 'meta']);
@@ -56,7 +56,7 @@ it('lista los comprobantes del tenant activo', function (): void {
 
 it('filtra por emisor', function (): void {
     $this->actingAs($this->owner)
-        ->getJson('/api/v1/invoices?issuer=UNO')
+        ->getJson('/api/v1/fiscal_documents?issuer=UNO')
         ->assertOk()
         ->assertJsonCount(1, 'data')
         ->assertJsonPath('data.0.issuer_name', 'PROVEEDOR UNO S.A.');
@@ -71,7 +71,7 @@ it('no expone comprobantes de otro tenant', function (): void {
         'ruc' => '0990000028001',
     ]);
 
-    Invoice::factory()->create([
+    FiscalDocument::factory()->create([
         'tenant_id' => $otherTenant->id,
         'company_id' => $otherCompany->id,
         'issuer_name' => 'PROVEEDOR SECRETO S.A.',
@@ -80,7 +80,7 @@ it('no expone comprobantes de otro tenant', function (): void {
     app(TenantContext::class)->initialize($this->tenant);
 
     $response = $this->actingAs($this->owner)
-        ->getJson('/api/v1/invoices');
+        ->getJson('/api/v1/fiscal_documents');
 
     $response->assertOk();
 
@@ -91,10 +91,10 @@ it('no expone comprobantes de otro tenant', function (): void {
 });
 
 it('devuelve el detalle con líneas, impuestos y retenciones', function (): void {
-    $invoice = Invoice::query()->firstOrFail();
+    $fiscal_document = FiscalDocument::query()->firstOrFail();
 
     $this->actingAs($this->owner)
-        ->getJson("/api/v1/invoices/{$invoice->public_id}")
+        ->getJson("/api/v1/fiscal_documents/{$fiscal_document->public_id}")
         ->assertOk()
-        ->assertJsonPath('data.id', $invoice->public_id);
+        ->assertJsonPath('data.id', $fiscal_document->public_id);
 });

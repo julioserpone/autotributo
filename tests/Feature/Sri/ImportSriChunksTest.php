@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\Sri\Actions\ImportSriKeys;
 use App\Domain\Sri\Contracts\SriAuthorizationGateway;
 use App\Domain\Sri\Contracts\SriXmlRecovery;
@@ -49,7 +49,7 @@ beforeEach(function (): void {
         AccessKeyFactory::make(sequential: '000000003'),
     ];
 
-    $this->template = (string) file_get_contents(__DIR__.'/../../Fixtures/xml/invoice/factura.xml');
+    $this->template = (string) file_get_contents(__DIR__.'/../../Fixtures/xml/fiscal_document/factura.xml');
 });
 
 afterEach(function (): void {
@@ -65,7 +65,7 @@ afterEach(function (): void {
  */
 function bindChunkGateway(array $keys, array $unavailable = [], array $corrupt = []): void
 {
-    $template = (string) file_get_contents(__DIR__.'/../../Fixtures/xml/invoice/factura.xml');
+    $template = (string) file_get_contents(__DIR__.'/../../Fixtures/xml/fiscal_document/factura.xml');
     $results = [];
 
     foreach ($keys as $key) {
@@ -97,14 +97,14 @@ it('registra el resultado de cada comprobante del bloque', function (): void {
     bindChunkGateway($this->keys);
     $run = parsingRun($this->company);
 
-    $result = app(ImportSriKeys::class)->handle($run, SriDocumentType::Invoice, '2026-09', $this->keys);
+    $result = app(ImportSriKeys::class)->handle($run, SriDocumentType::FiscalDocument, '2026-09', $this->keys);
 
     expect($result->found)->toBe(3)
         ->and($result->imported)->toBe(3)
         ->and($result->failed)->toBe(0)
         ->and($result->fromSri)->toBe(3)
         ->and($result->fromS3)->toBe(0)
-        ->and(Invoice::query()->count())->toBe(3);
+        ->and(FiscalDocument::query()->count())->toBe(3);
 
     $files = $run->files()->where('s3_key', 'like', '%-xml/%')->get();
 
@@ -125,12 +125,12 @@ it('marca los fallos por comprobante sin detener el resto del bloque', function 
     );
     $run = parsingRun($this->company);
 
-    $result = app(ImportSriKeys::class)->handle($run, SriDocumentType::Invoice, '2026-09', $this->keys);
+    $result = app(ImportSriKeys::class)->handle($run, SriDocumentType::FiscalDocument, '2026-09', $this->keys);
 
     expect($result->found)->toBe(3)
         ->and($result->imported)->toBe(1)
         ->and($result->failed)->toBe(2)
-        ->and(Invoice::query()->count())->toBe(1);
+        ->and(FiscalDocument::query()->count())->toBe(1);
 
     $missing = $run->files()->where('file_name', $this->keys[1].'.xml')->sole();
     $invalid = $run->files()->where('file_name', $this->keys[2].'.xml')->sole();
@@ -148,7 +148,7 @@ it('marca sri_unavailable cuando el gateway del SRI falla', function (): void {
 
     $result = app(ImportSriKeys::class)->handle(
         $run,
-        SriDocumentType::Invoice,
+        SriDocumentType::FiscalDocument,
         '2026-09',
         [$this->keys[0]],
     );
@@ -166,7 +166,7 @@ it('lee del S3 del robot y registra la fuente', function (): void {
     ReconcileFixtures::putPeriod(
         $this->company,
         '2026-09',
-        SriDocumentType::Invoice,
+        SriDocumentType::FiscalDocument,
         implode("\n", $this->keys)."\n",
         $this->keys,
     );
@@ -179,12 +179,12 @@ it('lee del S3 del robot y registra la fuente', function (): void {
     app(SriXmlRecovery::class)->discover($run);
     app()->instance(SriAuthorizationGateway::class, new FakeSriAuthorizationGateway);
 
-    $result = app(ImportSriKeys::class)->handle($run, SriDocumentType::Invoice, '2026-09', $this->keys);
+    $result = app(ImportSriKeys::class)->handle($run, SriDocumentType::FiscalDocument, '2026-09', $this->keys);
 
     expect($result->imported)->toBe(3)
         ->and($result->fromS3)->toBe(3)
         ->and($result->fromSri)->toBe(0)
-        ->and(Invoice::query()->count())->toBe(3);
+        ->and(FiscalDocument::query()->count())->toBe(3);
 
     expect($run->files()->where('source', 's3')->count())->toBe(3);
 });
@@ -195,12 +195,12 @@ it('el job de bloque importa solo las claves recibidas', function (): void {
 
     (new ImportSriChunkJob(
         $run->id,
-        SriDocumentType::Invoice->value,
+        SriDocumentType::FiscalDocument->value,
         '2026-09',
         [$this->keys[0]],
     ))->handle();
 
-    expect(Invoice::query()->count())->toBe(1)
+    expect(FiscalDocument::query()->count())->toBe(1)
         ->and($run->files()->where('file_name', $this->keys[0].'.xml')->exists())->toBeTrue();
 });
 
@@ -210,12 +210,12 @@ it('el job de bloque omite un run que ya no está en parsing', function (): void
 
     (new ImportSriChunkJob(
         $run->id,
-        SriDocumentType::Invoice->value,
+        SriDocumentType::FiscalDocument->value,
         '2026-09',
         $this->keys,
     ))->handle();
 
-    expect(Invoice::query()->count())->toBe(0);
+    expect(FiscalDocument::query()->count())->toBe(0);
 });
 
 /**

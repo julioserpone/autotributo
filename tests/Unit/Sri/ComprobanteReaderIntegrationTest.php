@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use App\Domain\Sri\Data\SriInvoiceData;
+use App\Domain\Sri\Data\SriFiscalDocumentData;
 use App\Domain\Sri\Enums\SriDocumentType;
 use App\Domain\Sri\Exceptions\SriXmlException;
-use App\Integrations\Sri\PackageSriInvoiceParser;
+use App\Integrations\Sri\PackageSriFiscalDocumentParser;
 use Tests\Support\Sri\AccessKeyFactory;
 
 /**
  * El parser del dominio es el paquete `julioserpone/sri-comprobantes-php`
- * envuelto por `PackageSriInvoiceParser`. Estos tests verifican la traducción
+ * envuelto por `PackageSriFiscalDocumentParser`. Estos tests verifican la traducción
  * al modelo de la aplicación y, de paso, el contrato del paquete.
  */
 function xmlFixture(string $path, array $replace = []): string
@@ -36,72 +36,72 @@ function keyed(string $path, string $type): string
 }
 
 beforeEach(function (): void {
-    $this->parser = new PackageSriInvoiceParser;
+    $this->parser = new PackageSriFiscalDocumentParser;
 });
 
 it('interpreta una factura completa', function (): void {
-    $invoice = $this->parser->parse(xmlFixture('invoice/factura.xml'));
+    $fiscal_document = $this->parser->parse(xmlFixture('fiscal_document/factura.xml'));
 
-    expect($invoice)->toBeInstanceOf(SriInvoiceData::class)
-        ->and($invoice->documentType)->toBe(SriDocumentType::Invoice)
-        ->and($invoice->accessKey)->toBe(AccessKeyFactory::make())
-        ->and($invoice->environment)->toBe('2')
-        ->and($invoice->issueDate)->toBe('2026-09-15')
-        ->and($invoice->issuerRuc)->toBe('1758871873001')
-        ->and($invoice->issuerName)->toBe('PROVEEDOR DE PRUEBA S.A.')
-        ->and($invoice->receiverRuc)->toBe('1790012345001')
-        ->and($invoice->receiverName)->toBe('CLIENTE DE PRUEBA CIA. LTDA.')
-        ->and($invoice->establishment)->toBe('001')
-        ->and($invoice->emissionPoint)->toBe('001')
-        ->and($invoice->sequential)->toBe('000000123')
-        ->and($invoice->currency)->toBe('USD');
+    expect($fiscal_document)->toBeInstanceOf(SriFiscalDocumentData::class)
+        ->and($fiscal_document->documentType)->toBe(SriDocumentType::FiscalDocument)
+        ->and($fiscal_document->accessKey)->toBe(AccessKeyFactory::make())
+        ->and($fiscal_document->environment)->toBe('2')
+        ->and($fiscal_document->issueDate)->toBe('2026-09-15')
+        ->and($fiscal_document->issuerRuc)->toBe('1758871873001')
+        ->and($fiscal_document->issuerName)->toBe('PROVEEDOR DE PRUEBA S.A.')
+        ->and($fiscal_document->receiverRuc)->toBe('1790012345001')
+        ->and($fiscal_document->receiverName)->toBe('CLIENTE DE PRUEBA CIA. LTDA.')
+        ->and($fiscal_document->establishment)->toBe('001')
+        ->and($fiscal_document->emissionPoint)->toBe('001')
+        ->and($fiscal_document->sequential)->toBe('000000123')
+        ->and($fiscal_document->currency)->toBe('USD');
 });
 
 it('convierte los totales a centavos sin float', function (): void {
-    $invoice = $this->parser->parse(xmlFixture('invoice/factura.xml'));
+    $fiscal_document = $this->parser->parse(xmlFixture('fiscal_document/factura.xml'));
 
-    expect($invoice->subtotalCents)->toBe(10_000)
-        ->and($invoice->discountCents)->toBe(1_000)
-        ->and($invoice->taxCents)->toBe(1_350)
-        ->and($invoice->tipCents)->toBe(0)
-        ->and($invoice->totalCents)->toBe(10_350)
-        ->and($invoice->totalsMismatch())->toBeFalse();
+    expect($fiscal_document->subtotalCents)->toBe(10_000)
+        ->and($fiscal_document->discountCents)->toBe(1_000)
+        ->and($fiscal_document->taxCents)->toBe(1_350)
+        ->and($fiscal_document->tipCents)->toBe(0)
+        ->and($fiscal_document->totalCents)->toBe(10_350)
+        ->and($fiscal_document->totalsMismatch())->toBeFalse();
 });
 
 it('interpreta los ítems y sus impuestos', function (): void {
-    $invoice = $this->parser->parse(xmlFixture('invoice/factura.xml'));
-    $first = $invoice->items[0];
+    $fiscal_document = $this->parser->parse(xmlFixture('fiscal_document/factura.xml'));
+    $first = $fiscal_document->items[0];
 
-    expect($invoice->items)->toHaveCount(2)
+    expect($fiscal_document->items)->toHaveCount(2)
         ->and($first->lineNumber)->toBe(1)
         ->and($first->description)->toBe('Servicios de consultoría contable')
         ->and($first->normalizedDescription)->toBe('SERVICIOS DE CONSULTORIA CONTABLE')
         ->and($first->mainCode)->toBe('SRV-001')
         ->and($first->subtotalCents)->toBe(9_000)
         ->and($first->totalCents)->toBe(10_350)
-        ->and($invoice->itemsSubtotalCents())->toBe(10_000);
+        ->and($fiscal_document->itemsSubtotalCents())->toBe(10_000);
 });
 
 it('normaliza los impuestos de cabecera con su código de porcentaje', function (): void {
-    $invoice = $this->parser->parse(xmlFixture('invoice/factura.xml'));
+    $fiscal_document = $this->parser->parse(xmlFixture('fiscal_document/factura.xml'));
 
-    expect($invoice->taxes)->toHaveCount(2)
-        ->and($invoice->taxes[0]->taxCode)->toBe('2')
-        ->and($invoice->taxes[0]->sriPercentageCode)->toBe('4')
-        ->and($invoice->taxes[0]->baseCents)->toBe(9_000)
-        ->and($invoice->taxes[0]->amountCents)->toBe(1_350)
-        ->and($invoice->taxes[1]->sriPercentageCode)->toBe('0')
-        ->and($invoice->taxesTotalCents())->toBe(1_350);
+    expect($fiscal_document->taxes)->toHaveCount(2)
+        ->and($fiscal_document->taxes[0]->taxCode)->toBe('2')
+        ->and($fiscal_document->taxes[0]->sriPercentageCode)->toBe('4')
+        ->and($fiscal_document->taxes[0]->baseCents)->toBe(9_000)
+        ->and($fiscal_document->taxes[0]->amountCents)->toBe(1_350)
+        ->and($fiscal_document->taxes[1]->sriPercentageCode)->toBe('0')
+        ->and($fiscal_document->taxesTotalCents())->toBe(1_350);
 });
 
 it('marca los totales inconsistentes en lugar de corregirlos', function (): void {
-    $xml = str_replace('<importeTotal>103.50</importeTotal>', '<importeTotal>104.00</importeTotal>', xmlFixture('invoice/factura.xml'));
+    $xml = str_replace('<importeTotal>103.50</importeTotal>', '<importeTotal>104.00</importeTotal>', xmlFixture('fiscal_document/factura.xml'));
 
-    $invoice = $this->parser->parse($xml);
+    $fiscal_document = $this->parser->parse($xml);
 
-    expect($invoice->totalsMismatch())->toBeTrue()
-        ->and($invoice->totalCents)->toBe(10_400)
-        ->and($invoice->expectedTotalCents())->toBe(10_350);
+    expect($fiscal_document->totalsMismatch())->toBeTrue()
+        ->and($fiscal_document->totalCents)->toBe(10_400)
+        ->and($fiscal_document->expectedTotalCents())->toBe(10_350);
 });
 
 it('interpreta una nota de crédito y su documento modificado', function (): void {
@@ -163,14 +163,14 @@ it('rechaza un XML malformado', function (): void {
 });
 
 it('rechaza un comprobante sin información tributaria', function (): void {
-    $xml = preg_replace('#<infoTributaria>.*?</infoTributaria>#s', '', xmlFixture('invoice/factura.xml'));
+    $xml = preg_replace('#<infoTributaria>.*?</infoTributaria>#s', '', xmlFixture('fiscal_document/factura.xml'));
 
     expect(fn () => $this->parser->parse((string) $xml))
         ->toThrow(SriXmlException::class, 'no es válido');
 });
 
 it('rechaza una clave de acceso inválida en el XML', function (): void {
-    $xml = xmlFixture('invoice/factura.xml', ['{{CLAVE}}' => AccessKeyFactory::withBrokenCheckDigit()]);
+    $xml = xmlFixture('fiscal_document/factura.xml', ['{{CLAVE}}' => AccessKeyFactory::withBrokenCheckDigit()]);
 
     expect(fn () => $this->parser->parse($xml))->toThrow(SriXmlException::class);
 });

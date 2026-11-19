@@ -58,7 +58,7 @@ function addStaleXmlRow(SriSyncRun $run, string $name, SriImportOutcome $outcome
     return $run->files()->create([
         'file_name' => $name.'.xml',
         's3_key' => '2026-09/01-recibidas-2026-09-xml/'.$name.'.xml',
-        'document_type' => SriDocumentType::Invoice,
+        'document_type' => SriDocumentType::FiscalDocument,
         'status' => SriSyncRunFileStatus::Processed,
         'import_outcome' => $outcome,
         'source' => 's3',
@@ -104,7 +104,7 @@ it('reanuda un run stale cuando el robot ya publicó el paquete', function (): v
     ReconcileFixtures::putPeriod(
         $this->company,
         '2026-09',
-        SriDocumentType::Invoice,
+        SriDocumentType::FiscalDocument,
         $key."\n",
         [$key],
     );

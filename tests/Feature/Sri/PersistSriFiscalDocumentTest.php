@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
-use App\Domain\Invoicing\Models\InvoiceItem;
-use App\Domain\Sri\Actions\PersistSriInvoice;
-use App\Domain\Sri\Contracts\SriInvoiceParser;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
+use App\Domain\Sri\Actions\PersistSriFiscalDocument;
+use App\Domain\Sri\Contracts\SriFiscalDocumentParser;
 use App\Domain\Sri\Data\SriImportResult;
 use App\Domain\Sri\Enums\SriDocumentType;
 use App\Domain\Sri\Enums\SriImportOutcome;
@@ -20,7 +20,7 @@ use Tests\Support\Sri\AccessKeyFactory;
 /**
  * Carga el XML de un fixture con la clave de acceso del caso.
  */
-function invoiceXml(string $path, string $key): string
+function fiscal_documentXml(string $path, string $key): string
 {
     $xml = file_get_contents(__DIR__.'/../../Fixtures/xml/'.$path.'/'.basename($path).'.xml');
 
@@ -43,8 +43,8 @@ beforeEach(function (): void {
         'ruc' => '1758871873001',
     ]);
 
-    $this->persist = app(PersistSriInvoice::class);
-    $this->parser = app(SriInvoiceParser::class);
+    $this->persist = app(PersistSriFiscalDocument::class);
+    $this->parser = app(SriFiscalDocumentParser::class);
 });
 
 afterEach(function (): void {
@@ -62,22 +62,22 @@ function persistFixture(object $test, string $fixture, ?string $xml = null): Sri
 }
 
 it('persiste un comprobante y sus hijos', function (): void {
-    $result = persistFixture($this, 'invoice/factura.xml');
+    $result = persistFixture($this, 'fiscal_document/factura.xml');
 
     expect($result->outcome)->toBe(SriImportOutcome::Created)
-        ->and($result->invoice->exists)->toBeTrue()
-        ->and($result->invoice->tenant_id)->toBe($this->tenant->id)
-        ->and($result->invoice->document_type)->toBe(SriDocumentType::Invoice)
-        ->and($result->invoice->direction)->toBe(Invoice::DIRECTION_RECEIVED)
-        ->and($result->invoice->source)->toBe(Invoice::SOURCE_SRI_ROBOT)
-        ->and($result->invoice->subtotal_cents)->toBe(10_000)
-        ->and($result->invoice->tax_cents)->toBe(1_350)
-        ->and($result->invoice->total_cents)->toBe(10_350)
-        ->and($result->invoice->totals_mismatch)->toBeFalse()
-        ->and($result->invoice->items)->toHaveCount(2)
-        ->and($result->invoice->taxes)->toHaveCount(2)
-        ->and($result->invoice->items->first()->normalized_description)->toBe('SERVICIOS DE CONSULTORIA CONTABLE')
-        ->and($result->invoice->items->first()->classification_status)->toBe('pending');
+        ->and($result->fiscal_document->exists)->toBeTrue()
+        ->and($result->fiscal_document->tenant_id)->toBe($this->tenant->id)
+        ->and($result->fiscal_document->document_type)->toBe(SriDocumentType::FiscalDocument)
+        ->and($result->fiscal_document->direction)->toBe(FiscalDocument::DIRECTION_RECEIVED)
+        ->and($result->fiscal_document->source)->toBe(FiscalDocument::SOURCE_SRI_ROBOT)
+        ->and($result->fiscal_document->subtotal_cents)->toBe(10_000)
+        ->and($result->fiscal_document->tax_cents)->toBe(1_350)
+        ->and($result->fiscal_document->total_cents)->toBe(10_350)
+        ->and($result->fiscal_document->totals_mismatch)->toBeFalse()
+        ->and($result->fiscal_document->items)->toHaveCount(2)
+        ->and($result->fiscal_document->taxes)->toHaveCount(2)
+        ->and($result->fiscal_document->items->first()->normalized_description)->toBe('SERVICIOS DE CONSULTORIA CONTABLE')
+        ->and($result->fiscal_document->items->first()->classification_status)->toBe('pending');
 });
 
 it('persiste las retenciones de un comprobante 07', function (): void {
@@ -88,18 +88,18 @@ it('persiste las retenciones de un comprobante 07', function (): void {
 
     $result = $this->persist->handle($this->company, $this->parser->parse($xml), $xml);
 
-    expect($result->invoice->document_type)->toBe(SriDocumentType::Withholding)
-        ->and($result->invoice->retentions)->toHaveCount(2)
-        ->and($result->invoice->retentions->first()->tax_type)->toBe('IR')
-        ->and($result->invoice->retentions->first()->retention_code)->toBe('303')
-        ->and($result->invoice->retentions->first()->amount_cents)->toBe(200)
-        ->and($result->invoice->total_cents)->toBe(2_900);
+    expect($result->fiscal_document->document_type)->toBe(SriDocumentType::Withholding)
+        ->and($result->fiscal_document->retentions)->toHaveCount(2)
+        ->and($result->fiscal_document->retentions->first()->tax_type)->toBe('IR')
+        ->and($result->fiscal_document->retentions->first()->retention_code)->toBe('303')
+        ->and($result->fiscal_document->retentions->first()->amount_cents)->toBe(200)
+        ->and($result->fiscal_document->total_cents)->toBe(2_900);
 });
 
 it('es idempotente: el mismo XML no duplica filas', function (): void {
     $key = AccessKeyFactory::make();
     $xml = str_replace('{{CLAVE}}', $key, (string) file_get_contents(
-        __DIR__.'/../../Fixtures/xml/invoice/factura.xml',
+        __DIR__.'/../../Fixtures/xml/fiscal_document/factura.xml',
     ));
     $data = $this->parser->parse($xml);
 
@@ -108,15 +108,15 @@ it('es idempotente: el mismo XML no duplica filas', function (): void {
 
     expect($first->outcome)->toBe(SriImportOutcome::Created)
         ->and($second->outcome)->toBe(SriImportOutcome::Skipped)
-        ->and($second->invoice->id)->toBe($first->invoice->id)
-        ->and(Invoice::query()->where('access_key', $key)->count())->toBe(1)
-        ->and(InvoiceItem::query()->where('invoice_id', $first->invoice->id)->count())->toBe(2);
+        ->and($second->fiscal_document->id)->toBe($first->fiscal_document->id)
+        ->and(FiscalDocument::query()->where('access_key', $key)->count())->toBe(1)
+        ->and(FiscalDocumentItem::query()->where('fiscal_document_id', $first->fiscal_document->id)->count())->toBe(2);
 });
 
 it('re-importa el comprobante cuando se fuerza aunque el XML no cambió', function (): void {
     $key = AccessKeyFactory::make();
     $xml = str_replace('{{CLAVE}}', $key, (string) file_get_contents(
-        __DIR__.'/../../Fixtures/xml/invoice/factura.xml',
+        __DIR__.'/../../Fixtures/xml/fiscal_document/factura.xml',
     ));
     $data = $this->parser->parse($xml);
 
@@ -126,18 +126,18 @@ it('re-importa el comprobante cuando se fuerza aunque el XML no cambió', functi
         $data,
         $xml,
         null,
-        Invoice::SOURCE_SRI_ROBOT,
+        FiscalDocument::SOURCE_SRI_ROBOT,
         true,
     );
 
     expect($first->outcome)->toBe(SriImportOutcome::Created)
         ->and($second->outcome)->toBe(SriImportOutcome::Updated)
-        ->and(Invoice::query()->where('access_key', $key)->count())->toBe(1);
+        ->and(FiscalDocument::query()->where('access_key', $key)->count())->toBe(1);
 });
 it('actualiza el comprobante cuando el XML cambió', function (): void {
     $key = AccessKeyFactory::make();
     $original = str_replace('{{CLAVE}}', $key, (string) file_get_contents(
-        __DIR__.'/../../Fixtures/xml/invoice/factura.xml',
+        __DIR__.'/../../Fixtures/xml/fiscal_document/factura.xml',
     ));
     $corrected = str_replace('<importeTotal>103.50</importeTotal>', '<importeTotal>103.60</importeTotal>', $original);
 
@@ -145,17 +145,17 @@ it('actualiza el comprobante cuando el XML cambió', function (): void {
     $second = $this->persist->handle($this->company, $this->parser->parse($corrected), $corrected);
 
     expect($second->outcome)->toBe(SriImportOutcome::Updated)
-        ->and($second->invoice->id)->toBe($first->invoice->id)
-        ->and($second->invoice->total_cents)->toBe(10_360)
-        ->and(Invoice::query()->count())->toBe(1)
-        ->and(InvoiceItem::query()->count())->toBe(2)
-        ->and($second->invoice->first_seen_at->equalTo($first->invoice->first_seen_at))->toBeTrue();
+        ->and($second->fiscal_document->id)->toBe($first->fiscal_document->id)
+        ->and($second->fiscal_document->total_cents)->toBe(10_360)
+        ->and(FiscalDocument::query()->count())->toBe(1)
+        ->and(FiscalDocumentItem::query()->count())->toBe(2)
+        ->and($second->fiscal_document->first_seen_at->equalTo($first->fiscal_document->first_seen_at))->toBeTrue();
 });
 
 it('re-importa el comprobante cuando el run fue forzado aunque el XML no cambió', function (): void {
     $key = AccessKeyFactory::make();
     $xml = str_replace('{{CLAVE}}', $key, (string) file_get_contents(
-        __DIR__.'/../../Fixtures/xml/invoice/factura.xml',
+        __DIR__.'/../../Fixtures/xml/fiscal_document/factura.xml',
     ));
     $data = $this->parser->parse($xml);
 
@@ -183,32 +183,32 @@ it('marca los comprobantes con totales inconsistentes sin corregirlos', function
     $xml = str_replace(
         '<importeTotal>103.50</importeTotal>',
         '<importeTotal>104.00</importeTotal>',
-        str_replace('{{CLAVE}}', $key, (string) file_get_contents(__DIR__.'/../../Fixtures/xml/invoice/factura.xml')),
+        str_replace('{{CLAVE}}', $key, (string) file_get_contents(__DIR__.'/../../Fixtures/xml/fiscal_document/factura.xml')),
     );
 
     $result = $this->persist->handle($this->company, $this->parser->parse($xml), $xml);
 
-    expect($result->invoice->totals_mismatch)->toBeTrue()
-        ->and($result->invoice->total_cents)->toBe(10_400);
+    expect($result->fiscal_document->totals_mismatch)->toBeTrue()
+        ->and($result->fiscal_document->total_cents)->toBe(10_400);
 });
 
 it('no colisiona la misma clave entre empresas del mismo tenant', function (): void {
     $other = Company::factory()->create(['tenant_id' => $this->tenant->id, 'ruc' => '0999999999001']);
     $key = AccessKeyFactory::make();
-    $xml = str_replace('{{CLAVE}}', $key, (string) file_get_contents(__DIR__.'/../../Fixtures/xml/invoice/factura.xml'));
+    $xml = str_replace('{{CLAVE}}', $key, (string) file_get_contents(__DIR__.'/../../Fixtures/xml/fiscal_document/factura.xml'));
     $data = $this->parser->parse($xml);
 
     $first = $this->persist->handle($this->company, $data, $xml);
     $second = $this->persist->handle($other, $data, $xml);
 
     expect($second->outcome)->toBe(SriImportOutcome::Created)
-        ->and($second->invoice->id)->not->toBe($first->invoice->id)
-        ->and(Invoice::query()->count())->toBe(2);
+        ->and($second->fiscal_document->id)->not->toBe($first->fiscal_document->id)
+        ->and(FiscalDocument::query()->count())->toBe(2);
 });
 
 it('guarda la ruta del XML por ambiente, ruc y período', function (): void {
-    $result = persistFixture($this, 'invoice/factura.xml');
+    $result = persistFixture($this, 'fiscal_document/factura.xml');
 
-    expect($result->invoice->xml_path)->toBe(sprintf('2/1758871873001/2026-09/%s.xml', $result->invoice->access_key))
-        ->and($result->invoice->xml_sha256)->toHaveLength(64);
+    expect($result->fiscal_document->xml_path)->toBe(sprintf('2/1758871873001/2026-09/%s.xml', $result->fiscal_document->access_key))
+        ->and($result->fiscal_document->xml_sha256)->toHaveLength(64);
 });
