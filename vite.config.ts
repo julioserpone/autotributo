@@ -63,11 +63,32 @@ export default defineConfig({
             refresh: true,
         }),
         vue(),
+        // Tema «Mint» del editor de Nuxt UI (ADR-0009, enmienda 2026-11-19):
+        // teal sobre neutrales oliva, esquinas de 0.75rem y controles tipo
+        // píldora. El modo claro/oscuro lo gestiona `useTheme`, no Nuxt UI.
         ui({
+            colorMode: false,
             ui: {
                 colors: {
-                    primary: 'zinc',
-                    neutral: 'zinc',
+                    primary: 'teal',
+                    neutral: 'olive',
+                },
+                button: {
+                    slots: { base: 'rounded-full' },
+                },
+                input: {
+                    slots: { base: 'rounded-full' },
+                    defaultVariants: { variant: 'soft' },
+                },
+                select: {
+                    slots: { base: 'rounded-full' },
+                    defaultVariants: { variant: 'soft' },
+                },
+                selectMenu: {
+                    slots: { base: 'rounded-full' },
+                },
+                inputMenu: {
+                    slots: { base: 'rounded-full' },
                 },
             },
             icon: {
