@@ -33,7 +33,7 @@ describe('DashboardPage', () => {
         });
         await router.push('/');
 
-        const wrapper = mount(DashboardPage, { global: { plugins: [pinia, router], stubs: { AppSidebar: true, AppWorkspaceSwitcher: true } } });
+        const wrapper = mount(DashboardPage, { global: { plugins: [pinia, router], stubs: { AppSidebar: true, UDashboardSearch: true } } });
 
         expect(wrapper.text()).toContain('Sin datos todavía');
         expect(wrapper.text()).not.toContain('Vista previa con datos de ejemplo');
@@ -46,7 +46,7 @@ describe('DashboardPage', () => {
         });
         await router.push('/?preview=1');
 
-        const wrapper = mount(DashboardPage, { global: { plugins: [pinia, router], stubs: { AppSidebar: true, AppWorkspaceSwitcher: true } } });
+        const wrapper = mount(DashboardPage, { global: { plugins: [pinia, router], stubs: { AppSidebar: true, UDashboardSearch: true } } });
 
         expect(wrapper.text()).toContain('Vista previa con datos de ejemplo');
         expect(wrapper.text()).toContain('CORPORACIÓN FAVORITA C.A.');

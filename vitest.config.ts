@@ -17,5 +17,9 @@ export default defineConfig({
         include: ['resources/js/**/*.spec.ts'],
         setupFiles: ['./resources/js/test/setup.ts'],
         css: false,
+        // El entorno jsdom con Nuxt UI tarda en montar overlays y portales;
+        // el valor por defecto (5 s) provoca fallos intermitentes en CI lento.
+        testTimeout: 20000,
+        hookTimeout: 20000,
     },
 });

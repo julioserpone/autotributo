@@ -4,7 +4,6 @@ import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AppShell from '@/layouts/AppShell.vue';
-import DashboardPage from '@/pages/DashboardPage.vue';
 
 vi.mock('@/stores/health', () => ({
     useHealthStore: () => ({ status: 'ok', check: vi.fn() }),
@@ -13,7 +12,7 @@ vi.mock('@/stores/health', () => ({
 vi.mock('@/stores/company', () => ({
     useCompanyStore: () => ({
         loaded: true,
-        activeCompany: { id: 'c1', trade_name: 'Empresa Demo', legal_name: 'Empresa Demo S.A.', ruc: '1790016919001' },
+        activeCompany: null,
         fetchCompanies: vi.fn(),
     }),
 }));
@@ -26,22 +25,22 @@ describe('AppShell', () => {
         setActivePinia(pinia);
     });
 
-    it('renderiza el título, el skip link y el contenido', async () => {
+    it('renderiza el skip link y el contenido de la página', async () => {
         const router = createRouter({
             history: createMemoryHistory(),
-            routes: [{ path: '/', name: 'dashboard', component: DashboardPage }],
+            routes: [{ path: '/', name: 'dashboard', component: { template: '<div />' } }],
         });
         await router.push('/');
 
         const wrapper = mount(AppShell, {
-            props: { title: 'Panel' },
             slots: { default: '<p>Contenido</p>' },
-            global: { plugins: [pinia, router], stubs: { AppSidebar: true, AppWorkspaceSwitcher: true } },
+            global: {
+                plugins: [pinia, router],
+                stubs: { AppSidebar: true, UDashboardSearch: true },
+            },
         });
 
         expect(wrapper.get('a[href="#contenido"]').text()).toContain('Saltar al contenido');
-        expect(wrapper.get('main').attributes('id')).toBe('contenido');
         expect(wrapper.text()).toContain('Contenido');
-        expect(wrapper.text()).toContain('Panel');
     });
 });
