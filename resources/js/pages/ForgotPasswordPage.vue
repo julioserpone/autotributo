@@ -56,12 +56,14 @@ async function submit(): Promise<void> {
         <UInput
           id="email"
           v-model="email"
-          class="w-full"
+          class="w-full bg-elevated/40"
           type="email"
           autocomplete="email"
           required
           icon="i-lucide-mail"
           size="lg"
+          color="neutral"
+          variant="outline"
         />
       </UFormField>
 
@@ -75,7 +77,7 @@ async function submit(): Promise<void> {
 
       <UButton
         type="submit"
-        color="neutral"
+        color="primary"
         variant="solid"
         size="lg"
         block

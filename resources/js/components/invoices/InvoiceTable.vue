@@ -100,9 +100,9 @@ function setFilter(next: 'all' | InvoiceStatus): void {
 </script>
 
 <template>
-  <section class="overflow-hidden rounded-lg border border-line bg-surface shadow-2xs dark:shadow-none">
-    <div class="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex items-center gap-1 rounded-md border border-line bg-elevated p-1">
+  <section class="overflow-hidden rounded-lg border border-default bg-elevated/50">
+    <div class="flex flex-col gap-3 border-b border-default p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex items-center gap-1 rounded-md border border-default bg-elevated p-1">
         <button
           v-for="filter in [
             { key: 'all', label: 'Todos' },
@@ -114,14 +114,14 @@ function setFilter(next: 'all' | InvoiceStatus): void {
           type="button"
           class="rounded px-2.5 py-1 text-xs font-medium transition"
           :class="statusFilter === filter.key
-            ? 'border border-line bg-surface text-ink'
-            : 'text-muted hover:text-ink'"
+            ? 'border border-default bg-default text-highlighted'
+            : 'text-muted hover:text-highlighted'"
           @click="setFilter(filter.key as 'all' | InvoiceStatus)"
         >
           {{ filter.label }}
           <span
             v-if="filter.key === 'all'"
-            class="ml-1 font-mono text-2xs text-faint"
+            class="ml-1 font-mono text-2xs text-dimmed"
           >
             {{ counts.all }}
           </span>
@@ -131,20 +131,20 @@ function setFilter(next: 'all' | InvoiceStatus): void {
       <div class="relative w-full sm:w-64">
         <UIcon
           name="i-lucide-search"
-          class="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-faint"
+          class="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-dimmed"
         />
         <input
           v-model="search"
           type="search"
           placeholder="Buscar RUC, proveedor o factura…"
-          class="w-full rounded-md border border-line bg-elevated py-1.5 pl-8 pr-3 text-xs text-ink placeholder:text-faint focus:border-line-strong focus:outline-none"
+          class="w-full rounded-md border border-default bg-elevated py-1.5 pl-8 pr-3 text-xs text-highlighted placeholder:text-dimmed focus:border-accented focus:outline-none"
         >
       </div>
     </div>
 
     <div class="overflow-x-auto">
       <table class="w-full text-left text-xs">
-        <thead class="border-b border-line bg-elevated/60 text-2xs font-medium uppercase tracking-wider text-muted">
+        <thead class="border-b border-default bg-elevated/60 text-2xs font-medium uppercase tracking-wider text-muted">
           <tr>
             <th
               v-if="props.selectable"
@@ -152,7 +152,7 @@ function setFilter(next: 'all' | InvoiceStatus): void {
             >
               <input
                 type="checkbox"
-                class="size-3.5 rounded border-line bg-elevated"
+                class="size-3.5 rounded border-default bg-elevated"
                 :checked="props.selected?.length === props.invoices.length && props.invoices.length > 0"
                 @change="toggleAll"
                 @click.stop
@@ -184,7 +184,7 @@ function setFilter(next: 'all' | InvoiceStatus): void {
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-line">
+        <tbody class="divide-y divide-default">
           <tr
             v-for="invoice in filtered"
             :key="invoice.id"
@@ -198,22 +198,22 @@ function setFilter(next: 'all' | InvoiceStatus): void {
             >
               <input
                 type="checkbox"
-                class="size-3.5 rounded border-line bg-elevated"
+                class="size-3.5 rounded border-default bg-elevated"
                 :checked="props.selected?.includes(invoice.id)"
                 @change="toggleOne(invoice.id)"
                 @click.stop
               >
             </td>
             <td class="px-4 py-3">
-              <p class="font-mono font-medium text-ink">
+              <p class="font-mono font-medium text-highlighted">
                 {{ invoice.number }}
               </p>
-              <p class="text-2xs text-faint">
+              <p class="text-2xs text-dimmed">
                 {{ invoice.documentType }}
               </p>
             </td>
             <td class="px-4 py-3">
-              <p class="font-medium text-ink">
+              <p class="font-medium text-highlighted">
                 {{ invoice.issuerName }}
               </p>
               <p class="font-mono text-2xs text-muted">
@@ -229,7 +229,7 @@ function setFilter(next: 'all' | InvoiceStatus): void {
             <td class="px-4 py-3 text-right font-mono tabular-nums text-muted">
               {{ money(invoice.taxCents) }}
             </td>
-            <td class="px-4 py-3 text-right font-mono tabular-nums font-semibold text-ink">
+            <td class="px-4 py-3 text-right font-mono tabular-nums font-semibold text-highlighted">
               {{ money(invoice.totalCents) }}
             </td>
             <td class="px-4 py-3">
@@ -275,7 +275,7 @@ function setFilter(next: 'all' | InvoiceStatus): void {
       </table>
     </div>
 
-    <div class="flex items-center justify-between border-t border-line bg-elevated/30 px-4 py-3 text-xs text-muted">
+    <div class="flex items-center justify-between border-t border-default bg-elevated/30 px-4 py-3 text-xs text-muted">
       <span>Mostrando {{ filtered.length }} de {{ props.invoices.length }} comprobantes</span>
       <span class="text-2xs">Cifras en USD · formato tabular</span>
     </div>

@@ -51,13 +51,15 @@ async function submit(): Promise<void> {
           <UInput
             id="code"
             v-model="code"
-            class="w-full"
+            class="w-full bg-elevated/40"
             type="text"
             inputmode="numeric"
             autocomplete="one-time-code"
             required
             icon="i-lucide-key-round"
             size="lg"
+            color="neutral"
+            variant="outline"
           />
         </UFormField>
       </template>
@@ -70,11 +72,13 @@ async function submit(): Promise<void> {
           <UInput
             id="recovery_code"
             v-model="recoveryCode"
-            class="w-full"
+            class="w-full bg-elevated/40"
             type="text"
             required
             icon="i-lucide-key-round"
             size="lg"
+            color="neutral"
+            variant="outline"
           />
         </UFormField>
       </template>
@@ -89,7 +93,7 @@ async function submit(): Promise<void> {
 
       <UButton
         type="submit"
-        color="neutral"
+        color="primary"
         variant="solid"
         size="lg"
         block
@@ -103,7 +107,7 @@ async function submit(): Promise<void> {
     <template #footer>
       <button
         type="button"
-        class="w-full text-sm text-muted underline-offset-4 hover:text-ink hover:underline"
+        class="w-full text-sm text-muted underline-offset-4 hover:text-highlighted hover:underline"
         @click="useRecovery = !useRecovery"
       >
         {{ useRecovery ? 'Usar código de la aplicación' : 'Usar código de recuperación' }}
