@@ -3,7 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import DashboardPage from '@/pages/DashboardPage.vue';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage.vue';
-import InvoiceInboxPage from '@/pages/InvoiceInboxPage.vue';
+import FiscalDocumentInboxPage from '@/pages/FiscalDocumentInboxPage.vue';
 import LoginPage from '@/pages/LoginPage.vue';
 import NotFoundPage from '@/pages/NotFoundPage.vue';
 import ResetPasswordPage from '@/pages/ResetPasswordPage.vue';
@@ -51,9 +51,9 @@ const router = createRouter({
             meta: { title: 'Panel' },
         },
         {
-            path: '/invoices',
-            name: 'invoices',
-            component: InvoiceInboxPage,
+            path: '/fiscal_documents',
+            name: 'fiscal_documents',
+            component: FiscalDocumentInboxPage,
             meta: { title: 'Comprobantes' },
         },
         {

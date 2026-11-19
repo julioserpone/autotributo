@@ -4,9 +4,9 @@ import { defineStore } from 'pinia';
 
 import { getJson } from '@/lib/api';
 
-export type InvoiceStatus = 'authorized' | 'pending' | 'rejected';
+export type FiscalDocumentStatus = 'authorized' | 'pending' | 'rejected';
 
-export interface InvoiceApi {
+export interface FiscalDocumentApi {
     id: string;
     number: string;
     document_type: string;
@@ -33,7 +33,7 @@ export interface InvoiceApi {
     totals_mismatch: boolean;
 }
 
-export interface InvoiceFilters {
+export interface FiscalDocumentFilters {
     status: string;
     documentType: string;
     companyId: string;
@@ -51,37 +51,37 @@ export const documentTypeLabels: Record<string, string> = {
     '07': 'Comprobante de retención',
 };
 
-function toStatus(value: string): InvoiceStatus {
+function toStatus(value: string): FiscalDocumentStatus {
     if (value === 'pending') return 'pending';
     if (value === 'rejected') return 'rejected';
     return 'authorized';
 }
 
-export function toInvoiceRow(invoice: InvoiceApi): import('@/components/invoices/InvoiceTable.vue').InvoiceRow {
+export function toFiscalDocumentRow(fiscal_document: FiscalDocumentApi): import('@/components/fiscal-documents/FiscalDocumentTable.vue').FiscalDocumentRow {
     return {
-        id: invoice.id,
-        number: invoice.number,
-        documentType: documentTypeLabels[invoice.document_type] ?? invoice.document_type,
-        issuerName: invoice.issuer_name,
-        issuerRuc: invoice.issuer_ruc,
-        issueDate: invoice.issue_date
-            ? new Date(invoice.issue_date).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })
+        id: fiscal_document.id,
+        number: fiscal_document.number,
+        documentType: documentTypeLabels[fiscal_document.document_type] ?? fiscal_document.document_type,
+        issuerName: fiscal_document.issuer_name,
+        issuerRuc: fiscal_document.issuer_ruc,
+        issueDate: fiscal_document.issue_date
+            ? new Date(fiscal_document.issue_date).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })
             : '—',
-        subtotalCents: invoice.subtotal_cents,
-        taxCents: invoice.tax_cents,
-        totalCents: invoice.total_cents,
-        status: toStatus(invoice.status),
+        subtotalCents: fiscal_document.subtotal_cents,
+        taxCents: fiscal_document.tax_cents,
+        totalCents: fiscal_document.total_cents,
+        status: toStatus(fiscal_document.status),
     };
 }
 
-export const useInvoiceStore = defineStore('invoices', () => {
-    const invoices = ref<InvoiceApi[]>([]);
+export const useFiscalDocumentStore = defineStore('fiscal_documents', () => {
+    const fiscalDocuments = ref<FiscalDocumentApi[]>([]);
     const loading = ref(false);
     const loadingMore = ref(false);
     const error = ref<string | null>(null);
     const nextCursor = ref<string | null>(null);
 
-    const filters = ref<InvoiceFilters>({
+    const filters = ref<FiscalDocumentFilters>({
         status: 'all',
         documentType: 'all',
         companyId: 'all',
@@ -90,7 +90,7 @@ export const useInvoiceStore = defineStore('invoices', () => {
         dateTo: '',
     });
 
-    const rows = computed(() => invoices.value.map(toInvoiceRow));
+    const rows = computed(() => fiscalDocuments.value.map(toFiscalDocumentRow));
 
     function buildQuery(cursor: string | null): string {
         const params = new URLSearchParams();
@@ -102,18 +102,18 @@ export const useInvoiceStore = defineStore('invoices', () => {
         if (filters.value.issuer.trim()) params.set('issuer', filters.value.issuer.trim());
         if (filters.value.dateFrom) params.set('date_from', filters.value.dateFrom);
         if (filters.value.dateTo) params.set('date_to', filters.value.dateTo);
-        return `/api/v1/invoices?${params.toString()}`;
+        return `/api/v1/fiscal_documents?${params.toString()}`;
     }
 
     async function fetchFirst(): Promise<void> {
         loading.value = true;
         error.value = null;
-        invoices.value = [];
+        fiscalDocuments.value = [];
         nextCursor.value = null;
 
         try {
-            const response = await getJson<{ data: InvoiceApi[]; meta: { next_cursor: string | null } }>(buildQuery(null));
-            invoices.value = response.data;
+            const response = await getJson<{ data: FiscalDocumentApi[]; meta: { next_cursor: string | null } }>(buildQuery(null));
+            fiscalDocuments.value = response.data;
             nextCursor.value = response.meta?.next_cursor ?? null;
         } catch (caught: unknown) {
             error.value = caught instanceof Error ? caught.message : 'No se pudieron cargar los comprobantes.';
@@ -127,8 +127,8 @@ export const useInvoiceStore = defineStore('invoices', () => {
         loadingMore.value = true;
 
         try {
-            const response = await getJson<{ data: InvoiceApi[]; meta: { next_cursor: string | null } }>(buildQuery(nextCursor.value));
-            invoices.value = [...invoices.value, ...response.data];
+            const response = await getJson<{ data: FiscalDocumentApi[]; meta: { next_cursor: string | null } }>(buildQuery(nextCursor.value));
+            fiscalDocuments.value = [...fiscalDocuments.value, ...response.data];
             nextCursor.value = response.meta?.next_cursor ?? null;
         } catch (caught: unknown) {
             error.value = caught instanceof Error ? caught.message : 'No se pudieron cargar más comprobantes.';
@@ -137,12 +137,12 @@ export const useInvoiceStore = defineStore('invoices', () => {
         }
     }
 
-    function setFilter(patch: Partial<InvoiceFilters>): void {
+    function setFilter(patch: Partial<FiscalDocumentFilters>): void {
         filters.value = { ...filters.value, ...patch };
     }
 
     return {
-        invoices,
+        fiscalDocuments,
         loading,
         loadingMore,
         error,

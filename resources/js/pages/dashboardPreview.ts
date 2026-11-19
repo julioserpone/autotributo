@@ -1,8 +1,8 @@
-import type { InvoiceRow } from '@/components/invoices/InvoiceTable.vue';
+import type { FiscalDocumentRow } from '@/components/fiscal-documents/FiscalDocumentTable.vue';
 
 export const PREVIEW_PERIOD = 'Noviembre 2026';
 
-export const previewInvoices: InvoiceRow[] = [
+export const previewFiscalDocuments: FiscalDocumentRow[] = [
     {
         id: 'preview-1',
         number: '001-002-000049182',

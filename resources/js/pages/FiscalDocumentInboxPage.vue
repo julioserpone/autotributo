@@ -5,12 +5,12 @@ import { getLocalTimeZone, parseDate, today } from '@internationalized/date';
 
 import AppShell from '@/layouts/AppShell.vue';
 import AppPage from '@/components/layout/AppPage.vue';
-import InvoiceTable from '@/components/invoices/InvoiceTable.vue';
+import FiscalDocumentTable from '@/components/fiscal-documents/FiscalDocumentTable.vue';
 import { useCompanyStore } from '@/stores/company';
-import { useInvoiceStore, documentTypeLabels } from '@/stores/invoices';
+import { useFiscalDocumentStore, documentTypeLabels } from '@/stores/fiscalDocuments';
 
 const companyStore = useCompanyStore();
-const invoiceStore = useInvoiceStore();
+const fiscal_documentStore = useFiscalDocumentStore();
 
 // Filtros de fecha como selector de calendario (UInputDate) sincronizados con
 // los strings `YYYY-MM-DD` que espera el store y el endpoint.
@@ -39,20 +39,20 @@ function toDateValue(value: string): any {
     }
 }
 
-watch(() => invoiceStore.filters.dateFrom, (value) => {
+watch(() => fiscal_documentStore.filters.dateFrom, (value) => {
     dateFrom.value = toDateValue(value);
 }, { immediate: true });
 
-watch(() => invoiceStore.filters.dateTo, (value) => {
+watch(() => fiscal_documentStore.filters.dateTo, (value) => {
     dateTo.value = toDateValue(value);
 }, { immediate: true });
 
 watch(dateFrom, (value) => {
-    invoiceStore.filters.dateFrom = value ? value.toString() : '';
+    fiscal_documentStore.filters.dateFrom = value ? value.toString() : '';
 });
 
 watch(dateTo, (value) => {
-    invoiceStore.filters.dateTo = value ? value.toString() : '';
+    fiscal_documentStore.filters.dateTo = value ? value.toString() : '';
 });
 
 // Cierra el popover del calendario al seleccionar una fecha.
@@ -78,17 +78,17 @@ function onDateToSelect(value: any): void {
 
 const selected = ref<string[]>([]);
 const detailOpen = ref(false);
-const detailInvoice = ref<import('@/stores/invoices').InvoiceApi | null>(null);
+const detailFiscalDocument = ref<import('@/stores/fiscalDocuments').FiscalDocumentApi | null>(null);
 
 const detailStatusColor = computed<'success' | 'warning' | 'error'>(() => {
-    if (detailInvoice.value?.status === 'pending') return 'warning';
-    if (detailInvoice.value?.status === 'rejected') return 'error';
+    if (detailFiscalDocument.value?.status === 'pending') return 'warning';
+    if (detailFiscalDocument.value?.status === 'rejected') return 'error';
     return 'success';
 });
 
 const detailStatusLabel = computed(() => {
-    if (detailInvoice.value?.status === 'pending') return 'Pendiente';
-    if (detailInvoice.value?.status === 'rejected') return 'Rechazado';
+    if (detailFiscalDocument.value?.status === 'pending') return 'Pendiente';
+    if (detailFiscalDocument.value?.status === 'rejected') return 'Rechazado';
     return 'Autorizado';
 });
 
@@ -121,19 +121,19 @@ const money = (cents: number): string =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100);
 
 function openDetail(id: string): void {
-    detailInvoice.value = invoiceStore.invoices.find((invoice) => invoice.id === id) ?? null;
+    detailFiscalDocument.value = fiscal_documentStore.fiscalDocuments.find((fiscal_document) => fiscal_document.id === id) ?? null;
     detailOpen.value = true;
 }
 
 function applyFilters(): void {
-    void invoiceStore.fetchFirst();
+    void fiscal_documentStore.fetchFirst();
 }
 
 onMounted(() => {
     if (!companyStore.loaded) {
         void companyStore.fetchCompanies();
     }
-    void invoiceStore.fetchFirst();
+    void fiscal_documentStore.fetchFirst();
 });
 </script>
 
@@ -151,7 +151,7 @@ onMounted(() => {
             name="company"
           >
             <USelect
-              v-model="invoiceStore.filters.companyId"
+              v-model="fiscal_documentStore.filters.companyId"
               :items="companyOptions"
               color="neutral"
               variant="outline"
@@ -165,7 +165,7 @@ onMounted(() => {
             name="status"
           >
             <USelect
-              v-model="invoiceStore.filters.status"
+              v-model="fiscal_documentStore.filters.status"
               :items="statusOptions"
               color="neutral"
               variant="outline"
@@ -179,7 +179,7 @@ onMounted(() => {
             name="document_type"
           >
             <USelect
-              v-model="invoiceStore.filters.documentType"
+              v-model="fiscal_documentStore.filters.documentType"
               :items="documentTypeOptions"
               color="neutral"
               variant="outline"
@@ -193,7 +193,7 @@ onMounted(() => {
             name="issuer"
           >
             <UInput
-              v-model="invoiceStore.filters.issuer"
+              v-model="fiscal_documentStore.filters.issuer"
               placeholder="Buscar…"
               icon="i-lucide-search"
               color="neutral"
@@ -325,11 +325,11 @@ onMounted(() => {
       </section>
 
       <UAlert
-        v-if="invoiceStore.error"
+        v-if="fiscal_documentStore.error"
         color="error"
         variant="soft"
         icon="i-lucide-alert-circle"
-        :description="invoiceStore.error"
+        :description="fiscal_documentStore.error"
       />
 
       <!-- Barra de selección masiva -->
@@ -347,30 +347,30 @@ onMounted(() => {
         />
       </div>
 
-      <InvoiceTable
+      <FiscalDocumentTable
         v-model:selected="selected"
-        :invoices="invoiceStore.rows"
-        :loading="invoiceStore.loading"
+        :fiscal-documents="fiscal_documentStore.rows"
+        :loading="fiscal_documentStore.loading"
         selectable
         @row-click="openDetail"
       />
 
       <div
-        v-if="invoiceStore.nextCursor"
+        v-if="fiscal_documentStore.nextCursor"
         class="flex justify-center"
       >
         <UButton
           color="neutral"
           variant="outline"
           size="md"
-          :loading="invoiceStore.loadingMore"
+          :loading="fiscal_documentStore.loadingMore"
           label="Cargar más"
-          @click="invoiceStore.loadMore()"
+          @click="fiscal_documentStore.loadMore()"
         />
       </div>
 
       <UAlert
-        v-if="!invoiceStore.loading && invoiceStore.rows.length === 0"
+        v-if="!fiscal_documentStore.loading && fiscal_documentStore.rows.length === 0"
         color="warning"
         variant="soft"
         icon="i-lucide-alert-triangle"
@@ -387,7 +387,7 @@ onMounted(() => {
       >
         <template #body>
           <div
-            v-if="detailInvoice"
+            v-if="detailFiscalDocument"
             class="space-y-4 text-sm"
           >
             <dl class="grid grid-cols-2 gap-3">
@@ -396,7 +396,7 @@ onMounted(() => {
                   Número
                 </dt>
                 <dd class="font-mono text-highlighted">
-                  {{ detailInvoice.number }}
+                  {{ detailFiscalDocument.number }}
                 </dd>
               </div>
               <div>
@@ -404,7 +404,7 @@ onMounted(() => {
                   Tipo
                 </dt>
                 <dd class="text-highlighted">
-                  {{ documentTypeLabels[detailInvoice.document_type] }}
+                  {{ documentTypeLabels[detailFiscalDocument.document_type] }}
                 </dd>
               </div>
               <div>
@@ -412,7 +412,7 @@ onMounted(() => {
                   Emisor
                 </dt>
                 <dd class="text-highlighted">
-                  {{ detailInvoice.issuer_name }}
+                  {{ detailFiscalDocument.issuer_name }}
                 </dd>
               </div>
               <div>
@@ -420,7 +420,7 @@ onMounted(() => {
                   RUC emisor
                 </dt>
                 <dd class="font-mono text-highlighted">
-                  {{ detailInvoice.issuer_ruc }}
+                  {{ detailFiscalDocument.issuer_ruc }}
                 </dd>
               </div>
               <div>
@@ -428,7 +428,7 @@ onMounted(() => {
                   Fecha emisión
                 </dt>
                 <dd class="text-highlighted">
-                  {{ detailInvoice.issue_date }}
+                  {{ detailFiscalDocument.issue_date }}
                 </dd>
               </div>
               <div>
@@ -445,9 +445,9 @@ onMounted(() => {
                     <span
                       class="size-1.5 rounded-full"
                       :class="{
-                        'bg-emerald-500': detailInvoice.status === 'authorized',
-                        'bg-amber-500': detailInvoice.status === 'pending',
-                        'bg-red-500': detailInvoice.status === 'rejected',
+                        'bg-emerald-500': detailFiscalDocument.status === 'authorized',
+                        'bg-amber-500': detailFiscalDocument.status === 'pending',
+                        'bg-red-500': detailFiscalDocument.status === 'rejected',
                       }"
                     />
                     {{ detailStatusLabel }}
@@ -459,15 +459,15 @@ onMounted(() => {
             <div class="rounded-lg border border-default bg-muted/50 p-3">
               <div class="flex items-baseline justify-between">
                 <span class="text-xs text-muted">Subtotal</span>
-                <span class="font-mono tabular-nums text-highlighted">{{ money(detailInvoice.subtotal_cents) }}</span>
+                <span class="font-mono tabular-nums text-highlighted">{{ money(detailFiscalDocument.subtotal_cents) }}</span>
               </div>
               <div class="flex items-baseline justify-between">
                 <span class="text-xs text-muted">IVA 15%</span>
-                <span class="font-mono tabular-nums text-highlighted">{{ money(detailInvoice.tax_cents) }}</span>
+                <span class="font-mono tabular-nums text-highlighted">{{ money(detailFiscalDocument.tax_cents) }}</span>
               </div>
               <div class="flex items-baseline justify-between border-t border-default pt-2 font-semibold">
                 <span class="text-xs text-muted">Total</span>
-                <span class="font-mono tabular-nums text-highlighted">{{ money(detailInvoice.total_cents) }}</span>
+                <span class="font-mono tabular-nums text-highlighted">{{ money(detailFiscalDocument.total_cents) }}</span>
               </div>
             </div>
 
@@ -476,7 +476,7 @@ onMounted(() => {
                 Clave de acceso
               </dt>
               <dd class="mt-1 break-all font-mono text-2xs text-muted">
-                {{ detailInvoice.access_key }}
+                {{ detailFiscalDocument.access_key }}
               </dd>
             </div>
           </div>

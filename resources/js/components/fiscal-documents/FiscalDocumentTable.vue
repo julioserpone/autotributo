@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 
-export type InvoiceStatus = 'authorized' | 'pending' | 'rejected';
+export type FiscalDocumentStatus = 'authorized' | 'pending' | 'rejected';
 
-export interface InvoiceRow {
+export interface FiscalDocumentRow {
     id: string;
     number: string;
     documentType: string;
@@ -13,11 +13,11 @@ export interface InvoiceRow {
     subtotalCents: number;
     taxCents: number;
     totalCents: number;
-    status: InvoiceStatus;
+    status: FiscalDocumentStatus;
 }
 
 const props = defineProps<{
-    invoices: InvoiceRow[];
+    fiscalDocuments: FiscalDocumentRow[];
     loading?: boolean;
     selectable?: boolean;
     selected?: string[];
@@ -29,25 +29,25 @@ const emit = defineEmits<{
 }>();
 
 const search = ref('');
-const statusFilter = ref<'all' | InvoiceStatus>('all');
+const statusFilter = ref<'all' | FiscalDocumentStatus>('all');
 
 const filtered = computed(() => {
     const query = search.value.trim().toLowerCase();
-    return props.invoices.filter((invoice) => {
-        const matchesStatus = statusFilter.value === 'all' || invoice.status === statusFilter.value;
+    return props.fiscalDocuments.filter((fiscal_document) => {
+        const matchesStatus = statusFilter.value === 'all' || fiscal_document.status === statusFilter.value;
         const matchesSearch = query === ''
-            || invoice.issuerName.toLowerCase().includes(query)
-            || invoice.issuerRuc.includes(query)
-            || invoice.number.includes(query);
+            || fiscal_document.issuerName.toLowerCase().includes(query)
+            || fiscal_document.issuerRuc.includes(query)
+            || fiscal_document.number.includes(query);
         return matchesStatus && matchesSearch;
     });
 });
 
 const counts = computed(() => ({
-    all: props.invoices.length,
-    authorized: props.invoices.filter((item) => item.status === 'authorized').length,
-    pending: props.invoices.filter((item) => item.status === 'pending').length,
-    rejected: props.invoices.filter((item) => item.status === 'rejected').length,
+    all: props.fiscalDocuments.length,
+    authorized: props.fiscalDocuments.filter((item) => item.status === 'authorized').length,
+    pending: props.fiscalDocuments.filter((item) => item.status === 'pending').length,
+    rejected: props.fiscalDocuments.filter((item) => item.status === 'rejected').length,
 }));
 
 function money(cents: number): string {
@@ -59,7 +59,7 @@ function money(cents: number): string {
     }).format(cents / 100);
 }
 
-function statusColor(status: InvoiceStatus): 'success' | 'warning' | 'error' {
+function statusColor(status: FiscalDocumentStatus): 'success' | 'warning' | 'error' {
     switch (status) {
         case 'authorized':
             return 'success';
@@ -70,7 +70,7 @@ function statusColor(status: InvoiceStatus): 'success' | 'warning' | 'error' {
     }
 }
 
-function statusLabel(status: InvoiceStatus): string {
+function statusLabel(status: FiscalDocumentStatus): string {
     switch (status) {
         case 'authorized':
             return 'Autorizado';
@@ -83,7 +83,7 @@ function statusLabel(status: InvoiceStatus): string {
 
 function toggleAll(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
-    emit('update:selected', checked ? props.invoices.map((invoice) => invoice.id) : []);
+    emit('update:selected', checked ? props.fiscalDocuments.map((fiscal_document) => fiscal_document.id) : []);
 }
 
 function toggleOne(id: string): void {
@@ -94,7 +94,7 @@ function toggleOne(id: string): void {
     emit('update:selected', next);
 }
 
-function setFilter(next: 'all' | InvoiceStatus): void {
+function setFilter(next: 'all' | FiscalDocumentStatus): void {
     statusFilter.value = next;
 }
 </script>
@@ -116,7 +116,7 @@ function setFilter(next: 'all' | InvoiceStatus): void {
           :class="statusFilter === filter.key
             ? 'border border-default bg-default text-highlighted'
             : 'text-muted hover:text-highlighted'"
-          @click="setFilter(filter.key as 'all' | InvoiceStatus)"
+          @click="setFilter(filter.key as 'all' | FiscalDocumentStatus)"
         >
           {{ filter.label }}
           <span
@@ -153,7 +153,7 @@ function setFilter(next: 'all' | InvoiceStatus): void {
               <input
                 type="checkbox"
                 class="size-3.5 rounded border-default bg-elevated"
-                :checked="props.selected?.length === props.invoices.length && props.invoices.length > 0"
+                :checked="props.selected?.length === props.fiscalDocuments.length && props.fiscalDocuments.length > 0"
                 @change="toggleAll"
                 @click.stop
               >
@@ -186,10 +186,10 @@ function setFilter(next: 'all' | InvoiceStatus): void {
         </thead>
         <tbody class="divide-y divide-default">
           <tr
-            v-for="invoice in filtered"
-            :key="invoice.id"
+            v-for="fiscal_document in filtered"
+            :key="fiscal_document.id"
             class="cursor-pointer transition hover:bg-elevated/60"
-            @click="emit('row-click', invoice.id)"
+            @click="emit('row-click', fiscal_document.id)"
           >
             <td
               v-if="props.selectable"
@@ -199,42 +199,42 @@ function setFilter(next: 'all' | InvoiceStatus): void {
               <input
                 type="checkbox"
                 class="size-3.5 rounded border-default bg-elevated"
-                :checked="props.selected?.includes(invoice.id)"
-                @change="toggleOne(invoice.id)"
+                :checked="props.selected?.includes(fiscal_document.id)"
+                @change="toggleOne(fiscal_document.id)"
                 @click.stop
               >
             </td>
             <td class="px-4 py-3">
               <p class="font-mono font-medium text-highlighted">
-                {{ invoice.number }}
+                {{ fiscal_document.number }}
               </p>
               <p class="text-2xs text-dimmed">
-                {{ invoice.documentType }}
+                {{ fiscal_document.documentType }}
               </p>
             </td>
             <td class="px-4 py-3">
               <p class="font-medium text-highlighted">
-                {{ invoice.issuerName }}
+                {{ fiscal_document.issuerName }}
               </p>
               <p class="font-mono text-2xs text-muted">
-                {{ invoice.issuerRuc }}
+                {{ fiscal_document.issuerRuc }}
               </p>
             </td>
             <td class="px-4 py-3 text-muted">
-              {{ invoice.issueDate }}
+              {{ fiscal_document.issueDate }}
             </td>
             <td class="px-4 py-3 text-right font-mono tabular-nums text-muted">
-              {{ money(invoice.subtotalCents) }}
+              {{ money(fiscal_document.subtotalCents) }}
             </td>
             <td class="px-4 py-3 text-right font-mono tabular-nums text-muted">
-              {{ money(invoice.taxCents) }}
+              {{ money(fiscal_document.taxCents) }}
             </td>
             <td class="px-4 py-3 text-right font-mono tabular-nums font-semibold text-highlighted">
-              {{ money(invoice.totalCents) }}
+              {{ money(fiscal_document.totalCents) }}
             </td>
             <td class="px-4 py-3">
               <UBadge
-                :color="statusColor(invoice.status)"
+                :color="statusColor(fiscal_document.status)"
                 variant="subtle"
                 size="xs"
                 class="gap-1.5 font-medium"
@@ -242,12 +242,12 @@ function setFilter(next: 'all' | InvoiceStatus): void {
                 <span
                   class="size-1.5 rounded-full"
                   :class="{
-                    'bg-emerald-500': invoice.status === 'authorized',
-                    'bg-amber-500': invoice.status === 'pending',
-                    'bg-red-500': invoice.status === 'rejected',
+                    'bg-emerald-500': fiscal_document.status === 'authorized',
+                    'bg-amber-500': fiscal_document.status === 'pending',
+                    'bg-red-500': fiscal_document.status === 'rejected',
                   }"
                 />
-                {{ statusLabel(invoice.status) }}
+                {{ statusLabel(fiscal_document.status) }}
               </UBadge>
             </td>
             <td class="px-4 py-3 text-right">
@@ -266,7 +266,7 @@ function setFilter(next: 'all' | InvoiceStatus): void {
               :colspan="props.selectable ? 9 : 8"
               class="px-4 py-10 text-center text-xs text-muted"
             >
-              {{ props.invoices.length === 0
+              {{ props.fiscalDocuments.length === 0
                 ? 'Aún no hay comprobantes en este período.'
                 : 'No se encontraron comprobantes que coincidan con el filtro.' }}
             </td>
@@ -276,7 +276,7 @@ function setFilter(next: 'all' | InvoiceStatus): void {
     </div>
 
     <div class="flex items-center justify-between border-t border-default bg-elevated/30 px-4 py-3 text-xs text-muted">
-      <span>Mostrando {{ filtered.length }} de {{ props.invoices.length }} comprobantes</span>
+      <span>Mostrando {{ filtered.length }} de {{ props.fiscalDocuments.length }} comprobantes</span>
       <span class="text-2xs">Cifras en USD · formato tabular</span>
     </div>
   </section>
