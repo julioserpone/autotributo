@@ -188,7 +188,7 @@ watch(run, (current) => {
         class="space-y-4 text-sm"
       >
         <div>
-          <p class="font-mono text-sm text-ink">
+          <p class="font-mono text-sm text-highlighted">
             ID {{ run.id }}
           </p>
           <div class="mt-1 flex items-center gap-2">
@@ -211,7 +211,7 @@ watch(run, (current) => {
             </UBadge>
             <span
               v-if="syncStore.polling"
-              class="text-2xs text-faint"
+              class="text-2xs text-dimmed"
             >
               (actualizando…)
             </span>
@@ -220,34 +220,34 @@ watch(run, (current) => {
 
         <dl class="space-y-3">
           <div>
-            <dt class="text-2xs uppercase tracking-wider text-faint">
+            <dt class="text-2xs uppercase tracking-wider text-dimmed">
               Período consultado
             </dt>
-            <dd class="font-mono text-ink">
+            <dd class="font-mono text-highlighted">
               {{ periods }}
             </dd>
           </div>
           <div>
-            <dt class="text-2xs uppercase tracking-wider text-faint">
+            <dt class="text-2xs uppercase tracking-wider text-dimmed">
               Rango de fechas
             </dt>
-            <dd class="font-mono text-ink">
+            <dd class="font-mono text-highlighted">
               {{ run.date_from }} → {{ run.date_to }}
             </dd>
           </div>
           <div>
-            <dt class="text-2xs uppercase tracking-wider text-faint">
+            <dt class="text-2xs uppercase tracking-wider text-dimmed">
               Documentos consultados
             </dt>
-            <dd class="text-ink">
+            <dd class="text-highlighted">
               {{ documentTypes }}
             </dd>
           </div>
           <div v-if="elapsedLabel">
-            <dt class="text-2xs uppercase tracking-wider text-faint">
+            <dt class="text-2xs uppercase tracking-wider text-dimmed">
               {{ elapsedTitle }}
             </dt>
-            <dd class="font-mono text-ink">
+            <dd class="font-mono text-highlighted">
               {{ elapsedLabel }}
             </dd>
           </div>
@@ -255,16 +255,16 @@ watch(run, (current) => {
 
         <div>
           <div class="flex items-center justify-between">
-            <p class="text-2xs text-faint">
+            <p class="text-2xs text-dimmed">
               Progreso
             </p>
-            <p class="font-mono text-sm font-semibold tabular-nums text-ink">
+            <p class="font-mono text-sm font-semibold tabular-nums text-highlighted">
               {{ progressPercent }}%
             </p>
           </div>
           <div class="mt-1 h-2 w-full overflow-hidden rounded-full bg-elevated">
             <div
-              class="h-full bg-accent transition-all duration-500"
+              class="h-full bg-primary transition-all duration-500"
               :style="{ width: progressPercent + '%' }"
             />
           </div>
@@ -283,41 +283,41 @@ watch(run, (current) => {
         />
 
         <div class="grid grid-cols-2 gap-3">
-          <div class="rounded-md border border-line bg-canvas p-3">
-            <p class="text-2xs uppercase tracking-wider text-faint">
+          <div class="rounded-md border border-default bg-muted/50 p-3">
+            <p class="text-2xs uppercase tracking-wider text-dimmed">
               Encontrados
             </p>
-            <p class="font-mono text-lg font-semibold tabular-nums text-ink">
+            <p class="font-mono text-lg font-semibold tabular-nums text-highlighted">
               {{ run.totals.found }}
             </p>
           </div>
-          <div class="rounded-md border border-line bg-canvas p-3">
-            <p class="text-2xs uppercase tracking-wider text-faint">
+          <div class="rounded-md border border-default bg-muted/50 p-3">
+            <p class="text-2xs uppercase tracking-wider text-dimmed">
               Importados
             </p>
-            <p class="font-mono text-lg font-semibold tabular-nums text-ink">
+            <p class="font-mono text-lg font-semibold tabular-nums text-highlighted">
               {{ run.totals.imported }}
             </p>
           </div>
-          <div class="rounded-md border border-line bg-canvas p-3">
-            <p class="text-2xs uppercase tracking-wider text-faint">
+          <div class="rounded-md border border-default bg-muted/50 p-3">
+            <p class="text-2xs uppercase tracking-wider text-dimmed">
               Omitidos
             </p>
-            <p class="font-mono text-lg font-semibold tabular-nums text-ink">
+            <p class="font-mono text-lg font-semibold tabular-nums text-highlighted">
               {{ run.totals.skipped }}
             </p>
             <p
               v-if="skippedFiles.length > 0"
-              class="mt-1 text-2xs text-faint"
+              class="mt-1 text-2xs text-dimmed"
             >
               {{ skippedFiles.length }} archivo(s) ya registrados
             </p>
           </div>
-          <div class="rounded-md border border-line bg-canvas p-3">
-            <p class="text-2xs uppercase tracking-wider text-faint">
+          <div class="rounded-md border border-default bg-muted/50 p-3">
+            <p class="text-2xs uppercase tracking-wider text-dimmed">
               Fallidos
             </p>
-            <p class="font-mono text-lg font-semibold tabular-nums text-ink">
+            <p class="font-mono text-lg font-semibold tabular-nums text-highlighted">
               {{ run.totals.failed }}
             </p>
             <p
@@ -332,7 +332,7 @@ watch(run, (current) => {
         <div v-if="syncStore.selectedFiles.length > 0">
           <button
             type="button"
-            class="flex w-full items-center justify-between rounded-md border border-line bg-canvas px-3 py-2 text-xs font-medium text-ink transition hover:bg-elevated"
+            class="flex w-full items-center justify-between rounded-md border border-default bg-muted/50 px-3 py-2 text-xs font-medium text-highlighted transition hover:bg-elevated"
             @click="filesExpanded = !filesExpanded"
           >
             <span>
@@ -343,12 +343,12 @@ watch(run, (current) => {
               class="size-4 text-muted"
             />
           </button>
-          <p class="mt-1 text-2xs text-faint">
+          <p class="mt-1 text-2xs text-dimmed">
             Estados: En S3 = XML en el bucket, aún no importado · Procesado = importado · No encontrado = no estaba en S3 · Inválido = XML malformado.
           </p>
           <ul
             v-if="filesExpanded"
-            class="mt-2 divide-y divide-line rounded-md border border-line"
+            class="mt-2 divide-y divide-default rounded-md border border-default"
           >
             <li
               v-for="file in syncStore.selectedFiles"
@@ -356,12 +356,12 @@ watch(run, (current) => {
               class="flex items-center justify-between gap-3 px-3 py-2 text-xs"
             >
               <div class="min-w-0">
-                <p class="truncate font-mono text-ink">
+                <p class="truncate font-mono text-highlighted">
                   {{ file.file_name }}
                 </p>
                 <p
                   v-if="file.error_message"
-                  class="truncate text-2xs text-ink"
+                  class="truncate text-2xs text-highlighted"
                 >
                   {{ fileErrorLabel(file.error_code) }} · {{ file.error_message }}
                 </p>
@@ -376,7 +376,7 @@ watch(run, (current) => {
                 </UBadge>
                 <span
                   v-if="importOutcomeLabel(file.import_outcome)"
-                  class="text-2xs text-faint"
+                  class="text-2xs text-dimmed"
                 >
                   {{ importOutcomeLabel(file.import_outcome) }}
                 </span>

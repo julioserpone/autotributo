@@ -59,12 +59,14 @@ async function submit(): Promise<void> {
         <UInput
           id="email"
           v-model="email"
-          class="w-full"
+          class="w-full bg-elevated/40"
           type="email"
           autocomplete="username"
           required
           icon="i-lucide-mail"
           size="lg"
+          color="neutral"
+          variant="outline"
         />
       </UFormField>
 
@@ -75,12 +77,14 @@ async function submit(): Promise<void> {
         <UInput
           id="password"
           v-model="password"
-          class="w-full"
+          class="w-full bg-elevated/40"
           type="password"
           autocomplete="current-password"
           required
           icon="i-lucide-lock"
           size="lg"
+          color="neutral"
+          variant="outline"
         />
       </UFormField>
 
@@ -99,7 +103,7 @@ async function submit(): Promise<void> {
 
       <UButton
         type="submit"
-        color="neutral"
+        color="primary"
         variant="solid"
         size="lg"
         block
@@ -114,7 +118,7 @@ async function submit(): Promise<void> {
       <p class="text-center text-sm text-muted">
         <RouterLink
           :to="{ name: 'forgot-password' }"
-          class="text-ink underline-offset-4 hover:underline"
+          class="text-highlighted underline-offset-4 hover:underline"
         >
           ¿Olvidaste tu contraseña?
         </RouterLink>

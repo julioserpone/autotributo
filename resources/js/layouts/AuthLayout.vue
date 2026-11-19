@@ -6,19 +6,24 @@ defineProps<{
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-canvas px-6 py-12">
-    <div class="w-full max-w-lg space-y-6">
+  <div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-default px-6 py-12">
+    <div
+      aria-hidden="true"
+      class="pointer-events-none absolute -top-40 left-1/2 size-[36rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
+    />
+
+    <div class="relative w-full max-w-lg space-y-6">
       <div class="flex flex-col items-center gap-2 text-center">
-        <span class="grid size-10 place-items-center rounded-control bg-brand font-bold text-white shadow-2xs">
+        <span class="grid size-11 place-items-center rounded-full bg-primary text-lg font-bold text-inverted">
           A
         </span>
-        <p class="text-xs font-medium uppercase tracking-[0.2em] text-faint">
+        <p class="text-2xs font-semibold uppercase tracking-[0.24em] text-dimmed">
           Autotributo
         </p>
       </div>
 
-      <section class="rounded-lg border border-line bg-surface p-6 shadow-2xs dark:shadow-none">
-        <h1 class="text-xl font-semibold tracking-tight text-ink">
+      <section class="rounded-lg border border-default bg-elevated/50 p-6 shadow-sm sm:p-8">
+        <h1 class="text-xl font-semibold tracking-tight text-highlighted">
           {{ title }}
         </h1>
         <p
@@ -40,7 +45,7 @@ defineProps<{
         </div>
       </section>
 
-      <p class="text-center text-2xs text-faint">
+      <p class="text-center text-2xs text-dimmed">
         Contabilidad SRI · Ecuador
       </p>
     </div>

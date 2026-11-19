@@ -7,7 +7,7 @@
         <title>{{ config('app.name', 'Autotributo') }}</title>
         @vite(['resources/css/app.css', 'resources/js/app.ts'])
     </head>
-    <body class="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
+    <body class="min-h-screen antialiased">
         <div id="app"></div>
     </body>
 </html>

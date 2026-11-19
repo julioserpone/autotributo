@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 import SriSyncRunDetailDrawer from '@/components/sri/SriSyncRunDetailDrawer.vue';
 import SriSyncRunHistory from '@/components/sri/SriSyncRunHistory.vue';
+import AppPage from '@/components/layout/AppPage.vue';
 import AppShell from '@/layouts/AppShell.vue';
 import { documentTypeOptions } from '@/lib/sri';
 import { useCompanyStore } from '@/stores/company';
@@ -145,136 +146,138 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <AppShell title="Sincronización">
-    <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 class="text-lg font-semibold tracking-tight text-ink">
-          Monitor de sincronización SRI
-        </h1>
-        <p class="mt-1 text-xs text-muted">
-          Inicia una descarga del portal SRI y sigue su progreso en vivo.
-        </p>
-      </div>
-    </header>
+  <AppShell>
+    <AppPage
+      title="Monitor de sincronización SRI"
+      description="Inicia una descarga del portal SRI y sigue su progreso en vivo."
+    >
+      <!-- Formulario para iniciar sync -->
+      <section class="rounded-lg border border-default bg-elevated/50 p-5">
+        <h2 class="text-sm font-medium text-highlighted">
+          Nueva sincronización
+        </h2>
 
-    <!-- Formulario para iniciar sync -->
-    <section class="rounded-lg border border-line bg-surface p-5 shadow-2xs dark:shadow-none">
-      <h2 class="text-sm font-medium text-ink">
-        Nueva sincronización
-      </h2>
-
-      <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <UFormField
-          label="Empresa"
-          name="company"
-        >
-          <USelect
-            v-model="formCompanyId"
-            :items="companyOptions"
-            placeholder="Selecciona una empresa"
-            size="md"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField
-          label="Tipos de documento"
-          name="document_types"
-        >
-          <USelectMenu
-            v-model="selectedTypes"
-            :items="documentTypeOptions"
-            value-key="value"
-            multiple
-            :search-input="false"
-            size="md"
-            class="w-full"
+        <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <UFormField
+            label="Empresa"
+            name="company"
           >
-            <span class="truncate">{{ documentTypesSummary }}</span>
-          </USelectMenu>
-        </UFormField>
-
-        <UFormField
-          label="Desde (AAAA-MM)"
-          name="from"
-        >
-          <UInput
-            v-model="formFrom"
-            placeholder="2026-09"
-            size="md"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField
-          label="Hasta (AAAA-MM)"
-          name="to"
-        >
-          <UInput
-            v-model="formTo"
-            placeholder="2026-11"
-            size="md"
-            class="w-full"
-          />
-        </UFormField>
-      </div>
-
-      <div class="mt-4 flex flex-wrap items-center gap-4">
-        <div class="flex items-center gap-1.5">
-          <UCheckbox
-            v-model="formForce"
-            label="Forzar re-descarga"
-          />
-          <UTooltip text="Vuelve a descargar e importar los comprobantes aunque ya se hayan registrado. Úsalo si un archivo se importó mal o quedó incompleto; sin esta opción, los comprobantes ya registrados se omiten.">
-            <UButton
+            <USelect
+              v-model="formCompanyId"
+              :items="companyOptions"
+              placeholder="Selecciona una empresa"
               color="neutral"
-              variant="ghost"
-              size="xs"
-              icon="i-lucide-info"
-              square
-              aria-label="Qué significa forzar re-descarga"
+              variant="outline"
+              size="md"
+              class="w-full"
             />
-          </UTooltip>
+          </UFormField>
+
+          <UFormField
+            label="Tipos de documento"
+            name="document_types"
+          >
+            <USelectMenu
+              v-model="selectedTypes"
+              :items="documentTypeOptions"
+              value-key="value"
+              multiple
+              :search-input="false"
+              color="neutral"
+              variant="outline"
+              size="md"
+              class="w-full"
+            >
+              <span class="truncate">{{ documentTypesSummary }}</span>
+            </USelectMenu>
+          </UFormField>
+
+          <UFormField
+            label="Desde (AAAA-MM)"
+            name="from"
+          >
+            <UInput
+              v-model="formFrom"
+              placeholder="2026-09"
+              color="neutral"
+              variant="outline"
+              size="md"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            label="Hasta (AAAA-MM)"
+            name="to"
+          >
+            <UInput
+              v-model="formTo"
+              placeholder="2026-11"
+              color="neutral"
+              variant="outline"
+              size="md"
+              class="w-full"
+            />
+          </UFormField>
         </div>
 
-        <UButton
-          color="neutral"
-          variant="solid"
-          size="md"
-          icon="i-lucide-play"
-          label="Iniciar sincronización"
-          class="sm:ml-auto"
-          :loading="starting"
-          :disabled="starting"
-          @click="startSync"
+        <div class="mt-4 flex flex-wrap items-center gap-4">
+          <div class="flex items-center gap-1.5">
+            <UCheckbox
+              v-model="formForce"
+              label="Forzar re-descarga"
+            />
+            <UTooltip text="Vuelve a descargar e importar los comprobantes aunque ya se hayan registrado. Úsalo si un archivo se importó mal o quedó incompleto; sin esta opción, los comprobantes ya registrados se omiten.">
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                icon="i-lucide-info"
+                square
+                aria-label="Qué significa forzar re-descarga"
+              />
+            </UTooltip>
+          </div>
+
+          <UButton
+            color="primary"
+            variant="solid"
+            size="md"
+            icon="i-lucide-play"
+            label="Iniciar sincronización"
+            class="sm:ml-auto"
+            :loading="starting"
+            :disabled="starting"
+            @click="startSync"
+          />
+        </div>
+
+        <UAlert
+          v-if="startError"
+          color="error"
+          variant="soft"
+          icon="i-lucide-alert-circle"
+          :description="startError"
+          class="mt-3"
         />
-      </div>
+      </section>
 
       <UAlert
-        v-if="startError"
+        v-if="syncStore.error"
         color="error"
         variant="soft"
         icon="i-lucide-alert-circle"
-        :description="startError"
-        class="mt-3"
+        :description="syncStore.error"
       />
-    </section>
 
-    <UAlert
-      v-if="syncStore.error"
-      color="error"
-      variant="soft"
-      icon="i-lucide-alert-circle"
-      :description="syncStore.error"
-    />
+      <SriSyncRunHistory
+        :runs="syncStore.runs"
+        :loading="syncStore.loading"
+        :selected-run-id="syncStore.selectedRunId"
+        @select="selectRun"
+      />
 
-    <SriSyncRunHistory
-      :runs="syncStore.runs"
-      :loading="syncStore.loading"
-      :selected-run-id="syncStore.selectedRunId"
-      @select="selectRun"
-    />
-
-    <SriSyncRunDetailDrawer v-model:open="detailOpen" />
+      <SriSyncRunDetailDrawer v-model:open="detailOpen" />
+    </AppPage>
   </AppShell>
 </template>

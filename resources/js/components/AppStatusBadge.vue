@@ -26,7 +26,7 @@ const config = computed(() => {
     :color="config.color"
     variant="subtle"
     size="sm"
-    class="gap-1.5 font-medium"
+    class="gap-1.5 font-medium h-8"
     :data-status="status"
   >
     <span
