@@ -24,9 +24,9 @@ enum Ability: string
     case SyncStart = 'sync.start';
     case SyncCancel = 'sync.cancel';
 
-    case InvoicesView = 'invoices.view';
-    case InvoicesReview = 'invoices.review';
-    case InvoicesExport = 'invoices.export';
+    case FiscalDocumentsView = 'fiscal_documents.view';
+    case FiscalDocumentsReview = 'fiscal_documents.review';
+    case FiscalDocumentsExport = 'fiscal_documents.export';
 
     case RulesManage = 'rules.manage';
 

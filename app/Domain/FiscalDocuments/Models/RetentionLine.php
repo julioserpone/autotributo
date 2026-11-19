@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Invoicing\Models;
+namespace App\Domain\FiscalDocuments\Models;
 
 use App\Domain\Tenancy\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
@@ -27,10 +27,10 @@ final class RetentionLine extends Model
     ];
 
     /**
-     * @return BelongsTo<Invoice, $this>
+     * @return BelongsTo<FiscalDocument, $this>
      */
-    public function invoice(): BelongsTo
+    public function fiscal_document(): BelongsTo
     {
-        return $this->belongsTo(Invoice::class);
+        return $this->belongsTo(FiscalDocument::class);
     }
 }

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\Sri\Enums\SriDocumentType;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\InvoiceResource;
+use App\Http\Resources\FiscalDocumentResource;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -20,13 +20,13 @@ use Illuminate\Support\Facades\Gate;
  * Listado paginado por cursor (recomendado para grandes volúmenes) con filtros
  * por empresa, estado, tipo de comprobante, emisor y rango de fechas.
  */
-final class InvoiceController extends Controller
+final class FiscalDocumentController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        Gate::authorize('viewAny', Invoice::class);
+        Gate::authorize('viewAny', FiscalDocument::class);
 
-        $query = Invoice::query()->orderByDesc('issue_date')->orderByDesc('id');
+        $query = FiscalDocument::query()->orderByDesc('issue_date')->orderByDesc('id');
 
         $filters = (array) $request->input('filter', []);
 
@@ -78,15 +78,15 @@ final class InvoiceController extends Controller
 
         $perPage = max(1, min((int) $request->integer('per_page', 25), 100));
 
-        return InvoiceResource::collection(
+        return FiscalDocumentResource::collection(
             $query->cursorPaginate($perPage, ['*'], 'cursor', $request->query('cursor')),
         );
     }
 
-    public function show(Invoice $invoice): InvoiceResource
+    public function show(FiscalDocument $fiscal_document): FiscalDocumentResource
     {
-        Gate::authorize('view', $invoice);
+        Gate::authorize('view', $fiscal_document);
 
-        return new InvoiceResource($invoice->load(['items', 'taxes', 'retentions']));
+        return new FiscalDocumentResource($fiscal_document->load(['items', 'taxes', 'retentions']));
     }
 }

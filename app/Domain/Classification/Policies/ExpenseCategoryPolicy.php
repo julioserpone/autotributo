@@ -16,7 +16,7 @@ final class ExpenseCategoryPolicy
 {
     public function viewAny(User $user): bool
     {
-        return RolePermissions::allows($user, Ability::InvoicesView);
+        return RolePermissions::allows($user, Ability::FiscalDocumentsView);
     }
 
     public function view(User $user, ExpenseCategory $category): bool

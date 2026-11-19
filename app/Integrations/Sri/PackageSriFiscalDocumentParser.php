@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Integrations\Sri;
 
-use App\Domain\Sri\Contracts\SriInvoiceParser;
-use App\Domain\Sri\Data\SriInvoiceData;
-use App\Domain\Sri\Data\SriInvoiceItemData;
-use App\Domain\Sri\Data\SriInvoiceTaxData;
+use App\Domain\Sri\Contracts\SriFiscalDocumentParser;
+use App\Domain\Sri\Data\SriFiscalDocumentData;
+use App\Domain\Sri\Data\SriFiscalDocumentItemData;
+use App\Domain\Sri\Data\SriFiscalDocumentTaxData;
 use App\Domain\Sri\Data\SriRetentionData;
 use App\Domain\Sri\Enums\SriDocumentType;
 use App\Domain\Sri\Exceptions\SriXmlException;
@@ -26,7 +26,7 @@ use JulioSerpone\SriComprobantes\Comprobante\Data\RetencionData;
  * mapean los códigos de comprobante y se empaqueta el error del paquete en la
  * excepción del dominio.
  */
-final readonly class PackageSriInvoiceParser implements SriInvoiceParser
+final readonly class PackageSriFiscalDocumentParser implements SriFiscalDocumentParser
 {
     private const TAX_TYPES = [
         '1' => 'IR',
@@ -37,7 +37,7 @@ final readonly class PackageSriInvoiceParser implements SriInvoiceParser
 
     public function __construct(private ComprobanteReader $reader = new ComprobanteReader) {}
 
-    public function parse(string $xml): SriInvoiceData
+    public function parse(string $xml): SriFiscalDocumentData
     {
         try {
             return $this->map($this->reader->read($xml));
@@ -46,7 +46,7 @@ final readonly class PackageSriInvoiceParser implements SriInvoiceParser
         }
     }
 
-    private function map(ComprobanteData $data): SriInvoiceData
+    private function map(ComprobanteData $data): SriFiscalDocumentData
     {
         $type = SriDocumentType::tryFrom($data->tipo);
 
@@ -54,7 +54,7 @@ final readonly class PackageSriInvoiceParser implements SriInvoiceParser
             throw SriXmlException::unsupportedDocumentType($data->tipo);
         }
 
-        return new SriInvoiceData(
+        return new SriFiscalDocumentData(
             accessKey: $data->claveAcceso,
             documentType: $type,
             environment: $data->ambiente,
@@ -84,9 +84,9 @@ final readonly class PackageSriInvoiceParser implements SriInvoiceParser
         );
     }
 
-    private function item(ItemData $item): SriInvoiceItemData
+    private function item(ItemData $item): SriFiscalDocumentItemData
     {
-        return new SriInvoiceItemData(
+        return new SriFiscalDocumentItemData(
             lineNumber: $item->numeroLinea,
             description: $item->descripcion,
             normalizedDescription: $item->descripcionNormalizada,
@@ -100,9 +100,9 @@ final readonly class PackageSriInvoiceParser implements SriInvoiceParser
         );
     }
 
-    private function tax(ImpuestoData $tax): SriInvoiceTaxData
+    private function tax(ImpuestoData $tax): SriFiscalDocumentTaxData
     {
-        return new SriInvoiceTaxData(
+        return new SriFiscalDocumentTaxData(
             taxCode: $tax->codigo,
             sriPercentageCode: $tax->codigoPorcentaje,
             rate: $tax->tarifa,

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Sri\Contracts;
 
-use App\Domain\Sri\Data\SriInvoiceData;
+use App\Domain\Sri\Data\SriFiscalDocumentData;
 use App\Domain\Sri\Exceptions\SriXmlException;
 
 /**
@@ -19,10 +19,10 @@ use App\Domain\Sri\Exceptions\SriXmlException;
  * parser, se sustituye el adaptador en `SriServiceProvider` sin tocar
  * acciones, jobs ni tests. Ver `docs/11-next-stage-plan.md` §6.
  */
-interface SriInvoiceParser
+interface SriFiscalDocumentParser
 {
     /**
      * @throws SriXmlException
      */
-    public function parse(string $xml): SriInvoiceData;
+    public function parse(string $xml): SriFiscalDocumentData;
 }

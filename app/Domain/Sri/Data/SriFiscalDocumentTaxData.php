@@ -10,7 +10,7 @@ namespace App\Domain\Sri\Data;
  * `sriPercentageCode` (`codigoPorcentaje`) es distinto de la tarifa: ambos se
  * conservan porque el 104 se declara por código, no por tarifa.
  */
-final readonly class SriInvoiceTaxData
+final readonly class SriFiscalDocumentTaxData
 {
     public function __construct(
         public string $taxCode,

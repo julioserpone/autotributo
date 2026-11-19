@@ -17,8 +17,8 @@ use App\Domain\Classification\Models\ClassificationRule;
 use App\Domain\Classification\Models\ExpenseCategory;
 use App\Domain\Classification\Services\ClassificationRuleMatcher;
 use App\Domain\Classification\Services\ClassificationRuleRepository;
-use App\Domain\Invoicing\Models\Invoice;
-use App\Domain\Invoicing\Models\InvoiceItem;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -34,7 +34,7 @@ use Throwable;
  * abierto dejan el ítem en `review` sin bloquear la importación. Un clasificador
  * sin sugerencia (el fake por defecto) mantiene el ítem `pending`.
  */
-final readonly class ClassifyInvoiceItems
+final readonly class ClassifyFiscalDocumentItems
 {
     public function __construct(
         private ClassificationRuleMatcher $matcher,
@@ -43,9 +43,9 @@ final readonly class ClassifyInvoiceItems
         private float $confidenceThreshold,
     ) {}
 
-    public function handle(Invoice $invoice): int
+    public function handle(FiscalDocument $fiscal_document): int
     {
-        $rules = $this->rules->forTenant((int) $invoice->tenant_id);
+        $rules = $this->rules->forTenant((int) $fiscal_document->tenant_id);
 
         $classified = 0;
         /** @var array<int, int> $hits */
@@ -53,12 +53,12 @@ final readonly class ClassifyInvoiceItems
         /** @var list<ClassificationCategory>|null $categories */
         $categories = null;
 
-        foreach ($invoice->items()->get() as $item) {
-            if (! $item instanceof InvoiceItem) {
+        foreach ($fiscal_document->items()->get() as $item) {
+            if (! $item instanceof FiscalDocumentItem) {
                 continue;
             }
 
-            $issuerRuc = $invoice->issuer_ruc;
+            $issuerRuc = $fiscal_document->issuer_ruc;
 
             $rule = $this->matcher->firstMatch(
                 $rules,
@@ -69,13 +69,13 @@ final readonly class ClassifyInvoiceItems
             if ($rule instanceof ClassificationRule) {
                 $item->forceFill([
                     'expense_category_id' => $rule->expense_category_id,
-                    'classification_status' => InvoiceItem::STATUS_AUTO,
+                    'classification_status' => FiscalDocumentItem::STATUS_AUTO,
                 ])->save();
 
                 Classification::query()->updateOrCreate(
-                    ['invoice_item_id' => $item->id],
+                    ['fiscal_document_item_id' => $item->id],
                     [
-                        'tenant_id' => $invoice->tenant_id,
+                        'tenant_id' => $fiscal_document->tenant_id,
                         'expense_category_id' => $rule->expense_category_id,
                         'method' => ClassificationMethod::Rule,
                         'confidence' => 1.0,
@@ -94,7 +94,7 @@ final readonly class ClassifyInvoiceItems
 
             // Solo se consulta la IA para ítems aún pendientes: una segunda
             // pasada no debe volver a gastar presupuesto ni pisar una revisión.
-            if ($item->classification_status !== InvoiceItem::STATUS_PENDING) {
+            if ($item->classification_status !== FiscalDocumentItem::STATUS_PENDING) {
                 continue;
             }
 
@@ -110,7 +110,7 @@ final readonly class ClassifyInvoiceItems
                 continue;
             }
 
-            if ($this->classifyWithAi($invoice, $item, $categories)) {
+            if ($this->classifyWithAi($fiscal_document, $item, $categories)) {
                 $classified++;
             }
         }
@@ -127,7 +127,7 @@ final readonly class ClassifyInvoiceItems
     /**
      * @param  list<ClassificationCategory>  $categories
      */
-    private function classifyWithAi(Invoice $invoice, InvoiceItem $item, array $categories): bool
+    private function classifyWithAi(FiscalDocument $fiscal_document, FiscalDocumentItem $item, array $categories): bool
     {
         try {
             $result = $this->classifier->classify(new ClassificationRequest(
@@ -139,8 +139,8 @@ final readonly class ClassifyInvoiceItems
             ));
         } catch (ClassifierUnavailable|InvalidClassifierOutput $exception) {
             Log::warning('classification.ai_unavailable', [
-                'tenant_id' => $invoice->tenant_id,
-                'invoice_item_id' => $item->id,
+                'tenant_id' => $fiscal_document->tenant_id,
+                'fiscal_document_item_id' => $item->id,
                 'reason' => $exception::class,
             ]);
 
@@ -152,8 +152,8 @@ final readonly class ClassifyInvoiceItems
             // tumbar la importación del comprobante. El ítem va a revisión y
             // el detalle queda en el log sin datos del comprobante.
             Log::error('classification.ai_error', [
-                'tenant_id' => $invoice->tenant_id,
-                'invoice_item_id' => $item->id,
+                'tenant_id' => $fiscal_document->tenant_id,
+                'fiscal_document_item_id' => $item->id,
                 'reason' => $exception::class,
             ]);
 
@@ -172,8 +172,8 @@ final readonly class ClassifyInvoiceItems
 
         if (! $category instanceof ClassificationCategory) {
             Log::warning('classification.ai_unknown_category', [
-                'tenant_id' => $invoice->tenant_id,
-                'invoice_item_id' => $item->id,
+                'tenant_id' => $fiscal_document->tenant_id,
+                'fiscal_document_item_id' => $item->id,
             ]);
 
             $this->markForReview($item);
@@ -185,13 +185,13 @@ final readonly class ClassifyInvoiceItems
 
         $item->forceFill([
             'expense_category_id' => $category->id,
-            'classification_status' => $accepted ? InvoiceItem::STATUS_AUTO : InvoiceItem::STATUS_REVIEW,
+            'classification_status' => $accepted ? FiscalDocumentItem::STATUS_AUTO : FiscalDocumentItem::STATUS_REVIEW,
         ])->save();
 
         Classification::query()->updateOrCreate(
-            ['invoice_item_id' => $item->id],
+            ['fiscal_document_item_id' => $item->id],
             [
-                'tenant_id' => $invoice->tenant_id,
+                'tenant_id' => $fiscal_document->tenant_id,
                 'expense_category_id' => $category->id,
                 'method' => $result->cached ? ClassificationMethod::Cache : ClassificationMethod::Llm,
                 'confidence' => $suggestion->confidence,
@@ -219,10 +219,10 @@ final readonly class ClassifyInvoiceItems
         return null;
     }
 
-    private function markForReview(InvoiceItem $item): void
+    private function markForReview(FiscalDocumentItem $item): void
     {
         $item->forceFill([
-            'classification_status' => InvoiceItem::STATUS_REVIEW,
+            'classification_status' => FiscalDocumentItem::STATUS_REVIEW,
         ])->save();
     }
 

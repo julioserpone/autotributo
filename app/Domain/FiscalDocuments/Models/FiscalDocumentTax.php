@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Invoicing\Models;
+namespace App\Domain\FiscalDocuments\Models;
 
 use App\Domain\Tenancy\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
@@ -11,11 +11,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * Impuesto de cabecera de un comprobante.
  */
-final class InvoiceTax extends Model
+final class FiscalDocumentTax extends Model
 {
     use BelongsToTenant;
 
-    protected $table = 'invoice_taxes';
+    protected $table = 'fiscal_document_taxes';
 
     /** @var list<string> */
     protected $guarded = [];
@@ -27,10 +27,10 @@ final class InvoiceTax extends Model
     ];
 
     /**
-     * @return BelongsTo<Invoice, $this>
+     * @return BelongsTo<FiscalDocument, $this>
      */
-    public function invoice(): BelongsTo
+    public function fiscal_document(): BelongsTo
     {
-        return $this->belongsTo(Invoice::class);
+        return $this->belongsTo(FiscalDocument::class);
     }
 }

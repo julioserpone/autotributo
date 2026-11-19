@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('invoices', function (Blueprint $table): void {
+        Schema::create('fiscal_documents', function (Blueprint $table): void {
             $table->id();
             $table->char('public_id', 26)->unique();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
@@ -58,6 +58,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('invoices');
+        Schema::dropIfExists('fiscal_documents');
     }
 };

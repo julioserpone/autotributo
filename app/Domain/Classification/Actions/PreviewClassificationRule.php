@@ -10,7 +10,7 @@ use App\Domain\Classification\Models\ClassificationRule;
 use App\Domain\Classification\Services\ClassificationRuleConflictDetector;
 use App\Domain\Classification\Services\ClassificationRuleMatcher;
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\InvoiceItem;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
 use Illuminate\Database\Eloquent\Builder;
 use InvalidArgumentException;
 
@@ -46,7 +46,7 @@ final readonly class PreviewClassificationRule
             $rule->exists ? $rule->getKey() : null,
         );
 
-        $query = InvoiceItem::query()->with('invoice');
+        $query = FiscalDocumentItem::query()->with('fiscal_document');
 
         $companyPublicId = trim((string) ($criteria['company_id'] ?? ''));
 
@@ -58,7 +58,7 @@ final readonly class PreviewClassificationRule
             }
 
             $query->whereHas(
-                'invoice',
+                'fiscal_document',
                 fn (Builder $builder): Builder => $builder->where('company_id', $companyId),
             );
         }
@@ -69,13 +69,13 @@ final readonly class PreviewClassificationRule
 
         $query->orderBy('id')->chunkById(200, function ($items) use ($rule, $limit, &$matches, &$scanned, &$sample): void {
             foreach ($items as $item) {
-                if (! $item instanceof InvoiceItem) {
+                if (! $item instanceof FiscalDocumentItem) {
                     continue;
                 }
 
                 $scanned++;
-                $invoice = $item->invoice;
-                $issuerRuc = $invoice?->issuer_ruc;
+                $fiscal_document = $item->fiscal_document;
+                $issuerRuc = $fiscal_document?->issuer_ruc;
 
                 if (! $this->matcher->matches($rule, $item, $issuerRuc === null ? null : (string) $issuerRuc)) {
                     continue;
@@ -85,12 +85,12 @@ final readonly class PreviewClassificationRule
 
                 if (count($sample) < $limit) {
                     $sample[] = [
-                        'invoice_item_id' => $item->id,
+                        'fiscal_document_item_id' => $item->id,
                         'description' => $item->description,
                         'issuer_ruc' => $issuerRuc,
-                        'issuer_name' => $invoice?->issuer_name,
-                        'issue_date' => $invoice?->issue_date?->toDateString(),
-                        'invoice_id' => $invoice?->public_id,
+                        'issuer_name' => $fiscal_document?->issuer_name,
+                        'issue_date' => $fiscal_document?->issue_date?->toDateString(),
+                        'fiscal_document_id' => $fiscal_document?->public_id,
                     ];
                 }
             }

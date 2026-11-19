@@ -5,17 +5,17 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\Sri\Enums\SriDocumentType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use JulioSerpone\SriComprobantes\AccessKey\AccessKeyGenerator;
 
 /**
- * @extends Factory<Invoice>
+ * @extends Factory<FiscalDocument>
  */
-final class InvoiceFactory extends Factory
+final class FiscalDocumentFactory extends Factory
 {
-    protected $model = Invoice::class;
+    protected $model = FiscalDocument::class;
 
     /**
      * @return array<string, mixed>
@@ -26,15 +26,15 @@ final class InvoiceFactory extends Factory
 
         return [
             'company_id' => Company::factory(),
-            'document_type' => SriDocumentType::Invoice,
+            'document_type' => SriDocumentType::FiscalDocument,
             'access_key' => $this->fakeAccessKey(),
             'establishment' => '001',
             'emission_point' => '001',
             'sequential' => '000000123',
             'issue_date' => '2026-09-15',
-            'status' => Invoice::STATUS_AUTHORIZED,
+            'status' => FiscalDocument::STATUS_AUTHORIZED,
             'environment' => '2',
-            'direction' => Invoice::DIRECTION_RECEIVED,
+            'direction' => FiscalDocument::DIRECTION_RECEIVED,
             'issuer_ruc' => '1758871873001',
             'issuer_name' => 'PROVEEDOR DE PRUEBA S.A.',
             'receiver_ruc' => '1790012345001',
@@ -50,7 +50,7 @@ final class InvoiceFactory extends Factory
             'xml_path' => '2/1758871873001/2026-09/'.$this->fakeAccessKey().'.xml',
             'xml_sha256' => str_repeat('a', 64),
             'xml_size' => 100,
-            'source' => Invoice::SOURCE_SRI_ROBOT,
+            'source' => FiscalDocument::SOURCE_SRI_ROBOT,
             'totals_mismatch' => false,
             'first_seen_at' => now(),
             'updated_or_created_at' => now(),

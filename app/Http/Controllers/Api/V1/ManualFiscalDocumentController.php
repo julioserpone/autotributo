@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Companies\Models\Company;
-use App\Domain\Sri\Actions\ImportManualSriInvoice;
+use App\Domain\Sri\Actions\ImportManualSriFiscalDocument;
 use App\Domain\Sri\Enums\SriImportOutcome;
 use App\Domain\Sri\Exceptions\SriXmlException;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Sri\StoreManualInvoiceRequest;
-use App\Http\Resources\InvoiceResource;
+use App\Http\Requests\Sri\StoreManualFiscalDocumentRequest;
+use App\Http\Resources\FiscalDocumentResource;
 use App\Support\Http\ProblemDetails;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\UploadedFile;
@@ -20,11 +20,11 @@ use Illuminate\Http\UploadedFile;
  *
  * Es una importación síncrona de un solo documento: no crea un `SriSyncRun`.
  */
-final class ManualInvoiceController extends Controller
+final class ManualFiscalDocumentController extends Controller
 {
-    public function __construct(private readonly ImportManualSriInvoice $import) {}
+    public function __construct(private readonly ImportManualSriFiscalDocument $import) {}
 
-    public function store(StoreManualInvoiceRequest $request, Company $company): JsonResponse
+    public function store(StoreManualFiscalDocumentRequest $request, Company $company): JsonResponse
     {
         $file = $request->file('file');
 
@@ -48,7 +48,7 @@ final class ManualInvoiceController extends Controller
         $status = $result->outcome === SriImportOutcome::Created ? 201 : 200;
 
         return response()->json([
-            'data' => new InvoiceResource($result->invoice),
+            'data' => new FiscalDocumentResource($result->fiscal_document),
             'meta' => ['outcome' => $result->outcome->value],
         ], $status);
     }

@@ -12,7 +12,7 @@ namespace App\Domain\Sri\Enums;
  */
 enum SriDocumentType: string
 {
-    case Invoice = '01';
+    case FiscalDocument = '01';
     case PurchaseSettlement = '03';
     case CreditNote = '04';
     case DebitNote = '05';
@@ -22,7 +22,7 @@ enum SriDocumentType: string
     public function slug(): string
     {
         return match ($this) {
-            self::Invoice => 'facturas',
+            self::FiscalDocument => 'facturas',
             self::PurchaseSettlement => 'liquidaciones-compra',
             self::CreditNote => 'notas-credito',
             self::DebitNote => 'notas-debito',
@@ -34,7 +34,7 @@ enum SriDocumentType: string
     public function label(): string
     {
         return match ($this) {
-            self::Invoice => 'Factura',
+            self::FiscalDocument => 'Factura',
             self::PurchaseSettlement => 'Liquidación de compra de bienes y prestación de servicios',
             self::CreditNote => 'Nota de crédito',
             self::DebitNote => 'Nota de débito',
@@ -66,7 +66,7 @@ enum SriDocumentType: string
     public static function syncableCodes(): array
     {
         return [
-            self::Invoice->value,
+            self::FiscalDocument->value,
             self::PurchaseSettlement->value,
             self::CreditNote->value,
             self::DebitNote->value,

@@ -13,13 +13,13 @@ use App\Models\User;
  * Revisión humana de clasificaciones (F3-05).
  *
  * Consultar la cola requiere ver comprobantes; decidir requiere el permiso de
- * revisión (`invoices.review`), que no tienen los roles de solo lectura.
+ * revisión (`fiscal_documents.review`), que no tienen los roles de solo lectura.
  */
 final class ClassificationPolicy
 {
     public function viewAny(User $user): bool
     {
-        return RolePermissions::allows($user, Ability::InvoicesView);
+        return RolePermissions::allows($user, Ability::FiscalDocumentsView);
     }
 
     public function view(User $user, Classification $classification): bool
@@ -29,12 +29,12 @@ final class ClassificationPolicy
 
     public function review(User $user, Classification $classification): bool
     {
-        return RolePermissions::allows($user, Ability::InvoicesReview)
+        return RolePermissions::allows($user, Ability::FiscalDocumentsReview)
             && RolePermissions::sameTenant($classification);
     }
 
     public function reviewAny(User $user): bool
     {
-        return RolePermissions::allows($user, Ability::InvoicesReview);
+        return RolePermissions::allows($user, Ability::FiscalDocumentsReview);
     }
 }

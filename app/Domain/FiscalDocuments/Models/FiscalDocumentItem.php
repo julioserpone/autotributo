@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Invoicing\Models;
+namespace App\Domain\FiscalDocuments\Models;
 
 use App\Domain\Tenancy\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * `normalized_description` es la clave de las reglas de clasificación y de la
  * caché de IA; `classification_status` empieza en `pending` hasta F3.
  */
-final class InvoiceItem extends Model
+final class FiscalDocumentItem extends Model
 {
     use BelongsToTenant;
 
@@ -26,7 +26,7 @@ final class InvoiceItem extends Model
 
     public const STATUS_MANUAL = 'manual';
 
-    protected $table = 'invoice_items';
+    protected $table = 'fiscal_document_items';
 
     /** @var list<string> */
     protected $guarded = [];
@@ -39,10 +39,10 @@ final class InvoiceItem extends Model
     ];
 
     /**
-     * @return BelongsTo<Invoice, $this>
+     * @return BelongsTo<FiscalDocument, $this>
      */
-    public function invoice(): BelongsTo
+    public function fiscal_document(): BelongsTo
     {
-        return $this->belongsTo(Invoice::class);
+        return $this->belongsTo(FiscalDocument::class);
     }
 }

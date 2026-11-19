@@ -9,9 +9,9 @@ namespace App\Domain\Sri\Data;
  *
  * `normalizedDescription` se calcula en el dominio (sin acentos, mayúsculas y
  * espacios colapsados) porque es la clave de las reglas de clasificación y de
- * la caché de IA; se guarda desnormalizada en `invoice_items`.
+ * la caché de IA; se guarda desnormalizada en `fiscal_document_items`.
  */
-final readonly class SriInvoiceItemData
+final readonly class SriFiscalDocumentItemData
 {
     public function __construct(
         public int $lineNumber,

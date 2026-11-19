@@ -14,11 +14,11 @@ use App\Domain\Sri\Enums\SriDocumentType;
  * inconsistentes: el comprobante se importa igual (no se corrige en silencio)
  * y se marca para un hallazgo fiscal.
  */
-final readonly class SriInvoiceData
+final readonly class SriFiscalDocumentData
 {
     /**
-     * @param  list<SriInvoiceItemData>  $items
-     * @param  list<SriInvoiceTaxData>  $taxes
+     * @param  list<SriFiscalDocumentItemData>  $items
+     * @param  list<SriFiscalDocumentTaxData>  $taxes
      * @param  list<SriRetentionData>  $retentions
      * @param  list<string>  $relatedAccessKeys  Claves de las facturas ajustadas (notas de crédito y débito)
      */
@@ -98,7 +98,7 @@ final readonly class SriInvoiceData
     public function itemsSubtotalCents(): int
     {
         return array_sum(array_map(
-            static fn (SriInvoiceItemData $item): int => $item->subtotalCents,
+            static fn (SriFiscalDocumentItemData $item): int => $item->subtotalCents,
             $this->items,
         ));
     }
@@ -106,7 +106,7 @@ final readonly class SriInvoiceData
     public function taxesTotalCents(): int
     {
         return array_sum(array_map(
-            static fn (SriInvoiceTaxData $tax): int => $tax->amountCents,
+            static fn (SriFiscalDocumentTaxData $tax): int => $tax->amountCents,
             $this->taxes,
         ));
     }

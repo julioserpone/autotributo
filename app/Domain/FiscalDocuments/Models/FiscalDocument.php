@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Invoicing\Models;
+namespace App\Domain\FiscalDocuments\Models;
 
 use App\Domain\Sri\Enums\SriDocumentType;
 use App\Domain\Sri\Models\SriSyncRun;
 use App\Domain\Tenancy\Models\Concerns\BelongsToTenant;
-use Database\Factories\InvoiceFactory;
+use Database\Factories\FiscalDocumentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -36,9 +36,9 @@ use Illuminate\Support\Str;
  * @property Carbon|null $first_seen_at
  * @property Carbon|null $updated_or_created_at
  */
-final class Invoice extends Model
+final class FiscalDocument extends Model
 {
-    /** @use HasFactory<InvoiceFactory> */
+    /** @use HasFactory<FiscalDocumentFactory> */
     use BelongsToTenant, HasFactory;
 
     public const SOURCE_SRI_ROBOT = 'sri_robot';
@@ -49,7 +49,7 @@ final class Invoice extends Model
 
     public const DIRECTION_RECEIVED = 'received';
 
-    protected $table = 'invoices';
+    protected $table = 'fiscal_documents';
 
     /** @var list<string> */
     protected $guarded = [];
@@ -74,32 +74,32 @@ final class Invoice extends Model
 
     protected static function booted(): void
     {
-        self::creating(function (self $invoice): void {
-            if (blank($invoice->public_id)) {
-                $invoice->public_id = (string) Str::ulid();
+        self::creating(function (self $fiscal_document): void {
+            if (blank($fiscal_document->public_id)) {
+                $fiscal_document->public_id = (string) Str::ulid();
             }
         });
     }
 
-    protected static function newFactory(): InvoiceFactory
+    protected static function newFactory(): FiscalDocumentFactory
     {
-        return InvoiceFactory::new();
+        return FiscalDocumentFactory::new();
     }
 
     /**
-     * @return HasMany<InvoiceItem, $this>
+     * @return HasMany<FiscalDocumentItem, $this>
      */
     public function items(): HasMany
     {
-        return $this->hasMany(InvoiceItem::class);
+        return $this->hasMany(FiscalDocumentItem::class);
     }
 
     /**
-     * @return HasMany<InvoiceTax, $this>
+     * @return HasMany<FiscalDocumentTax, $this>
      */
     public function taxes(): HasMany
     {
-        return $this->hasMany(InvoiceTax::class);
+        return $this->hasMany(FiscalDocumentTax::class);
     }
 
     /**

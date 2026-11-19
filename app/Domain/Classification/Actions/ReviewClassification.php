@@ -7,7 +7,7 @@ namespace App\Domain\Classification\Actions;
 use App\Domain\Classification\Data\ClassificationReviewData;
 use App\Domain\Classification\Enums\ClassificationStatus;
 use App\Domain\Classification\Models\Classification;
-use App\Domain\Invoicing\Models\InvoiceItem;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -39,8 +39,8 @@ final readonly class ReviewClassification
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $item = InvoiceItem::query()
-                ->whereKey($locked->invoice_item_id)
+            $item = FiscalDocumentItem::query()
+                ->whereKey($locked->fiscal_document_item_id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
@@ -53,8 +53,8 @@ final readonly class ReviewClassification
             $item->forceFill([
                 'expense_category_id' => $categoryId,
                 'classification_status' => $accepted
-                    ? InvoiceItem::STATUS_MANUAL
-                    : InvoiceItem::STATUS_PENDING,
+                    ? FiscalDocumentItem::STATUS_MANUAL
+                    : FiscalDocumentItem::STATUS_PENDING,
             ])->save();
 
             $locked->forceFill([

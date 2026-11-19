@@ -16,7 +16,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * El límite de 2 MB se aplica antes de leer el contenido y la extensión se
  * restringe a XML; la guardia XXE y el parseo viven en la acción de dominio.
  */
-final class StoreManualInvoiceRequest extends FormRequest
+final class StoreManualFiscalDocumentRequest extends FormRequest
 {
     public function authorize(): bool
     {

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Domain\Sri\Actions;
 
-use App\Domain\Classification\Actions\ClassifyInvoiceItems;
+use App\Domain\Classification\Actions\ClassifyFiscalDocumentItems;
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
+use App\Domain\Sri\Data\SriFiscalDocumentData;
+use App\Domain\Sri\Data\SriFiscalDocumentItemData;
+use App\Domain\Sri\Data\SriFiscalDocumentTaxData;
 use App\Domain\Sri\Data\SriImportResult;
-use App\Domain\Sri\Data\SriInvoiceData;
-use App\Domain\Sri\Data\SriInvoiceItemData;
-use App\Domain\Sri\Data\SriInvoiceTaxData;
 use App\Domain\Sri\Data\SriRetentionData;
 use App\Domain\Sri\Enums\SriImportOutcome;
 use App\Domain\Sri\Models\SriSyncRun;
@@ -34,35 +34,35 @@ use Throwable;
  * Cada comprobante se escribe en su propia transacción: un XML con hijos
  * inválidos no deja el comprobante a medias.
  */
-final readonly class PersistSriInvoice
+final readonly class PersistSriFiscalDocument
 {
-    public function __construct(private ClassifyInvoiceItems $classifyItems) {}
+    public function __construct(private ClassifyFiscalDocumentItems $classifyItems) {}
 
     public function handle(
         Company $company,
-        SriInvoiceData $data,
+        SriFiscalDocumentData $data,
         string $xml,
         ?SriSyncRun $run = null,
-        string $source = Invoice::SOURCE_SRI_ROBOT,
+        string $source = FiscalDocument::SOURCE_SRI_ROBOT,
         bool $force = false,
     ): SriImportResult {
         $checksum = hash('sha256', $xml);
         $now = now();
 
         $result = DB::transaction(function () use ($company, $data, $xml, $checksum, $run, $source, $now, $force): SriImportResult {
-            $invoice = Invoice::query()
+            $fiscal_document = FiscalDocument::query()
                 ->where('company_id', $company->id)
                 ->where('access_key', $data->accessKey)
                 ->first();
 
-            if ($invoice !== null && $invoice->xml_sha256 === $checksum && ! ($force || ($run instanceof SriSyncRun && $run->force))) {
-                return new SriImportResult($invoice, SriImportOutcome::Skipped);
+            if ($fiscal_document !== null && $fiscal_document->xml_sha256 === $checksum && ! ($force || ($run instanceof SriSyncRun && $run->force))) {
+                return new SriImportResult($fiscal_document, SriImportOutcome::Skipped);
             }
 
-            $isNew = $invoice === null;
-            $invoice ??= new Invoice;
+            $isNew = $fiscal_document === null;
+            $fiscal_document ??= new FiscalDocument;
 
-            $invoice->fill([
+            $fiscal_document->fill([
                 'company_id' => $company->id,
                 'document_type' => $data->documentType,
                 'access_key' => $data->accessKey,
@@ -72,9 +72,9 @@ final readonly class PersistSriInvoice
                 'sequential' => $data->sequential,
                 'issue_date' => $data->issueDate,
                 'authorization_date' => $data->authorizationDate,
-                'status' => Invoice::STATUS_AUTHORIZED,
+                'status' => FiscalDocument::STATUS_AUTHORIZED,
                 'environment' => $data->environment,
-                'direction' => Invoice::DIRECTION_RECEIVED,
+                'direction' => FiscalDocument::DIRECTION_RECEIVED,
                 'issuer_ruc' => $data->issuerRuc,
                 'issuer_name' => $data->issuerName,
                 'receiver_ruc' => $data->receiverRuc === '' ? null : $data->receiverRuc,
@@ -93,23 +93,23 @@ final readonly class PersistSriInvoice
                 'raw' => null,
                 'source' => $source,
                 'totals_mismatch' => $data->totalsMismatch(),
-                'first_seen_at' => $isNew ? $now : $invoice->first_seen_at,
+                'first_seen_at' => $isNew ? $now : $fiscal_document->first_seen_at,
                 'updated_or_created_at' => $now,
                 'sync_run_id' => $run?->id,
             ]);
 
-            $invoice->save();
+            $fiscal_document->save();
 
             if (! $isNew) {
-                $invoice->items()->delete();
-                $invoice->taxes()->delete();
-                $invoice->retentions()->delete();
+                $fiscal_document->items()->delete();
+                $fiscal_document->taxes()->delete();
+                $fiscal_document->retentions()->delete();
             }
 
-            $this->storeChildren($invoice, $data);
+            $this->storeChildren($fiscal_document, $data);
 
             return new SriImportResult(
-                $invoice,
+                $fiscal_document,
                 $isNew ? SriImportOutcome::Created : SriImportOutcome::Updated,
             );
         });
@@ -118,7 +118,7 @@ final readonly class PersistSriInvoice
         // quedó persistido y el ítem sigue `pending` para revisión manual.
         if ($result->outcome !== SriImportOutcome::Skipped) {
             try {
-                $this->classifyItems->handle($result->invoice);
+                $this->classifyItems->handle($result->fiscal_document);
             } catch (Throwable $exception) {
                 report($exception);
             }
@@ -133,7 +133,7 @@ final readonly class PersistSriInvoice
      * F2-08 aún no escribe el XML en el bucket; se guarda la ruta prevista para
      * que el objeto y la fila no se desincronicen cuando se implemente.
      */
-    private function xmlPath(Company $company, SriInvoiceData $data): string
+    private function xmlPath(Company $company, SriFiscalDocumentData $data): string
     {
         return sprintf(
             '%s/%s/%s/%s.xml',
@@ -144,28 +144,28 @@ final readonly class PersistSriInvoice
         );
     }
 
-    private function storeChildren(Invoice $invoice, SriInvoiceData $data): void
+    private function storeChildren(FiscalDocument $fiscal_document, SriFiscalDocumentData $data): void
     {
         foreach ($data->items as $item) {
-            $invoice->items()->create($this->itemAttributes($invoice, $item));
+            $fiscal_document->items()->create($this->itemAttributes($fiscal_document, $item));
         }
 
         foreach ($data->taxes as $tax) {
-            $invoice->taxes()->create($this->taxAttributes($invoice, $tax));
+            $fiscal_document->taxes()->create($this->taxAttributes($fiscal_document, $tax));
         }
 
         foreach ($data->retentions as $retention) {
-            $invoice->retentions()->create($this->retentionAttributes($invoice, $retention));
+            $fiscal_document->retentions()->create($this->retentionAttributes($fiscal_document, $retention));
         }
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function itemAttributes(Invoice $invoice, SriInvoiceItemData $item): array
+    private function itemAttributes(FiscalDocument $fiscal_document, SriFiscalDocumentItemData $item): array
     {
         return [
-            'tenant_id' => $invoice->tenant_id,
+            'tenant_id' => $fiscal_document->tenant_id,
             'line_number' => $item->lineNumber,
             'main_code' => $item->mainCode,
             'auxiliary_code' => $item->auxiliaryCode,
@@ -183,10 +183,10 @@ final readonly class PersistSriInvoice
     /**
      * @return array<string, mixed>
      */
-    private function taxAttributes(Invoice $invoice, SriInvoiceTaxData $tax): array
+    private function taxAttributes(FiscalDocument $fiscal_document, SriFiscalDocumentTaxData $tax): array
     {
         return [
-            'tenant_id' => $invoice->tenant_id,
+            'tenant_id' => $fiscal_document->tenant_id,
             'tax_code' => $tax->taxCode,
             'sri_percentage_code' => $tax->sriPercentageCode,
             'rate' => $tax->rate,
@@ -198,10 +198,10 @@ final readonly class PersistSriInvoice
     /**
      * @return array<string, mixed>
      */
-    private function retentionAttributes(Invoice $invoice, SriRetentionData $retention): array
+    private function retentionAttributes(FiscalDocument $fiscal_document, SriRetentionData $retention): array
     {
         return [
-            'tenant_id' => $invoice->tenant_id,
+            'tenant_id' => $fiscal_document->tenant_id,
             'tax_type' => $retention->taxType,
             'retention_code' => $retention->retentionCode,
             'base_cents' => $retention->baseCents,

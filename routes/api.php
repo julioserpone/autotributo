@@ -11,10 +11,10 @@ use App\Http\Controllers\Api\V1\ClassificationRuleController;
 use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\ExpenseCategoryController;
+use App\Http\Controllers\Api\V1\FiscalDocumentController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationController;
-use App\Http\Controllers\Api\V1\InvoiceController;
-use App\Http\Controllers\Api\V1\ManualInvoiceController;
+use App\Http\Controllers\Api\V1\ManualFiscalDocumentController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\RealtimeStatusController;
 use App\Http\Controllers\Api\V1\SriCredentialController;
@@ -106,10 +106,10 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
 
         // Bandeja de comprobantes (F4-05): listado paginado por cursor con
         // filtros y detalle con líneas, impuestos y retenciones.
-        Route::get('invoices', [InvoiceController::class, 'index'])
-            ->name('api.v1.invoices.index');
-        Route::get('invoices/{invoice:public_id}', [InvoiceController::class, 'show'])
-            ->name('api.v1.invoices.show');
+        Route::get('fiscal_documents', [FiscalDocumentController::class, 'index'])
+            ->name('api.v1.fiscal_documents.index');
+        Route::get('fiscal_documents/{fiscal_document:public_id}', [FiscalDocumentController::class, 'show'])
+            ->name('api.v1.fiscal_documents.show');
 
         // Credenciales del portal SRI (F1-06). El secreto nunca se devuelve y
         // cada lectura o cambio queda auditado en `sri_credential_accesses`.
@@ -124,8 +124,8 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
 
         // Carga manual de XML autorizado (F2-13 / US-14): contingencia cuando
         // el robot no entrega el paquete. Importación síncrona de un documento.
-        Route::post('companies/{company}/invoices/manual', [ManualInvoiceController::class, 'store'])
-            ->name('api.v1.companies.invoices.manual.store');
+        Route::post('companies/{company}/fiscal_documents/manual', [ManualFiscalDocumentController::class, 'store'])
+            ->name('api.v1.companies.fiscal_documents.manual.store');
 
         // Sincronización (F1-06 + F2-03 + F2-09a): usa las credenciales guardadas
         // y la clave de idempotencia del cliente para no duplicar runs. El

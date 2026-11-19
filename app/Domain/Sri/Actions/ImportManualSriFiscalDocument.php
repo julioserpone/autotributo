@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Sri\Actions;
 
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
-use App\Domain\Sri\Contracts\SriInvoiceParser;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
+use App\Domain\Sri\Contracts\SriFiscalDocumentParser;
 use App\Domain\Sri\Data\SriImportResult;
 use App\Domain\Sri\Exceptions\SriXmlException;
 
@@ -17,13 +17,13 @@ use App\Domain\Sri\Exceptions\SriXmlException;
  * job, solo interpreta el documento y lo persiste con `source=manual_upload`.
  * La acción recibe el XML ya leído para no acoplar el dominio a HTTP.
  */
-final readonly class ImportManualSriInvoice
+final readonly class ImportManualSriFiscalDocument
 {
     private const MAX_BYTES = 2_097_152;
 
     public function __construct(
-        private SriInvoiceParser $parser,
-        private PersistSriInvoice $persist,
+        private SriFiscalDocumentParser $parser,
+        private PersistSriFiscalDocument $persist,
     ) {}
 
     /**
@@ -52,7 +52,7 @@ final readonly class ImportManualSriInvoice
             $data,
             $xml,
             null,
-            Invoice::SOURCE_MANUAL_UPLOAD,
+            FiscalDocument::SOURCE_MANUAL_UPLOAD,
         );
     }
 }

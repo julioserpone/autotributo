@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Domain\Classification\Models\Classification;
-use App\Domain\Invoicing\Models\Invoice;
-use App\Domain\Invoicing\Models\InvoiceItem;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -28,14 +28,14 @@ final class ClassificationResource extends JsonResource
     {
         $classification = $this->resource;
 
-        $item = $classification->relationLoaded('invoiceItem') && $classification->invoiceItem instanceof InvoiceItem
-            ? $classification->invoiceItem
+        $item = $classification->relationLoaded('fiscal_documentItem') && $classification->fiscal_documentItem instanceof FiscalDocumentItem
+            ? $classification->fiscal_documentItem
             : null;
 
-        $invoice = $item instanceof InvoiceItem
-            && $item->relationLoaded('invoice')
-            && $item->invoice instanceof Invoice
-            ? $item->invoice
+        $fiscal_document = $item instanceof FiscalDocumentItem
+            && $item->relationLoaded('fiscal_document')
+            && $item->fiscal_document instanceof FiscalDocument
+            ? $item->fiscal_document
             : null;
 
         return [
@@ -47,19 +47,19 @@ final class ClassificationResource extends JsonResource
             'expense_category' => $classification->relationLoaded('expenseCategory') && $classification->expenseCategory !== null
                 ? new ExpenseCategoryResource($classification->expenseCategory)
                 : null,
-            'item' => $item instanceof InvoiceItem ? [
+            'item' => $item instanceof FiscalDocumentItem ? [
                 'id' => $item->id,
                 'line_number' => $item->line_number,
                 'description' => $item->description,
                 'total_cents' => $item->total_cents,
             ] : null,
-            'invoice' => $invoice instanceof Invoice ? [
-                'id' => $invoice->public_id,
-                'document_type' => $invoice->document_type->value,
-                'issue_date' => $invoice->issue_date?->toDateString(),
-                'issuer_name' => $invoice->issuer_name,
-                'issuer_ruc' => $invoice->issuer_ruc,
-                'total_cents' => $invoice->total_cents,
+            'fiscal_document' => $fiscal_document instanceof FiscalDocument ? [
+                'id' => $fiscal_document->public_id,
+                'document_type' => $fiscal_document->document_type->value,
+                'issue_date' => $fiscal_document->issue_date?->toDateString(),
+                'issuer_name' => $fiscal_document->issuer_name,
+                'issuer_ruc' => $fiscal_document->issuer_ruc,
+                'total_cents' => $fiscal_document->total_cents,
             ] : null,
             'reviewed_by' => $classification->relationLoaded('reviewer') && $classification->reviewer !== null
                 ? [
