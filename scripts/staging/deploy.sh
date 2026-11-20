@@ -133,9 +133,15 @@ log "preparando dependencias y assets (composer/npm en caliente)"
 docker compose -f "$COMPOSE_FILE" --env-file .env run --rm --no-deps -u 0:0 app \
     ./scripts/staging/build-app.sh
 
-log "aplicando migraciones"
-docker compose -f "$COMPOSE_FILE" --env-file .env run --rm --no-deps app \
-    php artisan migrate --force
+if [[ "${DB_RECREATE:-0}" == "1" ]]; then
+    log "recreando la base de datos (migrate:fresh --seed)"
+    docker compose -f "$COMPOSE_FILE" --env-file .env run --rm --no-deps app \
+        php artisan migrate:fresh --seed --force
+else
+    log "aplicando migraciones pendientes"
+    docker compose -f "$COMPOSE_FILE" --env-file .env run --rm --no-deps app \
+        php artisan migrate --force
+fi
 
 log "recreando servicios"
 docker compose -f "$COMPOSE_FILE" --env-file .env up -d --remove-orphans \
