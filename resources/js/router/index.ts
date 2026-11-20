@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import DashboardPage from '@/pages/DashboardPage.vue';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage.vue';
+import ClassificationReviewPage from '@/pages/ClassificationReviewPage.vue';
 import FiscalDocumentInboxPage from '@/pages/FiscalDocumentInboxPage.vue';
 import LoginPage from '@/pages/LoginPage.vue';
 import NotFoundPage from '@/pages/NotFoundPage.vue';
@@ -55,6 +56,12 @@ const router = createRouter({
             name: 'fiscal_documents',
             component: FiscalDocumentInboxPage,
             meta: { title: 'Comprobantes' },
+        },
+        {
+            path: '/classifications',
+            name: 'classifications',
+            component: ClassificationReviewPage,
+            meta: { title: 'Revisión de clasificación' },
         },
         {
             path: '/sync',
