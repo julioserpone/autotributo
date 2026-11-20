@@ -106,8 +106,26 @@ Crea **AWS Budgets** con alarmas a USD 5 y USD 10 antes de provisionar.
 ### 4.2 Crear la instancia
 
 ```bash
-./scripts/staging/ec2-control.sh create           # imagen de GHCR + código de main
-./scripts/staging/ec2-control.sh create --source # sin imagen: build en la instancia
+./scripts/staging/ec2-control.sh create                                   # imagen de GHCR + código de main
+./scripts/staging/ec2-control.sh create --source                         # sin imagen: build del contenedor en la instancia
+./scripts/staging/ec2-control.sh create --recreate-db                    # recrea la BD (migrate:fresh --seed)
+./scripts/staging/ec2-control.sh create --branch BRANCH                  # despliega otra rama (p. ej. un PR sin fusionar)
+./scripts/staging/ec2-control.sh create --recreate-db --branch BRANCH \
+    --ruc RUC --password PASS                                            # recrea la BD con datos de demo + credencial SRI sellada
+```
+
+Opciones de `create`:
+
+| Opción | Descripción |
+|---|---|
+| `--source` | No usa la imagen de GHCR: la instancia construye el contenedor `app` (solo para depurar el build). |
+| `--recreate-db` | Ejecuta `migrate:fresh --seed` en lugar de `migrate`. Siempre corre `DemoTenantSeeder` (tenant, 4 roles y los 3 usuarios de prueba). |
+| `--branch BRANCH` | Rama de Git a desplegar (por defecto `main`). Útil para validar un PR sin fusionarlo. |
+| `--ruc RUC` | RUC ecuatoriano válido de 13 dígitos. Requiere `--password`. Junto con `--recreate-db` crea una empresa de prueba con credencial SRI cifrada. |
+| `--password PASS` | Contraseña del portal del SRI para la empresa de prueba (mín. 6 caracteres, sin saltos de línea). Requiere `--ruc`. |
+| `--inline` | Desactiva el panel de pantalla completa (salida en texto plano). |
+
+`--ruc` y `--password` deben indicarse juntos. La contraseña del portal **no** se muestra en el panel ni viaja en `argv` del host: se copia en un archivo temporal con permisos `600` que se borra al terminar el deploy.
 ```
 
 El script hace todo el ciclo y no necesita consola de AWS:
@@ -125,6 +143,34 @@ El script hace todo el ciclo y no necesita consola de AWS:
    IP nueva**.
 6. Ejecuta `deploy.sh` (pull de la imagen, Composer/Vite en caliente si hace
    falta, migraciones, healthchecks y `/up`).
+7. Comprueba `https://<hostname>/up` desde tu máquina (DNS público + TLS) y
+   termina.
+
+#### Panel de consola
+
+Mientras corre, el script ocupa **una sola pantalla** (buffer alterno, sin
+scroll) con dos secciones de `scripts/lib/dashboard.sh`:
+
+- **Etapas**: la lista completa desde el principio. Cada etapa muestra su icono
+  (`✔` hecha, spinner en curso, `○` pendiente, `!` aviso, `✖` falló) y su
+  duración. En terminales bajas la lista se resume en una línea
+  (`✔ ✔ ⠹ ○ ○ ○ 3/6 Provisionar host…`) para dejarle espacio al panel.
+- **En curso**: el comando que se está ejecutando (`$ scp …`, `$ aws ec2 …`,
+  `$ ssh ubuntu@… deploy.sh`) y las últimas líneas de su salida. Las líneas con
+  `error`, `failed` o `denied` se pintan en rojo y dos líneas de comando se
+  envuelven sin romper argumentos. Las barras de progreso de npm, Vite,
+  Composer y Docker se colapsan a su estado final (se descartan los repintados
+  con `\r`, los códigos ANSI y las líneas repetidas), así que no desplazan a la
+  salida real ni se quedan pegadas cuando el proceso avanza de fase.
+
+Al salir se recupera la pantalla normal y queda un resumen en el scrollback con
+el estado y la duración de cada etapa. Si algo falla, el resumen incluye el
+mensaje, las últimas líneas del log y la ruta del log completo en
+`$TMPDIR/autotributo-dash.*/session.log`.
+
+Con stdout redirigido (CI, `| tee`, `cron`) el panel cambia solo a texto plano
+equivalente (`▶ etapa`, `$ comando`, `ok`), y `--inline` lo fuerza también en
+una terminal. `NO_COLOR=1` desactiva el color.
 
 ### 4.2.1 Qué hace exactamente `deploy.sh`
 
@@ -428,6 +474,7 @@ Staging no se apaga: se destruye. Desde tu máquina local, sin consola de AWS:
 ./scripts/staging/ec2-control.sh create           # crear y desplegar (~4–6 min)
 ./scripts/staging/ec2-control.sh status           # estado, IP, AZ y coste/h
 ./scripts/staging/ec2-control.sh destroy --yes    # respaldar .env y terminar todo
+./scripts/staging/ec2-control.sh create --inline  # panel desactivado (texto plano)
 ```
 
 `create --source` despliega el código del repositorio (build del target `app` en
@@ -624,9 +671,54 @@ Cuando se compre `autotributo.com` y se habilite Cloud:
   en `~/.aws/credentials`. Si `aws sts get-caller-identity` falla con `AuthFailure`,
   regenera las claves en IAM y actualiza el archivo (no uses `aws sso login`, el
   perfil no está configurado para SSO).
-- **SSH inaccesible.** `destroy` ahora falla rápido (60 s) en `wait_ssh` y omite
-  el respaldo del `.env` con una advertencia, pero **sigue terminando la instancia**
-  con las credenciales AWS válidas. Si tu IP cambió, añádela al SG (ver §4.2).
+- **SSH inaccesible.** `destroy` espera 90 s a `wait_ssh` y, si no responde,
+  omite el respaldo del `.env` con un **aviso** (`!` en la etapa 2/4), pero
+  **sigue terminando la instancia** con las credenciales AWS válidas. Si tu IP
+  cambió, añádela al SG (ver §4.2).
+- **Timeout de SSH durante `create`.** Una instancia recién arrancada puede
+  tardar en aceptar conexiones mientras cloud-init termina. El script usa
+  `ConnectTimeout=20` con keepalive y **reintenta hasta 5 veces** (esperando
+  10 s) cuando el fallo es de transporte (código 255); solo aborta si el
+  comando remoto devuelve otro código. Si aun así falla, la instancia queda
+  encendida: `destroy --yes` y repite `create`.
+- **Qué significa el aviso de "Respaldar el .env".** La etapa termina en `AVISO`
+  (`!`) cuando no se pudo descargar la configuración, pero el `destroy` continúa
+  igual: bloquearlo dejaría la instancia encendida y facturando. El motivo
+  aparece en el resumen (`↳ no se pudo respaldar: se conserva el respaldo
+  anterior`) y en el log del panel. El respaldo anterior **no se sobrescribe con
+  un archivo vacío**: se descarga a temporales y solo se reemplaza
+  `~/.config/autotributo/{staging,duckdns}.env` si ambos llegaron con contenido.
+  Si el aviso se repite, comprueba en la instancia que existen
+  `/opt/autotributo/.env` y `/etc/autotributo/duckdns.env` y que `sudo` no pide
+  contraseña. Un `duckdns.env` local vacío hace que el siguiente `create` aborte
+  en la etapa 1 con un mensaje que indica qué escribir en el archivo.
 - **BD desincronizada tras un refactor.** Cuando cambian nombres de tablas o
   campos, usa `create --recreate-db`, que ejecuta `migrate:fresh --seed` en lugar
   de `migrate --force`. Verifica antes que no haya datos que quieras conservar.
+
+
+### Datos de demo en staging
+
+`create --recreate-db` ejecuta siempre `DemoTenantSeeder`, que crea el tenant por
+defecto, los cuatro roles y los tres usuarios de prueba (`owner@autotributo.test`,
+`accountant@autotributo.test`, `assistant@autotributo.test`, contraseña
+`password`). Para dejar además una empresa con credenciales SRI cifradas
+("selladas") en la base:
+
+```bash
+./scripts/staging/ec2-control.sh create --recreate-db \
+    --ruc 0990000018001 --password 'tu-clave-sri'
+```
+
+- `--ruc` debe ser un RUC ecuatoriano válido de 13 dígitos; `--password` la
+  contraseña del portal del SRI (mínimo 6 caracteres, sin saltos de línea).
+- Ambos parámetros son obligatorios juntos. Si faltan, la base se recrea con
+  los usuarios de prueba pero sin empresa de prueba.
+- La contraseña del portal **no** se muestra en el panel ni queda en `argv` del
+  host: viaja en un archivo temporal con permisos `600` que se borra al
+  terminar el deploy.
+- Si `SRI_CREDENTIALS_KEY` falta en el respaldo, `create` genera una y la
+  persiste (600) para que la credencial cifrada siga siendo descifrable en
+  recreaciones futuras.
+- La credencial se cifra con `SRI_CREDENTIALS_KEY` (sodium secretbox) y queda
+  asociada a la empresa de prueba, vinculada al tenant de los usuarios.

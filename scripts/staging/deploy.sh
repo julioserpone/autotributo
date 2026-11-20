@@ -81,6 +81,18 @@ cd "$APP_DIR" || fail "no existe APP_DIR=${APP_DIR}"
 [[ -f "$COMPOSE_FILE" ]] || fail "no existe ${COMPOSE_FILE} en ${APP_DIR}"
 [[ -f .env ]] || fail "falta .env en ${APP_DIR} (copiar .env.staging.example)"
 
+# Credenciales de demo inyectadas por `ec2-control.sh create --ruc/--password`:
+# se dejan en un archivo temporal (600) y se consumen aquí una sola vez.
+DEMO_ENV_FILE="${DEMO_ENV_FILE:-/tmp/autotributo-demo.env}"
+if [[ -f "$DEMO_ENV_FILE" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$DEMO_ENV_FILE"
+    set +a
+    rm -f "$DEMO_ENV_FILE"
+fi
+export DEMO_SEED="${DEMO_SEED:-0}"
+
 # Un solo deploy a la vez (el descriptor 9 se libera al salir).
 exec 9>"$LOCK_FILE"
 if ! flock -n 9; then
@@ -135,7 +147,12 @@ docker compose -f "$COMPOSE_FILE" --env-file .env run --rm --no-deps -u 0:0 app 
 
 if [[ "${DB_RECREATE:-0}" == "1" ]]; then
     log "recreando la base de datos (migrate:fresh --seed)"
-    docker compose -f "$COMPOSE_FILE" --env-file .env run --rm --no-deps app \
+    demo_env_args=(-e "DEMO_SEED=1")
+    if [[ -n "${DEMO_RUC:-}" ]]; then
+        demo_env_args+=(-e DEMO_RUC -e DEMO_SRI_PASSWORD)
+        log "inyectando credenciales de prueba (RUC ${DEMO_RUC})"
+    fi
+    docker compose -f "$COMPOSE_FILE" --env-file .env run --rm --no-deps "${demo_env_args[@]}" app \
         php artisan migrate:fresh --seed --force
 else
     log "aplicando migraciones pendientes"

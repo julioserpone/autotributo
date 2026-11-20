@@ -34,6 +34,9 @@
 - Conventional Commits in English.
 - `make check` green before PR. Tests run in Docker: `docker compose exec -T app ./vendor/bin/pest` (local `vendor/bin/pest` fails, DB host `db`).
 - Update `docs/02-implementation-plan.md`, `docs/09-progress.md` and `CHANGELOG.md` per task.
+- **Nuevas ramas siempre desde `main` actualizado**: `git checkout main && git pull --ff-only origin main` antes de `git checkout -b ...`.
+- **Cambios sobre trabajo en curso**: si el usuario reporta un problema en la rama/PR activo, hacer los cambios y commitear en esa misma rama (push al branch existente). NO crear un PR nuevo salvo que el usuario lo ordene explícitamente.
+- **Creación de PR**: solo cuando el usuario lo pida. Antes de informar, verificar que los GitHub Actions estén en verde. Si hay errores, corregirlos antes de reportar.
 
 ## Security
 - No secrets, tokens, keys, real XML or PII in code, fixtures, logs or screenshots.
