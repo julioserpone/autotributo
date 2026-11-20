@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
 
         if (app()->environment(['local', 'testing']) || (bool) config('demo.seed')) {
             $this->call(DemoTenantSeeder::class);
+            $this->call(ClassificationScenarioSeeder::class);
         }
     }
 }
