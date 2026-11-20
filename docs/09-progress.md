@@ -2,7 +2,7 @@
 
 > Tabla viva del proyecto. Se actualiza al cerrar cada tarea (una tarea = un commit/PR). La fuente de verdad del alcance sigue siendo `docs/02-implementation-plan.md`.
 
-**Última actualización:** 2026-11-19
+**Última actualización:** 2026-11-20
 
 ## Resumen por fase
 
@@ -11,8 +11,8 @@
 | F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
 | F1 · Núcleo tenant-ready | Completado | 11/11 | F1-11 · Staging efímero en AWS (EC2, Neon, DuckDNS, TLS, deploy, smoke tests) |
 | F2 · Ingesta SRI | Completado | 12/12 + F2-13 | F2-13 · Carga manual de XML (`US-14`) |
-| F3 · Motor fiscal + IA | En curso | 6/9 | F3-05 · Revisión humana de clasificaciones |
-| F4 · Frontend | En curso | 2/11 + fundaciones/auth parciales | F4-04 · Layout Dashboard de Nuxt UI con tema Mint (PR pendiente) |
+| F3 · Motor fiscal + IA | En curso | 7/9 | F3-06 · Riesgos fiscales y hallazgos |
+| F4 · Frontend | En curso | 4/11 + fundaciones/auth parciales | F4-06 · Monitor de sincronización con progreso en vivo (PR #73–#75) |
 | F5 · Declaraciones | Pendiente | 0/8 | — |
 | F6 · Hardening y beta | Pendiente | 0/8 | — |
 
@@ -68,6 +68,7 @@
 | F3-03 | Clasificador IA | Completado | P1 | `Classifier` + DTOs (`ClassificationRequest`, `ClassificationSuggestion`, `ClassifierResult`), prompt versionado `v1` en `resources/prompts/classify-item.v1.md`, `ClassifierOutputValidator` estricto (claves exactas, categoría del catálogo, confianza 0..1, `reason` ≤ 300, rechazo de markdown/JSON truncado), `OpenAiClassifier` (JSON Schema estricto) y `AnthropicClassifier`, `FakeClassifier` determinista, `ResilientClassifier` con un reintento solo ante salida inválida y `ClassifierCircuitBreaker` por tenant; `ClassifyFiscalDocumentItems` usa la IA solo si ninguna regla coincide y aplica `LLM_CONFIDENCE_THRESHOLD`: `auto`/`suggested` o `review`/`needs_review`, con degradación a `review` sin clasificación persistida ante timeout/429/5xx/salida inválida/circuito abierto/error inesperado · 39 tests / 131 assertions. Validado contra PostgreSQL local (smoke transaccional revertido: `auto`, `llm`, confianza 0,95, prompt `v1`) y con un mock HTTP local real para ambos adaptadores. Persistencia de `llm_calls`, caché por hash y presupuesto quedan para F3-04 (#63) |
 | F3-04 | Gobierno de IA | Completado | P1 | `llm_calls` (tenant/company, `purpose`, `provider`, `model`, `prompt_version`, `input_hash` SHA-256, tokens, `cost_micros`, `latency_ms`, `status`, `error_code`, `created_at`) enlazado desde `classifications.llm_call_id`; `GovernedClassifier` decide caché → presupuesto → proveedor; `LlmCache` reutiliza la última clasificación exitosa con la misma huella normalizada (descripción sin acentos, rubro, catálogo, modelo y prompt) y persiste `method=cache` sin coste; `LlmBudget` suma el mes en curso y corta antes de llamar con `budget_exceeded`, dejando el ítem en `review`; aviso al 80 % una vez al mes; `LlmCostCalculator` calcula en micros con enteros desde `config/ai.php`; `ClassifierUnavailable` e `InvalidClassifierOutput` exponen `errorCode()` para la bitácora. Groq/Gemini se prueban por configuración (`LLM_DRIVER=openai` + `OPENAI_BASE_URL`) · 15 tests / 70 assertions. Smoke real contra PostgreSQL (transacción revertida): `llm` con 1.200/300 tokens, 960 micros y 37 ms; segunda descripción idéntica `cache` con el mismo `llm_call_id` y una sola petición; presupuesto agotado `review` + `budget_exceeded` sin llamada (#64) |
 | F3-05 | Revisión humana | Completado | P1 | `GET /api/v1/classifications` (cola paginada que prioriza `needs_review` y filtra por `status`, `method`, `company_id`, `reviewed` y texto), `PATCH /api/v1/classifications/{classification}` (`decision=accept|reject`, categoría opcional para corregir) y `POST /api/v1/classifications/bulk-review` (máximo 100 ids, resultado parcial con `{updated, failed:[{id, reason}]}`); `ReviewClassification` acepta y deja el ítem `manual` con la categoría confirmada o lo rechaza devolviéndolo a `pending` sin categoría, siempre en transacción con bloqueo y conservando el origen (`method`, `rule_id`, `llm_call_id`); `Classification` pasa a ser auditable (`audit_logs` con `old_values`/`new_values`); `ClassificationPolicy` con `fiscal_documents.view` para leer y `fiscal_documents.review` para decidir (owner, accountant y assistant); revisar dos veces es válido y queda auditado · 12 tests / 71 assertions. OpenAPI regenerado (#69) |
+| F3-06 | Riesgos fiscales | Completado | P2 | `fiscal_findings` y `ghost_companies`; `DetectFiscalRisks` con `TOTALS_MISMATCH`, `INVALID_RUC`, `GHOST_COMPANY` y `DUPLICATE_SEQUENTIAL`; auto-resolución para riesgos técnicos objetivos; endpoints `GET/PATCH /api/v1/fiscal-findings` y `POST /api/v1/companies/{company}/fiscal-findings/detect`; integración best-effort en `FinalizeSriRun`; comando `fiscal:detect-risks` · 14 tests / 30 assertions. Pendiente firma del contador para severidades y códigos (`docs/fiscal-signoff.md`). |
 | F3-07 | Proporcionalidad IVA | Completado | P1 | `App\Domain\Shared\Values\Money` (value object inmutable sobre `brick/money` ^0.15: `cents()`, `ofDecimal()` con HALF_UP, `toCents()`, `decimal()`, `plus`/`minus`/`multipliedBy`, sin `float`) y `App\Domain\Fiscal\Services\Proportionality` (`factor()` = ventas 0 % / total con 6 decimales y `RoundingMode::HalfUp`; `complement()` calculado como `1 − factor` para que ambas caras sumen `1.000000` exacto; `apply()` del factor a un importe con redondeo a centavos; período sin ventas → `0.000000`; ventas negativas y factor fuera de [0,1] → `InvalidArgumentException`) · 33 tests / 66 assertions. Cierra el hueco del ADR-0002 (enmienda 2026-11-15): `brick/money` no estaba instalado y no existía `Money`. **Convención del 104 pendiente de firma del contador** (`docs/fiscal-signoff.md`) (#65) |
 
 ## Fase 4 · Frontend
@@ -75,19 +76,21 @@
 | ID | Tarea | Estado | Prioridad | Evidencia |
 |---|---|---|---|---|
 | F4-01 | Fundaciones | Parcial | P1 | Vite, Vue 3.5 + TypeScript estricto, Tailwind 4, router, Pinia y cliente HTTP con CSRF/errores; F4-02 añade la base de shadcn-vue (`reka-ui`, `class-variance-authority`, `clsx`, `tailwind-merge`) y el entorno de Vitest con stubs de layout. **Pendiente:** TanStack Query e i18n |
-| F4-04 | Layout | Completado (PR pendiente) | **P0** | Template Dashboard de Nuxt UI 4.13 (`UDashboardGroup`, `UDashboardSidebar` colapsable/redimensionable, `UDashboardPanel/Navbar/Toolbar/Search`) y tema Mint: `primary: teal`, `neutral: olive`, radio `0.75rem`, botones/inputs píldora, Nunito Variable (500/600/700/800) y JetBrains Mono. `AppShell`, `AppPage`, `AppSidebar`, `AppWorkspaceMenu`, `AppUserMenu`, `AuthLayout` y `lib/navigation.ts` (nav + ⌘K); selector de tema en el menú de usuario. Páginas migradas a `bg-default`/`bg-elevated`/`border-default`/`text-highlighted`/`text-muted`/`text-dimmed`. `useTheme` conserva `colorMode: false`. ADR-0009 enmendado y `docs/14-design-system.md` reescrito · 43 tests, `vue-tsc` y ESLint en verde · verificado en navegador (login, panel, bandeja, monitor y paleta ⌘K; claro y oscuro). |
+| F4-04 | Layout | Completado | **P0** | Template Dashboard de Nuxt UI 4.13 (`UDashboardGroup`, `UDashboardSidebar` colapsable/redimensionable, `UDashboardPanel/Navbar/Toolbar/Search`) y tema Mint: `primary: teal`, `neutral: olive`, radio `0.75rem`, botones/inputs píldora, Nunito Variable (500/600/700/800) y JetBrains Mono. `AppShell`, `AppPage`, `AppSidebar`, `AppWorkspaceMenu`, `AppUserMenu`, `AuthLayout` y `lib/navigation.ts` (nav + ⌘K); selector de tema en el menú de usuario. Páginas migradas a `bg-default`/`bg-elevated`/`border-default`/`text-highlighted`/`text-muted`/`text-dimmed`. `useTheme` conserva `colorMode: false`. ADR-0009 enmendado y `docs/14-design-system.md` reescrito · 43 tests, `vue-tsc` y ESLint en verde · verificado en navegador (login, panel, bandeja, monitor y paleta ⌘K; claro y oscuro). (#90) |
+| F4-05 | Bandeja de comprobantes | Completado | **P0** | `GET /api/v1/fiscal_documents` (cursor + filtros por empresa, estado, tipo, emisor, fechas), `GET /api/v1/fiscal_documents/{fiscal_document}` con líneas/impuestos/retenciones; `FiscalDocumentInboxPage` con filtros, paginación «Cargar más», drawer de detalle y selección múltiple. Migrado a `FiscalDocument` en PR #91. (#72) |
+| F4-06 | Monitor de sincronización | Completado | **P0** | `SyncMonitorPage` con formulario en una fila (empresa, tipos de documento como multiselección, desde/hasta), ayuda contextual para forzar re-descarga, progreso en vivo con polling (`poll_after_ms`) + archivos con errores, totales, historial y detalle de run. Store `sync` con `startSync` (Idempotency-Key), `loadRun`, `startPollingIfNeeded`. Refinamientos UI (#74, #75), progreso de `downloading` sin contar XML `missing`/`invalid`, historial estable durante refresco. (#73–#75) |
 | F4-02 | Design system | Completado | **P0** | Tokens semánticos dark-first en `resources/css/app.css` (`#09090b`, `#18181b`, `#27272a`, borde `#262626`, acentos violeta/rojo/verde, radios, sombras y `text-2xs`), tipografía del sistema, `prefers-reduced-motion` y foco visible; `AppField`, `AppButton`, `AppInput`, `AppSelect`, `AppCombobox`, `AppDateRange`, `AppTable` (loading/empty/error, slots y selección), `AppBadge`, `AppModal`, `AppToastHost` y `AppDrawer` con portal, foco atrapado y Escape; `useToast` y `AppToastHost` en `App.vue`; `AppLayout` con enlace de salto y `AppStatusBadge` migrados a tokens; páginas de auth migradas a las utilidades semánticas · 50 tests / 50 assertions · `docs/14-design-system.md`. Verificado en navegador: login dark, sin errores de consola. (#70) |
 
 ## Fases 3–6 · Estado resumido
 
 | Fase | Tareas | Estado | Prioridad actual |
 |---|---|---|---|
-| F3 · Motor fiscal + IA | F3-01…F3-09 | En curso (6/9) | P1 (catálogos, reglas, clasificador, gobierno de IA y proporcionalidad) / P2 (riesgos, revisión) |
-| F4 · Frontend | F4-01…F4-11 | En curso (1/11 + fundaciones, auth y layout parciales) | **P0** (design system, layout, bandeja, monitor) / P2 (resto) |
+| F3 · Motor fiscal + IA | F3-01…F3-09 | En curso (7/9) | P1 (catálogos, reglas, clasificador, gobierno de IA y proporcionalidad) / P2 (riesgos, revisión) |
+| F4 · Frontend | F4-01…F4-11 | En curso (4/11 + fundaciones/auth parciales) | **P0** (design system, layout, bandeja, monitor) / P1 (F4-07) / P2 (resto) |
 | F5 · Declaraciones | F5-01…F5-08 | Pendiente | P3 (después de F3) |
 | F6 · Hardening y beta | F6-01…F6-08 | Pendiente | P3 (lanzamiento) |
 
-## Registro de PRs recientes (2026-11-06 → 2026-11-16)
+## Registro de PRs recientes (2026-11-06 → 2026-11-20)
 
 | PR | Contenido | Tarea |
 |---|---|---|
@@ -119,6 +122,24 @@
 | #75 | Alineación de rutas de componentes del monitor | F4-06 |
 | #76 | Identidad de ejecución del robot, importación manual y sondeo sin callback | F2-10d |
 | #77 | Sondeo automático de S3 sin callback y reconciliación cada 5 min | F2-10d |
+| #78 | Actualización de progreso y changelog para identidad de ejecución del robot | Docs · F2-10d |
+| #79 | Progreso, alertas transitorias e historial estable del monitor SRI | F2-09/F4-06 |
+| #80 | Instancias efímeras con Neon e imagen base de PHP pre-construida | F1-11/Staging |
+| #81 | Mover `ARG BASE_IMAGE` al alcance global | Staging |
+| #82 | Documentar la imagen base de PHP en GHCR | Staging |
+| #83 | Imagen completa de la app en GHCR (opción E) | Staging |
+| #84 | No copiar archivos generados en el stage assets | Staging |
+| #85 | Documentar la imagen completa de la app | Staging |
+| #86 | Flujo por defecto sin `APP_IMAGE` | Staging |
+| #87 | Corregir sintaxis de `deploy.sh` (comillas en `APP_IMAGE`) | Staging |
+| #88 | Usar la imagen de GHCR como toolchain y tomar código de git | Staging |
+| #89 | Tolerar filas XML no registradas y permitir sondeo completo del robot | F2-10d |
+| #90 | Adoptar layout Dashboard de Nuxt UI y tema Mint (F4-04) | F4-04 |
+| #91 | Renombrar `Invoice` a `FiscalDocument` (refactor, etapa 2) | FiscalDocument refactor |
+| #92 | Compilar `phpredis` desde GitHub en lugar de pecl.php.net | Staging |
+| #93 | UI estilo dashboard y flag `--recreate-db` en `ec2-control` | Staging |
+| #94 | UI de dashboard en destroy y fallo rápido por timeout SSH | Staging |
+| #96 | Mejorar UI de dashboard y fallo rápido SSH en destroy | Staging |
 
 ## Cómo actualizar
 

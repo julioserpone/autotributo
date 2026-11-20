@@ -15,6 +15,8 @@ use App\Domain\Classification\Policies\ExpenseCategoryPolicy;
 use App\Domain\Companies\Models\Company;
 use App\Domain\Companies\Policies\CompanyPolicy;
 use App\Domain\Companies\Policies\SriCredentialPolicy;
+use App\Domain\Fiscal\Models\FiscalFinding;
+use App\Domain\Fiscal\Policies\FiscalFindingPolicy;
 use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\FiscalDocuments\Policies\FiscalDocumentPolicy;
 use App\Domain\Sri\Models\SriSyncRun;
@@ -56,6 +58,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
         Gate::policy(SriSyncRun::class, SriSyncRunPolicy::class);
         Gate::policy(FiscalDocument::class, FiscalDocumentPolicy::class);
+        Gate::policy(FiscalFinding::class, FiscalFindingPolicy::class);
         Gate::policy(Membership::class, MembershipPolicy::class);
         Gate::policy(ClassificationRule::class, ClassificationRulePolicy::class);
         Gate::policy(ExpenseCategory::class, ExpenseCategoryPolicy::class);

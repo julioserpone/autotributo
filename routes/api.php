@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\ExpenseCategoryController;
 use App\Http\Controllers\Api\V1\FiscalDocumentController;
+use App\Http\Controllers\Api\V1\FiscalFindingController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationController;
 use App\Http\Controllers\Api\V1\ManualFiscalDocumentController;
@@ -159,6 +160,14 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
             ->name('api.v1.classifications.bulk-review');
         Route::patch('classifications/{classification}', [ClassificationController::class, 'review'])
             ->name('api.v1.classifications.review');
+
+        // Hallazgos fiscales (F3-06): listado y actualización de estado.
+        Route::get('fiscal-findings', [FiscalFindingController::class, 'index'])
+            ->name('api.v1.fiscal-findings.index');
+        Route::patch('fiscal-findings/{fiscal_finding}', [FiscalFindingController::class, 'update'])
+            ->name('api.v1.fiscal-findings.update');
+        Route::post('companies/{company}/fiscal-findings/detect', [FiscalFindingController::class, 'detect'])
+            ->name('api.v1.companies.fiscal-findings.detect');
 
         // Historial de auditoría (F1-07), solo lectura y filtrado por tenant.
         Route::get('audit-logs', [AuditLogController::class, 'index'])

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Sri\Actions;
 
+use App\Domain\Companies\Models\Company;
+use App\Domain\Fiscal\Actions\DetectFiscalRisks;
 use App\Domain\Sri\Data\SriChunkImportResult;
 use App\Domain\Sri\Enums\SriDocumentType;
 use App\Domain\Sri\Enums\SriSyncRunFileStatus;
@@ -94,6 +96,18 @@ final readonly class FinalizeSriRun
         }
 
         $run->transitionTo($status);
+
+        if ($status === SriSyncRunStatus::Completed || $status === SriSyncRunStatus::Partial) {
+            try {
+                $company = Company::query()->find($run->company_id);
+
+                if ($company instanceof Company) {
+                    app(DetectFiscalRisks::class)->handle($company);
+                }
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
 
         return $run->refresh();
     }
