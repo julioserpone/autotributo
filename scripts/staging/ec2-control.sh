@@ -67,72 +67,103 @@ SSH_OPTS=(
 
 log() { printf '[ec2] %s\n' "$*"; }
 fail() { printf '[ec2] ERROR: %s\n' "$*" >&2; exit 1; }
-
 # ---------------------------------------------------------------------------
 # Dashboard visual para la consola: una sola pantalla con las etapas y tareas.
-# Evita el scroll infinito: al iniciar una etapa se limpia la pantalla y se
-# redibuja el panel de estado con el progreso acumulado.
 # ---------------------------------------------------------------------------
 DASH_TITLE="Autotributo staging"
 DASH_STAGES=()
-DASH_CURRENT_STAGE=""
-DASH_TASKS=()
+DASH_STAGE_STATUS=()
+DASH_CURRENT_TASK=""
+
+dash_sep() {
+    printf '\033[90m%s\033[0m\n' "$(printf '─%.0s' $(seq 1 78))"
+}
 
 dash_clear() {
-    # Limpia la pantalla sin borrar el scrollback (portable).
     printf '\033[2J\033[H'
 }
 
 dash_header() {
-    local width=78
-    printf '\033[1;36m'
-    printf '╔%s╗\n' "$(printf '═%.0s' $(seq 1 $((width - 2))))"
-    printf '║ %-76s ║\n' "$DASH_TITLE"
-    printf '╚%s╝\n' "$(printf '═%.0s' $(seq 1 $((width - 2))))"
-    printf '\033[0m'
+    printf '\033[1;36m%s\033[0m\n' "$DASH_TITLE"
+    dash_sep
+}
+
+dash_render() {
+    dash_clear
+    dash_header
+    printf '\n'
+    local i
+    for i in "${!DASH_STAGES[@]}"; do
+        local st="${DASH_STAGE_STATUS[$i]:-pending}"
+        local icon
+        case "$st" in
+            done)    icon="\033[32m✓\033[0m" ;;
+            running) icon="\033[33m▸\033[0m" ;;
+            fail)    icon="\033[31m✗\033[0m" ;;
+            *)       icon="\033[90m○\033[0m" ;;
+        esac
+        printf '  %b  %s\n' "$icon" "${DASH_STAGES[$i]}"
+    done
+    if [[ -n "$DASH_CURRENT_TASK" ]]; then
+        printf '\n  \033[90mTarea en curso:\033[0m %s\n' "$DASH_CURRENT_TASK"
+    fi
+    printf '\n'
 }
 
 dash_stage() {
-    DASH_CURRENT_STAGE="$1"
-    DASH_STAGES+=("$1")
-    DASH_TASKS=()
-    dash_clear
-    dash_header
-    printf '\n\033[1;33m▶ Etapa: %s\033[0m\n\n' "$1"
+    # dash_stage <index 0-based> <label>
+    local idx="$1"; shift
+    local label="$*"
+    while [[ ${#DASH_STAGES[@]} -le $idx ]]; do
+        DASH_STAGES+=("Etapa $(( ${#DASH_STAGES[@]} + 1 ))")
+        DASH_STAGE_STATUS+=("pending")
+    done
+    DASH_STAGES[$idx]="$label"
+    DASH_STAGE_STATUS[$idx]="running"
+    local j
+    for ((j=0; j<idx; j++)); do
+        if [[ "${DASH_STAGE_STATUS[$j]}" == "running" ]]; then
+            DASH_STAGE_STATUS[$j]="done"
+        fi
+    done
+    DASH_CURRENT_TASK=""
+    dash_render
 }
 
 dash_task() {
-    # dash_task "descripcion" "estado"  (estado: pending|running|done|fail)
-    local desc="$1" state="${2:-running}"
-    case "$state" in
-        done)  printf '  \033[32m✓\033[0m %s\n' "$desc" ;;
-        fail)  printf '  \033[31m✗\033[0m %s\n' "$desc" ;;
-        run)   printf '  \033[33m▸\033[0m %s ...\n' "$desc" ;;
-        *)     printf '  \033[90m○\033[0m %s\n' "$desc" ;;
-    esac
+    local desc="$1" state="${2:-run}"
+    DASH_CURRENT_TASK="$desc"
+    [[ "$state" == "done" ]] && DASH_CURRENT_TASK=""
+    dash_render
+    if [[ "$state" == "done" ]]; then
+        printf '  \033[32m  ✓ %s\033[0m\n' "$desc"
+    elif [[ "$state" == "fail" ]]; then
+        printf '  \033[31m  ✗ %s\033[0m\n' "$desc"
+    fi
 }
 
 box_run() {
-    # box_run "etiqueta" comando [args...]
-    # Muestra el comando en una caja y ejecuta capturando la salida (ultimas 12 lineas).
     local label="$1"; shift
     local width=78
     local out
     out="$(mktemp)"
-    printf '\n\033[1;34m┌─ %s \033[0m\n' "$label"
+    printf '\033[34m┌─ %s \033[0m\n' "$label"
     printf '\033[34m│\033[0m \033[90m$ %s\033[0m\n' "$*"
     printf '\033[34m└%s┘\033[0m\n' "$(printf '─%.0s' $(seq 1 $((width - 2))))"
     if "$@" >"$out" 2>&1; then
         printf '\033[32m  ✓ OK\033[0m\n'
-        tail -n 6 "$out" | sed 's/^/    /'
+        tail -n 4 "$out" | sed 's/^/    /'
+        rm -f "$out"
+        return 0
     else
         printf '\033[31m  ✗ FALLÓ\033[0m\n'
-        tail -n 15 "$out" | sed 's/^/    /'
+        tail -n 12 "$out" | sed 's/^/    /'
         rm -f "$out"
         return 1
     fi
-    rm -f "$out"
 }
+
+
 
 find_instance() {
     aws ec2 describe-instances \
@@ -222,7 +253,6 @@ wait_dns() {
 
 backup_remote() {
     local ip="$1"
-    dash_stage "1/6 · Verificar imagen y entorno"
     mkdir -p "$BACKUP_DIR"
     chmod 700 "$BACKUP_DIR"
 
