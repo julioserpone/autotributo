@@ -7,8 +7,10 @@
 # instancia desaparecen el volumen EBS y la IPv4 pública.
 #
 # Uso:
-#   ./scripts/staging/ec2-control.sh create           # imagen completa (rápido)
-#   ./scripts/staging/ec2-control.sh create --source   # build en la instancia
+#   ./scripts/staging/ec2-control.sh create                    # imagen completa (rápido)
+#   ./scripts/staging/ec2-control.sh create --source           # build en la instancia
+#   ./scripts/staging/ec2-control.sh create --recreate-db      # recrea la BD (migrate:fresh --seed)
+#   ./scripts/staging/ec2-control.sh create --source --recreate-db  # build + BD recreada
 #   ./scripts/staging/ec2-control.sh status
 #   ./scripts/staging/ec2-control.sh destroy --yes
 #
@@ -65,6 +67,72 @@ SSH_OPTS=(
 
 log() { printf '[ec2] %s\n' "$*"; }
 fail() { printf '[ec2] ERROR: %s\n' "$*" >&2; exit 1; }
+
+# ---------------------------------------------------------------------------
+# Dashboard visual para la consola: una sola pantalla con las etapas y tareas.
+# Evita el scroll infinito: al iniciar una etapa se limpia la pantalla y se
+# redibuja el panel de estado con el progreso acumulado.
+# ---------------------------------------------------------------------------
+DASH_TITLE="Autotributo staging"
+DASH_STAGES=()
+DASH_CURRENT_STAGE=""
+DASH_TASKS=()
+
+dash_clear() {
+    # Limpia la pantalla sin borrar el scrollback (portable).
+    printf '\033[2J\033[H'
+}
+
+dash_header() {
+    local width=78
+    printf '\033[1;36m'
+    printf '╔%s╗\n' "$(printf '═%.0s' $(seq 1 $((width - 2))))"
+    printf '║ %-76s ║\n' "$DASH_TITLE"
+    printf '╚%s╝\n' "$(printf '═%.0s' $(seq 1 $((width - 2))))"
+    printf '\033[0m'
+}
+
+dash_stage() {
+    DASH_CURRENT_STAGE="$1"
+    DASH_STAGES+=("$1")
+    DASH_TASKS=()
+    dash_clear
+    dash_header
+    printf '\n\033[1;33m▶ Etapa: %s\033[0m\n\n' "$1"
+}
+
+dash_task() {
+    # dash_task "descripcion" "estado"  (estado: pending|running|done|fail)
+    local desc="$1" state="${2:-running}"
+    case "$state" in
+        done)  printf '  \033[32m✓\033[0m %s\n' "$desc" ;;
+        fail)  printf '  \033[31m✗\033[0m %s\n' "$desc" ;;
+        run)   printf '  \033[33m▸\033[0m %s ...\n' "$desc" ;;
+        *)     printf '  \033[90m○\033[0m %s\n' "$desc" ;;
+    esac
+}
+
+box_run() {
+    # box_run "etiqueta" comando [args...]
+    # Muestra el comando en una caja y ejecuta capturando la salida (ultimas 12 lineas).
+    local label="$1"; shift
+    local width=78
+    local out
+    out="$(mktemp)"
+    printf '\n\033[1;34m┌─ %s \033[0m\n' "$label"
+    printf '\033[34m│\033[0m \033[90m$ %s\033[0m\n' "$*"
+    printf '\033[34m└%s┘\033[0m\n' "$(printf '─%.0s' $(seq 1 $((width - 2))))"
+    if "$@" >"$out" 2>&1; then
+        printf '\033[32m  ✓ OK\033[0m\n'
+        tail -n 6 "$out" | sed 's/^/    /'
+    else
+        printf '\033[31m  ✗ FALLÓ\033[0m\n'
+        tail -n 15 "$out" | sed 's/^/    /'
+        rm -f "$out"
+        return 1
+    fi
+    rm -f "$out"
+}
 
 find_instance() {
     aws ec2 describe-instances \
@@ -154,6 +222,7 @@ wait_dns() {
 
 backup_remote() {
     local ip="$1"
+    dash_stage "1/6 · Verificar imagen y entorno"
     mkdir -p "$BACKUP_DIR"
     chmod 700 "$BACKUP_DIR"
 
@@ -208,21 +277,32 @@ REMOTE
         'sudo systemctl start autotributo-duckdns.service'
     wait_dns "$ip"
 
+    dash_stage "4/6 · Desplegar aplicación (migraciones + assets)"
     log "desplegando la aplicación"
     # shellcheck disable=SC2029
-    ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
-        "cd $APP_DIR && APP_IMAGE='$(staging_app_image)' ./scripts/staging/deploy.sh"
+    if ! box_run "deploy.sh" ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
+        "cd $APP_DIR && DB_RECREATE='${DB_RECREATE}' APP_IMAGE='$(staging_app_image)' ./scripts/staging/deploy.sh"; then
+        fail "el deploy falló; revisa la salida anterior"
+    fi
 }
 
 cmd_create() {
+    dash_clear
+    dash_header
+    printf '\n\033[1mCreando instancia de staging...\033[0m\n\n'
+
     [[ -f "$KEY_FILE" ]] || fail "no existe la clave SSH: $KEY_FILE"
 
-    case "${1:-}" in
-        --source) DEPLOY_SOURCE=1 ;;
-        "") ;;
-        *) fail "argumento desconocido para create: $1 (usa --source o nada)" ;;
-    esac
+    DB_RECREATE="${DB_RECREATE:-0}"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --source) DEPLOY_SOURCE=1; shift ;;
+            --recreate-db) DB_RECREATE=1; shift ;;
+            *) fail "argumento desconocido para create: $1 (usa --source, --recreate-db o nada)" ;;
+        esac
+    done
 
+    dash_stage "1/6 · Verificar imagen y entorno"
     mkdir -p "$BACKUP_DIR"
     chmod 700 "$BACKUP_DIR"
     [[ -f "$BACKUP_DIR/staging.env" ]] \
@@ -269,6 +349,9 @@ cmd_create() {
     subnet="$(resolve_subnet)"
     [[ "$subnet" == subnet-* ]] || fail "no se pudo resolver la subnet por defecto"
 
+    dash_stage "2/6 · Crear instancia EC2"
+    dash_task "AMI: $ami" run
+    dash_task "Subnet: $subnet" run
     log "creando $INSTANCE_TYPE desde $ami en $AVAILABILITY_ZONE"
     local args=(
         --image-id "$ami"
@@ -290,6 +373,8 @@ cmd_create() {
         --query 'Instances[0].InstanceId' --output text)"
     [[ "$instance_id" == i-* ]] || fail "no se pudo crear la instancia"
 
+    dash_task "Instancia $instance_id creada" done
+    dash_task "Esperando estado running" run
     log "instancia $instance_id creada; esperando estado running"
     aws ec2 wait instance-running --instance-ids "$instance_id"
 
@@ -299,9 +384,11 @@ cmd_create() {
     ssh-keygen -R "$ip" -f "$BACKUP_DIR/known_hosts" >/dev/null 2>&1 || true
     log "IP pública temporal: $ip (sin Elastic IP)"
 
+    dash_stage "3/6 · Provisionar host (Docker, swap, UFW, DuckDNS)"
     wait_ssh "$ip"
     bootstrap_host "$ip"
 
+    dash_stage "6/6 · Listo"
     log "staging listo: https://$(staging_hostname)"
     log "coste mientras esté encendida: ~USD 0.019/hora"
     log "al terminar: ./scripts/staging/ec2-control.sh destroy --yes"
