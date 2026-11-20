@@ -617,3 +617,16 @@ Cuando se compre `autotributo.com` y se habilite Cloud:
 - [x] Sin datos reales ni credenciales SRI de producción.
 - [ ] Coste mensual de staging en USD 0 verificado en Billing tras un ciclo
       completo `create` → `destroy`.
+
+### 4.4 Credenciales AWS y SSH en `destroy`
+
+- **Credenciales AWS caducadas.** El perfil `autotributo-staging` usa claves estáticas
+  en `~/.aws/credentials`. Si `aws sts get-caller-identity` falla con `AuthFailure`,
+  regenera las claves en IAM y actualiza el archivo (no uses `aws sso login`, el
+  perfil no está configurado para SSO).
+- **SSH inaccesible.** `destroy` ahora falla rápido (60 s) en `wait_ssh` y omite
+  el respaldo del `.env` con una advertencia, pero **sigue terminando la instancia**
+  con las credenciales AWS válidas. Si tu IP cambió, añádela al SG (ver §4.2).
+- **BD desincronizada tras un refactor.** Cuando cambian nombres de tablas o
+  campos, usa `create --recreate-db`, que ejecuta `migrate:fresh --seed` en lugar
+  de `migrate --force`. Verifica antes que no haya datos que quieras conservar.
