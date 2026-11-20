@@ -70,7 +70,12 @@ export AWS_DEFAULT_REGION="$REGION"
 SSH_OPTS=(
     -i "$KEY_FILE"
     -o BatchMode=yes
-    -o ConnectTimeout=10
+    # 20s: una instancia recién arrancada puede tardar en aceptar la primera
+    # conexión mientras cloud-init termina. Con 10s el create abortaba por un
+    # timeout transitorio.
+    -o ConnectTimeout=20
+    -o ServerAliveInterval=15
+    -o ServerAliveCountMax=4
     -o StrictHostKeyChecking=accept-new
     -o UserKnownHostsFile="$BACKUP_DIR/known_hosts"
 )
@@ -178,15 +183,54 @@ wait_instance_state() {
 
 wait_ssh() {
     local ip="$1" i
-    for i in $(seq 1 12); do
+    for i in $(seq 1 18); do
         if ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" 'echo ok' >/dev/null 2>&1; then
             dash_note "SSH disponible en $ip"
             return 0
         fi
-        dash_note "Esperando SSH en $ip (intento ${i}/12)"
+        dash_note "Esperando SSH en $ip (intento ${i}/18)"
         dash_wait 5
     done
     return 1
+}
+
+# Reintenta un comando ssh solo cuando falla el transporte (código 255). Un
+# código distinto viene del comando remoto y no se reintenta. Se usa dentro de
+# dash_run, así que los mensajes van al panel en vez de a dash_note.
+ssh_retry() {
+    local tries="${1:-5}" i rc=0
+    shift
+    for (( i = 1; i <= tries; i++ )); do
+        rc=0
+        "$@" || rc=$?
+        (( rc == 0 )) && return 0
+        (( rc != 255 )) && return "$rc"
+        if (( i < tries )); then
+            printf 'reintento %d/%d: SSH no respondió (código %d), esperando 10s\n' \
+                "$i" "$tries" "$rc"
+            sleep 10
+        fi
+    done
+    return "$rc"
+}
+
+# Igual que ssh_retry, pero para comandos que reciben el script por stdin: el
+# pipe se reconstruye en cada intento (un heredoc se consumiría en el primero).
+ssh_retry_stdin() {
+    local tries="${1:-5}" script="$2" i rc=0
+    shift 2
+    for (( i = 1; i <= tries; i++ )); do
+        rc=0
+        printf '%s\n' "$script" | "$@" || rc=$?
+        (( rc == 0 )) && return 0
+        (( rc != 255 )) && return "$rc"
+        if (( i < tries )); then
+            printf 'reintento %d/%d: SSH no respondió (código %d), esperando 10s\n' \
+                "$i" "$tries" "$rc"
+            sleep 10
+        fi
+    done
+    return "$rc"
 }
 
 wait_dns() {
@@ -233,12 +277,10 @@ remote_put_config() {
         "$SSH_USER@$ip:/tmp/duckdns.env"
 }
 
-remote_install_config() {
-    local ip="$1"
-
+remote_install_script() {
     # Las variables se expanden en el cliente a propósito.
     # shellcheck disable=SC2087
-    ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" bash -s <<REMOTE
+    cat <<REMOTE
 set -euo pipefail
 sudo mkdir -p /etc/autotributo
 sudo install -m 600 -o root -g root /tmp/duckdns.env /etc/autotributo/duckdns.env
@@ -247,12 +289,18 @@ rm -f /tmp/duckdns.env
 if [[ ! -d "$APP_DIR/.git" ]]; then
     sudo mkdir -p "$APP_DIR"
     sudo chown "$SSH_USER:$SSH_USER" "$APP_DIR"
-    git clone "$REPO_URL" "$APP_DIR"
+    git clone --depth 1 "$REPO_URL" "$APP_DIR"
 fi
 
 install -m 600 /tmp/staging.env "$APP_DIR/.env"
 rm -f /tmp/staging.env
 REMOTE
+}
+
+remote_install_config() {
+    local ip="$1" script
+    script="$(remote_install_script)"
+    ssh_retry_stdin 5 "$script" ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" bash -s
 }
 
 backup_remote() {
@@ -417,15 +465,15 @@ cmd_create() {
     dash_run_as "ssh $SSH_USER@$ip bash -s" \
         "Instalando configuración y repositorio en el host" \
         remote_install_config "$ip" \
-        || fail "no se pudo instalar la configuración en la instancia"
+        || fail "no se pudo instalar la configuración (instancia $instance_id sigue encendida: destroy --yes y reintenta)"
     dash_run_as "ssh $SSH_USER@$ip sudo $APP_DIR/scripts/staging/provision-host.sh" \
         "Provisionando el host (Docker, swap, UFW, DuckDNS)" \
-        ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
+        ssh_retry 5 ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
         "sudo $APP_DIR/scripts/staging/provision-host.sh" \
-        || fail "provision-host.sh falló en la instancia"
+        || fail "provision-host.sh falló en la instancia (sigue encendida: $instance_id; destroy --yes y reintenta)"
     dash_run_as "ssh $SSH_USER@$ip sudo systemctl start autotributo-duckdns.service" \
         "Activando el servicio DuckDNS" \
-        ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
+        ssh_retry 5 ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
         'sudo systemctl start autotributo-duckdns.service' \
         || fail "no se pudo activar autotributo-duckdns.service"
     wait_dns "$ip"
@@ -436,9 +484,9 @@ cmd_create() {
     # shellcheck disable=SC2029
     dash_run_as "ssh $SSH_USER@$ip 'cd $APP_DIR && ./scripts/staging/deploy.sh'" \
         "Desplegando la aplicación (deploy.sh)" \
-        ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
+        ssh_retry 5 ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
         "cd $APP_DIR && DB_RECREATE='$DB_RECREATE' APP_IMAGE='$(staging_app_image)' ./scripts/staging/deploy.sh" \
-        || fail "el deploy falló; revisa la salida del panel"
+        || fail "el deploy falló (instancia $instance_id sigue encendida; revisa la salida del panel)"
     dash_stage_done
 
     # --- 5/6 -------------------------------------------------------------

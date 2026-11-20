@@ -650,10 +650,16 @@ Cuando se compre `autotributo.com` y se habilite Cloud:
   en `~/.aws/credentials`. Si `aws sts get-caller-identity` falla con `AuthFailure`,
   regenera las claves en IAM y actualiza el archivo (no uses `aws sso login`, el
   perfil no está configurado para SSO).
-- **SSH inaccesible.** `destroy` espera 60 s a `wait_ssh` y, si no responde,
+- **SSH inaccesible.** `destroy` espera 90 s a `wait_ssh` y, si no responde,
   omite el respaldo del `.env` con un **aviso** (`!` en la etapa 2/4), pero
   **sigue terminando la instancia** con las credenciales AWS válidas. Si tu IP
   cambió, añádela al SG (ver §4.2).
+- **Timeout de SSH durante `create`.** Una instancia recién arrancada puede
+  tardar en aceptar conexiones mientras cloud-init termina. El script usa
+  `ConnectTimeout=20` con keepalive y **reintenta hasta 5 veces** (esperando
+  10 s) cuando el fallo es de transporte (código 255); solo aborta si el
+  comando remoto devuelve otro código. Si aun así falla, la instancia queda
+  encendida: `destroy --yes` y repite `create`.
 - **Qué significa el aviso de "Respaldar el .env".** La etapa termina en `AVISO`
   (`!`) cuando no se pudo descargar la configuración, pero el `destroy` continúa
   igual: bloquearlo dejaría la instancia encendida y facturando. El motivo
