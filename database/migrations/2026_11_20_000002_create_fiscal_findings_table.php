@@ -38,8 +38,8 @@ return new class extends Migration
         // Unique parcial: no se duplican hallazgos abiertos con la misma
         // procedencia. Una vez resueltos/descartados se permite reabrir.
         DB::statement(
-            "CREATE UNIQUE INDEX fiscal_findings_open_unique "
-            ."ON fiscal_findings (tenant_id, code, source_type, source_id) "
+            'CREATE UNIQUE INDEX fiscal_findings_open_unique '
+            .'ON fiscal_findings (tenant_id, code, source_type, source_id) '
             ."WHERE status = 'open'"
         );
     }

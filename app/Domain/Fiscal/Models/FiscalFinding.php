@@ -12,6 +12,7 @@ use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\Tenancy\Models\Concerns\BelongsToTenant;
 use App\Models\User;
 use Database\Factories\FiscalFindingFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -77,8 +78,8 @@ final class FiscalFinding extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeOpen($query)
     {
@@ -86,8 +87,8 @@ final class FiscalFinding extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeForCompany($query, int $companyId)
     {

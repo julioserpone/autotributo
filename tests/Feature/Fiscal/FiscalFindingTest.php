@@ -9,6 +9,7 @@ use App\Domain\Fiscal\Enums\FiscalRiskStatus;
 use App\Domain\Fiscal\Models\FiscalFinding;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -67,7 +68,7 @@ it('no duplica hallazgos abiertos con la misma procedencia', function (): void {
         'source_type' => 'fiscal_document',
         'source_id' => 42,
         'status' => FiscalRiskStatus::Open->value,
-    ]))->toThrow(\Illuminate\Database\QueryException::class);
+    ]))->toThrow(QueryException::class);
 });
 
 it('permite reabrir un hallazgo tras resolverlo', function (): void {
