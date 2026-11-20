@@ -195,14 +195,14 @@ staging_app_image() {
 
 wait_ssh() {
     local ip="$1"
-    for _ in $(seq 1 60); do
+    for _ in $(seq 1 12); do
         if ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" 'echo ok' >/dev/null 2>&1; then
             log "SSH disponible en $ip"
             return 0
         fi
         sleep 5
     done
-    fail "SSH no respondió en $ip tras 5 minutos"
+    return 1
 }
 
 wait_dns() {
@@ -399,6 +399,11 @@ cmd_destroy() {
     [[ "$confirm" == "--yes" ]] \
         || fail "destroy borra la instancia y su disco. Repite con: $0 destroy --yes"
 
+    dash_clear
+    dash_header
+    printf '\n\033[1mDestruyendo instancia de staging...\033[0m\n\n'
+    dash_stage "1/4 · Localizar instancia"
+
     local instance_id
     instance_id="$(find_instance)"
     if [[ -z "$instance_id" || "$instance_id" == "None" ]]; then
@@ -429,8 +434,15 @@ cmd_destroy() {
     if [[ "$state" == "running" ]]; then
         ip="$(instance_field "$instance_id" PublicIpAddress)"
         if [[ -n "$ip" && "$ip" != "None" ]]; then
-            wait_ssh "$ip"
-            backup_remote "$ip"
+            dash_stage "2/4 · Respaldo del .env"
+            dash_task "IP: $ip" run
+            if wait_ssh "$ip"; then
+                backup_remote "$ip"
+                dash_task "Respaldo completado" done
+            else
+                dash_task "SSH no disponible; se omite el respaldo" fail
+                log "ADVERTENCIA: no se pudo conectar por SSH; se destruye sin respaldo"
+            fi
         else
             fail "la instancia no tiene IP pública; no se pudo respaldar el .env"
         fi
@@ -438,6 +450,7 @@ cmd_destroy() {
         fail "estado inesperado '$state'; no se destruye sin respaldo"
     fi
 
+    dash_stage "3/4 · Terminar instancia y volumen"
     log "terminando $instance_id (volumen $volume_id)"
     aws ec2 terminate-instances --instance-ids "$instance_id" >/dev/null
     aws ec2 wait instance-terminated --instance-ids "$instance_id"
@@ -460,6 +473,7 @@ cmd_destroy() {
         fi
     fi
 
+    dash_stage "4/4 · Listo"
     log "instancia terminada: sin EC2, sin EBS y sin IPv4. Coste AWS: USD 0"
 }
 
