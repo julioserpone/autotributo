@@ -106,8 +106,26 @@ Crea **AWS Budgets** con alarmas a USD 5 y USD 10 antes de provisionar.
 ### 4.2 Crear la instancia
 
 ```bash
-./scripts/staging/ec2-control.sh create           # imagen de GHCR + código de main
-./scripts/staging/ec2-control.sh create --source # sin imagen: build en la instancia
+./scripts/staging/ec2-control.sh create                                   # imagen de GHCR + código de main
+./scripts/staging/ec2-control.sh create --source                         # sin imagen: build del contenedor en la instancia
+./scripts/staging/ec2-control.sh create --recreate-db                    # recrea la BD (migrate:fresh --seed)
+./scripts/staging/ec2-control.sh create --branch BRANCH                  # despliega otra rama (p. ej. un PR sin fusionar)
+./scripts/staging/ec2-control.sh create --recreate-db --branch BRANCH \
+    --ruc RUC --password PASS                                            # recrea la BD con datos de demo + credencial SRI sellada
+```
+
+Opciones de `create`:
+
+| Opción | Descripción |
+|---|---|
+| `--source` | No usa la imagen de GHCR: la instancia construye el contenedor `app` (solo para depurar el build). |
+| `--recreate-db` | Ejecuta `migrate:fresh --seed` en lugar de `migrate`. Siempre corre `DemoTenantSeeder` (tenant, 4 roles y los 3 usuarios de prueba). |
+| `--branch BRANCH` | Rama de Git a desplegar (por defecto `main`). Útil para validar un PR sin fusionarlo. |
+| `--ruc RUC` | RUC ecuatoriano válido de 13 dígitos. Requiere `--password`. Junto con `--recreate-db` crea una empresa de prueba con credencial SRI cifrada. |
+| `--password PASS` | Contraseña del portal del SRI para la empresa de prueba (mín. 6 caracteres, sin saltos de línea). Requiere `--ruc`. |
+| `--inline` | Desactiva el panel de pantalla completa (salida en texto plano). |
+
+`--ruc` y `--password` deben indicarse juntos. La contraseña del portal **no** se muestra en el panel ni viaja en `argv` del host: se copia en un archivo temporal con permisos `600` que se borra al terminar el deploy.
 ```
 
 El script hace todo el ciclo y no necesita consola de AWS:
