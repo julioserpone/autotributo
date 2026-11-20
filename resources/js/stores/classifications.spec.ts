@@ -60,7 +60,7 @@ describe('useClassificationStore', () => {
         await store.accept(1, 2);
 
         expect(patchJson).toHaveBeenCalledWith('/api/v1/classifications/1', { decision: 'accept', expense_category_id: 2 });
-        expect(store.items[0].status).toBe('accepted');
+        expect(store.items[0]?.status).toBe('accepted');
     });
 
     it('rechaza una clasificación', async () => {
