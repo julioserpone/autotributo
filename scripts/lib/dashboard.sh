@@ -82,11 +82,12 @@ DASH_COLS=80
 DASH_RESIZED=1
 DASH_SIZE_OK=0
 DASH_TMP=""
+DASH_TAIL_KEY=""
+DASH_TAIL_CACHE=""
 DASH_OUT_LOG=""
 DASH_ERR_LOG=""
 DASH_SESSION_LOG=""
 
-DASH_ESC=$'\033'
 DASH_COLOR=${DASH_COLOR:-0}
 DASH_UTF8=${DASH_UTF8:-1}
 DASH_SPIN_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
@@ -324,16 +325,48 @@ _dash_stage_row() {
 
 _dash_tail_lines() {
     # $1 = filas -> _DASH_TAIL (texto con saltos de línea)
+    #
+    # La salida de npm/vite/composer/docker compose no es "líneas": usa \r para
+    # repintar la misma línea (progreso) y códigos ANSI para borrar o mover el
+    # cursor. Si se tratan como líneas sueltas, cientos de "transforming…"
+    # desplazan la salida real y quedan visibles cuando el comando ya avanzó.
+    # Aquí se conserva solo el estado final de cada línea física (último
+    # segmento tras \r), se descartan los códigos de control y se eliminan las
+    # repeticiones consecutivas que deja el repintado.
     local n="$1"
     _DASH_TAIL=""
     [[ -s "$DASH_OUT_LOG" || -s "$DASH_ERR_LOG" ]] || return 0
+
+    # El panel se redibuja cada 120 ms y procesar la salida cuesta; si nada
+    # cambió desde el último frame se reutiliza el resultado.
+    local size key
+    size=$(( $(wc -c <"$DASH_OUT_LOG" 2>/dev/null || printf 0) + $(wc -c <"$DASH_ERR_LOG" 2>/dev/null || printf 0) ))
+    key="$n:$size"
+    if [[ "$key" == "${DASH_TAIL_KEY:-}" ]]; then
+        _DASH_TAIL="${DASH_TAIL_CACHE:-}"
+        return 0
+    fi
+    DASH_TAIL_KEY="$key"
+
     _DASH_TAIL="$(
         cat "$DASH_OUT_LOG" "$DASH_ERR_LOG" 2>/dev/null \
-            | tail -n $(( n * 6 + 20 )) \
-            | tr '\r' '\n' \
-            | tail -n "$n" \
-            | sed -e "s/${DASH_ESC}\\[[0-9;?]*[A-Za-z]//g"
+            | tail -c 16384 \
+            | awk '
+                {
+                    tabs = $0
+                    gsub(/\t/, "  ", tabs)
+                    count = split(tabs, chunks, "\r")
+                    line = chunks[count]
+                    gsub(/\033\[[0-9;?]*[A-Za-z]/, "", line)
+                    gsub(/[[:cntrl:]]/, "", line)
+                    if (line == "") next
+                    if (line == previous) next
+                    previous = line
+                    print line
+                }' \
+            | tail -n "$n"
     )"
+    DASH_TAIL_CACHE="$_DASH_TAIL"
 }
 
 _dash_paint() {
@@ -626,6 +659,7 @@ dash_init() {
     DASH_SESSION_LOG="$DASH_TMP/session.log"
     : >"$DASH_OUT_LOG"
     : >"$DASH_ERR_LOG"
+    DASH_TAIL_KEY=""
     : >"$DASH_SESSION_LOG"
 
     DASH_ACTIVE=1
@@ -688,6 +722,7 @@ dash_stage() {
     DASH_CMD=""
     : >"$DASH_OUT_LOG"
     : >"$DASH_ERR_LOG"
+    DASH_TAIL_KEY=""
 
     if [[ "$DASH_MODE" == "inline" ]]; then
         printf '\n[%d/%d] %s\n' "$(( idx + 1 ))" "$DASH_N" "${DASH_STAGES[$idx]}"
@@ -825,6 +860,7 @@ dash_run() {
 
     : >"$DASH_OUT_LOG"
     : >"$DASH_ERR_LOG"
+    DASH_TAIL_KEY=""
     _dash_paint
 
     # El subshell no hereda los traps para que un `exit` dentro del comando no

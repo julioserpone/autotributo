@@ -140,7 +140,10 @@ scroll) con dos secciones de `scripts/lib/dashboard.sh`:
 - **En curso**: el comando que se está ejecutando (`$ scp …`, `$ aws ec2 …`,
   `$ ssh ubuntu@… deploy.sh`) y las últimas líneas de su salida. Las líneas con
   `error`, `failed` o `denied` se pintan en rojo y dos líneas de comando se
-  envuelven sin romper argumentos.
+  envuelven sin romper argumentos. Las barras de progreso de npm, Vite,
+  Composer y Docker se colapsan a su estado final (se descartan los repintados
+  con `\r`, los códigos ANSI y las líneas repetidas), así que no desplazan a la
+  salida real ni se quedan pegadas cuando el proceso avanza de fase.
 
 Al salir se recupera la pantalla normal y queda un resumen en el scrollback con
 el estado y la duración de cada etapa. Si algo falla, el resumen incluye el
