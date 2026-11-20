@@ -257,8 +257,8 @@ backup_remote() {
     chmod 700 "$BACKUP_DIR"
 
     log "respaldando .env en $BACKUP_DIR/staging.env"
-    scp "${SSH_OPTS[@]}" "$SSH_USER@$ip:$APP_DIR/.env" "$BACKUP_DIR/staging.env"
-    chmod 600 "$BACKUP_DIR/staging.env"
+    box_run "scp .env" scp "${SSH_OPTS[@]}" "$SSH_USER@$ip:$APP_DIR/.env" "$BACKUP_DIR/staging.env" || true
+    chmod 600 "$BACKUP_DIR/staging.env" 2>/dev/null || true
 
     log "respaldando duckdns.env en $BACKUP_DIR/duckdns.env"
     ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
@@ -307,7 +307,7 @@ REMOTE
         'sudo systemctl start autotributo-duckdns.service'
     wait_dns "$ip"
 
-    dash_stage "4/6 · Desplegar aplicación (migraciones + assets)"
+    dash_stage 3 "4/6 · Desplegar aplicación (migraciones + assets)"
     log "desplegando la aplicación"
     # shellcheck disable=SC2029
     if ! box_run "deploy.sh" ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
@@ -321,6 +321,11 @@ cmd_create() {
     dash_header
     printf '\n\033[1mCreando instancia de staging...\033[0m\n\n'
 
+    dash_stages_init
+    for _lbl in "1/6 · Verificar imagen y entorno" "2/6 · Crear instancia EC2" "3/6 · Provisionar host (Docker, swap, UFW, DuckDNS)" "4/6 · Desplegar aplicación (migraciones + assets)" "5/6 · Verificar salud" "6/6 · Listo"; do
+        DASH_STAGES+=("$_lbl"); DASH_STAGE_STATUS+=("pending")
+    done
+
     [[ -f "$KEY_FILE" ]] || fail "no existe la clave SSH: $KEY_FILE"
 
     DB_RECREATE="${DB_RECREATE:-0}"
@@ -332,7 +337,7 @@ cmd_create() {
         esac
     done
 
-    dash_stage "1/6 · Verificar imagen y entorno"
+    dash_stage 0 "1/6 · Verificar imagen y entorno"
     mkdir -p "$BACKUP_DIR"
     chmod 700 "$BACKUP_DIR"
     [[ -f "$BACKUP_DIR/staging.env" ]] \
@@ -379,7 +384,7 @@ cmd_create() {
     subnet="$(resolve_subnet)"
     [[ "$subnet" == subnet-* ]] || fail "no se pudo resolver la subnet por defecto"
 
-    dash_stage "2/6 · Crear instancia EC2"
+    dash_stage 1 "2/6 · Crear instancia EC2"
     dash_task "AMI: $ami" run
     dash_task "Subnet: $subnet" run
     log "creando $INSTANCE_TYPE desde $ami en $AVAILABILITY_ZONE"
@@ -414,11 +419,11 @@ cmd_create() {
     ssh-keygen -R "$ip" -f "$BACKUP_DIR/known_hosts" >/dev/null 2>&1 || true
     log "IP pública temporal: $ip (sin Elastic IP)"
 
-    dash_stage "3/6 · Provisionar host (Docker, swap, UFW, DuckDNS)"
+    dash_stage 2 "3/6 · Provisionar host (Docker, swap, UFW, DuckDNS)"
     wait_ssh "$ip"
     bootstrap_host "$ip"
 
-    dash_stage "6/6 · Listo"
+    dash_stage 5 "6/6 · Listo"
     log "staging listo: https://$(staging_hostname)"
     log "coste mientras esté encendida: ~USD 0.019/hora"
     log "al terminar: ./scripts/staging/ec2-control.sh destroy --yes"
@@ -432,7 +437,12 @@ cmd_destroy() {
     dash_clear
     dash_header
     printf '\n\033[1mDestruyendo instancia de staging...\033[0m\n\n'
-    dash_stage "1/4 · Localizar instancia"
+    # Pre-registra todas las etapas para que la lista sea visible desde el inicio.
+    dash_stages_init
+    for _lbl in "1/4 · Localizar instancia" "2/4 · Respaldo del .env" "3/4 · Terminar instancia y volumen" "4/4 · Listo"; do
+        DASH_STAGES+=("$_lbl"); DASH_STAGE_STATUS+=("pending")
+    done
+    dash_stage 0 "1/4 · Localizar instancia"
 
     local instance_id
     instance_id="$(find_instance)"
@@ -464,7 +474,7 @@ cmd_destroy() {
     if [[ "$state" == "running" ]]; then
         ip="$(instance_field "$instance_id" PublicIpAddress)"
         if [[ -n "$ip" && "$ip" != "None" ]]; then
-            dash_stage "2/4 · Respaldo del .env"
+            dash_stage 1 "2/4 · Respaldo del .env"
             dash_task "IP: $ip" run
             if wait_ssh "$ip"; then
                 backup_remote "$ip"
@@ -480,7 +490,7 @@ cmd_destroy() {
         fail "estado inesperado '$state'; no se destruye sin respaldo"
     fi
 
-    dash_stage "3/4 · Terminar instancia y volumen"
+    dash_stage 2 "3/4 · Terminar instancia y volumen"
     log "terminando $instance_id (volumen $volume_id)"
     aws ec2 terminate-instances --instance-ids "$instance_id" >/dev/null
     aws ec2 wait instance-terminated --instance-ids "$instance_id"
@@ -503,7 +513,7 @@ cmd_destroy() {
         fi
     fi
 
-    dash_stage "4/4 · Listo"
+    dash_stage 3 "4/4 · Listo"
     log "instancia terminada: sin EC2, sin EBS y sin IPv4. Coste AWS: USD 0"
 }
 
