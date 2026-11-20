@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\Sri\Actions\ImportSriRun;
 use App\Domain\Sri\Actions\ReconcileSriRun;
 use App\Domain\Sri\Contracts\SriAuthorizationGateway;
@@ -28,7 +28,7 @@ uses(RefreshDatabase::class);
  *
  * @param  list<string>  $keys
  */
-function publishKeys(Company $company, string $period, array $keys, SriDocumentType $type = SriDocumentType::Invoice): void
+function publishKeys(Company $company, string $period, array $keys, SriDocumentType $type = SriDocumentType::FiscalDocument): void
 {
     ReconcileFixtures::putPeriod($company, $period, $type, implode("\n", $keys)."\n", $keys);
 }
@@ -73,7 +73,7 @@ afterEach(function (): void {
  * @param  list<string>  $keys
  * @param  list<string>  $unavailable
  */
-function bindGateway(array $keys, array $unavailable = [], string $fixture = 'invoice/factura.xml'): void
+function bindGateway(array $keys, array $unavailable = [], string $fixture = 'fiscal_document/factura.xml'): void
 {
     $template = (string) file_get_contents(__DIR__.'/../../Fixtures/xml/'.$fixture);
     $results = [];
@@ -103,7 +103,7 @@ it('importa todos los comprobantes de un run', function (): void {
         ->and($result['report']->found)->toBe(3)
         ->and($result['report']->imported)->toBe(3)
         ->and($result['report']->failed)->toBe(0)
-        ->and(Invoice::query()->count())->toBe(3)
+        ->and(FiscalDocument::query()->count())->toBe(3)
         ->and($result['run']->totals['imported'])->toBe(3)
         ->and($result['run']->error_code)->toBeNull();
 });
@@ -123,7 +123,7 @@ it('no duplica comprobantes al reimportar el mismo run', function (): void {
 
     expect($result['report']->skipped)->toBe(3)
         ->and($result['report']->imported)->toBe(0)
-        ->and(Invoice::query()->count())->toBe(3);
+        ->and(FiscalDocument::query()->count())->toBe(3);
 });
 
 it('deja partial cuando alguna clave no está disponible', function (): void {
@@ -136,7 +136,7 @@ it('deja partial cuando alguna clave no está disponible', function (): void {
     expect($result['run']->status)->toBe(SriSyncRunStatus::Partial)
         ->and($result['report']->imported)->toBe(2)
         ->and($result['report']->failed)->toBe(1)
-        ->and(Invoice::query()->count())->toBe(2)
+        ->and(FiscalDocument::query()->count())->toBe(2)
         ->and($result['run']->error_message)->toContain('1 comprobante');
 });
 
@@ -149,13 +149,13 @@ it('falla el run cuando ninguna clave se puede importar', function (): void {
 
     expect($result['run']->status)->toBe(SriSyncRunStatus::Failed)
         ->and($result['run']->error_code)->toBe('import_failed')
-        ->and(Invoice::query()->count())->toBe(0);
+        ->and(FiscalDocument::query()->count())->toBe(0);
 });
 
 it('un XML corrupto no tumba el resto del run', function (): void {
     publishKeys($this->company, '2026-09', $this->keys);
 
-    $template = (string) file_get_contents(__DIR__.'/../../Fixtures/xml/invoice/factura.xml');
+    $template = (string) file_get_contents(__DIR__.'/../../Fixtures/xml/fiscal_document/factura.xml');
     app()->instance(SriAuthorizationGateway::class, new FakeSriAuthorizationGateway([
         $this->keys[0] => new AuthorizationResult(
             accessKey: $this->keys[0],
@@ -199,7 +199,7 @@ it('se ejecuta desde el comando con un run en parsing', function (): void {
         ->expectsOutputToContain('completed')
         ->assertSuccessful();
 
-    expect(Invoice::query()->count())->toBe(3);
+    expect(FiscalDocument::query()->count())->toBe(3);
 });
 
 it('importa un comprobante de retención desde el run', function (): void {
@@ -212,8 +212,8 @@ it('importa un comprobante de retención desde el run', function (): void {
 
     app(ImportSriRun::class)->handle($run);
 
-    $invoice = Invoice::query()->sole();
+    $fiscal_document = FiscalDocument::query()->sole();
 
-    expect($invoice->document_type)->toBe(SriDocumentType::Withholding)
-        ->and($invoice->retentions()->count())->toBe(2);
+    expect($fiscal_document->document_type)->toBe(SriDocumentType::Withholding)
+        ->and($fiscal_document->retentions()->count())->toBe(2);
 });

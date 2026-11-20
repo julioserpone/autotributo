@@ -4,9 +4,9 @@ import { useRoute } from 'vue-router';
 
 import AppShell from '@/layouts/AppShell.vue';
 import AppPage from '@/components/layout/AppPage.vue';
-import InvoiceTable from '@/components/invoices/InvoiceTable.vue';
+import FiscalDocumentTable from '@/components/fiscal-documents/FiscalDocumentTable.vue';
 import { useCompanyStore } from '@/stores/company';
-import { previewInvoices, previewKpis } from '@/pages/dashboardPreview';
+import { previewFiscalDocuments, previewKpis } from '@/pages/dashboardPreview';
 
 const route = useRoute();
 const companyStore = useCompanyStore();
@@ -22,7 +22,7 @@ const periodBadge = computed(() => {
     return `Período ${month}/${now.getFullYear()}`;
 });
 
-const invoices = computed(() => (isPreview.value ? previewInvoices : []));
+const fiscalDocuments = computed(() => (isPreview.value ? previewFiscalDocuments : []));
 
 const kpis = computed(() => {
     if (isPreview.value) {
@@ -173,7 +173,7 @@ onMounted(() => {
         </article>
       </section>
 
-      <InvoiceTable :invoices="invoices" />
+      <FiscalDocumentTable :fiscal-documents="fiscalDocuments" />
 
       <UAlert
         v-if="!isPreview"

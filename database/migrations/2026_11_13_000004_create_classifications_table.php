@@ -13,7 +13,7 @@ return new class extends Migration
         Schema::create('classifications', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
-            $table->foreignId('invoice_item_id')->constrained('invoice_items')->cascadeOnDelete();
+            $table->foreignId('fiscal_document_item_id')->constrained('fiscal_document_items')->cascadeOnDelete();
             $table->foreignId('expense_category_id')->constrained('expense_categories');
             $table->string('method', 16);
             $table->decimal('confidence', 5, 4)->default(1);
@@ -26,7 +26,7 @@ return new class extends Migration
             $table->timestampTz('reviewed_at')->nullable();
             $table->timestampsTz();
 
-            $table->unique('invoice_item_id');
+            $table->unique('fiscal_document_item_id');
             $table->index(['tenant_id', 'status']);
             $table->index(['tenant_id', 'expense_category_id']);
         });

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Domain\Classification\Actions\ClassifyInvoiceItems;
+use App\Domain\Classification\Actions\ClassifyFiscalDocumentItems;
 use App\Domain\Classification\Actions\SyncExpenseCategories;
 use App\Domain\Classification\Contracts\Classifier;
 use App\Domain\Classification\Enums\ClassificationMethod;
@@ -14,8 +14,8 @@ use App\Domain\Classification\Models\Classification;
 use App\Domain\Classification\Models\ClassificationRule;
 use App\Domain\Classification\Models\ExpenseCategory;
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
-use App\Domain\Invoicing\Models\InvoiceItem;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
 use App\Integrations\Ai\FakeClassifier;
@@ -26,9 +26,9 @@ uses(RefreshDatabase::class);
 /**
  * @param  array<string, mixed>  $overrides
  */
-function aiClassifyInvoice(int $tenantId, int $companyId, array $overrides = []): Invoice
+function aiClassifyFiscalDocument(int $tenantId, int $companyId, array $overrides = []): FiscalDocument
 {
-    return Invoice::factory()->create([
+    return FiscalDocument::factory()->create([
         'tenant_id' => $tenantId,
         'company_id' => $companyId,
         ...$overrides,
@@ -38,11 +38,11 @@ function aiClassifyInvoice(int $tenantId, int $companyId, array $overrides = [])
 /**
  * @param  array<string, mixed>  $overrides
  */
-function aiClassifyItem(Invoice $invoice, int $line, string $description, array $overrides = []): InvoiceItem
+function aiClassifyItem(FiscalDocument $fiscal_document, int $line, string $description, array $overrides = []): FiscalDocumentItem
 {
-    return InvoiceItem::query()->create([
-        'tenant_id' => $invoice->tenant_id,
-        'invoice_id' => $invoice->id,
+    return FiscalDocumentItem::query()->create([
+        'tenant_id' => $fiscal_document->tenant_id,
+        'fiscal_document_id' => $fiscal_document->id,
         'line_number' => $line,
         'description' => $description,
         'normalized_description' => mb_strtoupper($description),
@@ -61,25 +61,25 @@ beforeEach(function (): void {
     app(SyncExpenseCategories::class)->handle();
 
     $this->fake = app(FakeClassifier::class);
-    $this->classify = app(ClassifyInvoiceItems::class);
+    $this->classify = app(ClassifyFiscalDocumentItems::class);
     $this->categoryId = fn (string $code): int => (int) ExpenseCategory::query()
         ->where('code', $code)
         ->value('id');
 });
 
 it('acepta automáticamente una sugerencia con confianza suficiente', function (): void {
-    $invoice = aiClassifyInvoice($this->tenant->id, $this->company->id);
-    $item = aiClassifyItem($invoice, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
+    $fiscal_document = aiClassifyFiscalDocument($this->tenant->id, $this->company->id);
+    $item = aiClassifyItem($fiscal_document, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
 
     $this->fake->pushSuggestion('operativo', 0.95, 'Servicios profesionales');
 
-    expect($this->classify->handle($invoice))->toBe(1);
+    expect($this->classify->handle($fiscal_document))->toBe(1);
 
     $item->refresh();
     $classification = Classification::query()->firstOrFail();
 
     expect($item->expense_category_id)->toBe(($this->categoryId)('operativo'))
-        ->and($item->classification_status)->toBe(InvoiceItem::STATUS_AUTO)
+        ->and($item->classification_status)->toBe(FiscalDocumentItem::STATUS_AUTO)
         ->and($classification->method)->toBe(ClassificationMethod::Llm)
         ->and($classification->status)->toBe(ClassificationStatus::Suggested)
         ->and($classification->confidence)->toBe(0.95)
@@ -92,17 +92,17 @@ it('acepta automáticamente una sugerencia con confianza suficiente', function (
 });
 
 it('envía a revisión una sugerencia por debajo del umbral', function (): void {
-    $invoice = aiClassifyInvoice($this->tenant->id, $this->company->id);
-    $item = aiClassifyItem($invoice, 1, 'GASTO POCO CLARO');
+    $fiscal_document = aiClassifyFiscalDocument($this->tenant->id, $this->company->id);
+    $item = aiClassifyItem($fiscal_document, 1, 'GASTO POCO CLARO');
 
     $this->fake->pushSuggestion('operativo', 0.40, 'No es concluyente');
 
-    expect($this->classify->handle($invoice))->toBe(1);
+    expect($this->classify->handle($fiscal_document))->toBe(1);
 
     $item->refresh();
     $classification = Classification::query()->firstOrFail();
 
-    expect($item->classification_status)->toBe(InvoiceItem::STATUS_REVIEW)
+    expect($item->classification_status)->toBe(FiscalDocumentItem::STATUS_REVIEW)
         ->and($item->expense_category_id)->toBe(($this->categoryId)('operativo'))
         ->and($classification->status)->toBe(ClassificationStatus::NeedsReview)
         ->and($classification->method)->toBe(ClassificationMethod::Llm)
@@ -110,19 +110,19 @@ it('envía a revisión una sugerencia por debajo del umbral', function (): void 
 });
 
 it('mantiene pendiente el ítem cuando el clasificador no sugiere nada', function (): void {
-    $invoice = aiClassifyInvoice($this->tenant->id, $this->company->id);
-    $item = aiClassifyItem($invoice, 1, 'SIN SUGERENCIA');
+    $fiscal_document = aiClassifyFiscalDocument($this->tenant->id, $this->company->id);
+    $item = aiClassifyItem($fiscal_document, 1, 'SIN SUGERENCIA');
 
-    expect($this->classify->handle($invoice))->toBe(0)
-        ->and($item->refresh()->classification_status)->toBe(InvoiceItem::STATUS_PENDING)
+    expect($this->classify->handle($fiscal_document))->toBe(0)
+        ->and($item->refresh()->classification_status)->toBe(FiscalDocumentItem::STATUS_PENDING)
         ->and($item->expense_category_id)->toBeNull()
         ->and(Classification::query()->count())->toBe(0)
         ->and($this->fake->requests)->toHaveCount(1);
 });
 
 it('no llama a la IA cuando una regla clasifica el ítem', function (): void {
-    $invoice = aiClassifyInvoice($this->tenant->id, $this->company->id);
-    $item = aiClassifyItem($invoice, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
+    $fiscal_document = aiClassifyFiscalDocument($this->tenant->id, $this->company->id);
+    $item = aiClassifyItem($fiscal_document, 1, 'SERVICIOS DE CONSULTORIA CONTABLE');
 
     ClassificationRule::query()->create([
         'name' => 'Consultoría',
@@ -135,7 +135,7 @@ it('no llama a la IA cuando una regla clasifica el ítem', function (): void {
 
     $this->fake->pushSuggestion('alimentacion', 0.99);
 
-    expect($this->classify->handle($invoice))->toBe(1);
+    expect($this->classify->handle($fiscal_document))->toBe(1);
 
     $item->refresh();
     $classification = Classification::query()->firstOrFail();
@@ -146,52 +146,52 @@ it('no llama a la IA cuando una regla clasifica el ítem', function (): void {
 });
 
 it('degrada a revisión sin persistir clasificación cuando la IA no está disponible', function (): void {
-    $invoice = aiClassifyInvoice($this->tenant->id, $this->company->id);
-    $item = aiClassifyItem($invoice, 1, 'SERVICIO PROFESIONAL');
+    $fiscal_document = aiClassifyFiscalDocument($this->tenant->id, $this->company->id);
+    $item = aiClassifyItem($fiscal_document, 1, 'SERVICIO PROFESIONAL');
 
     $this->fake->pushException(ClassifierUnavailable::rateLimited());
 
-    expect($this->classify->handle($invoice))->toBe(0);
+    expect($this->classify->handle($fiscal_document))->toBe(0);
 
-    expect($item->refresh()->classification_status)->toBe(InvoiceItem::STATUS_REVIEW)
+    expect($item->refresh()->classification_status)->toBe(FiscalDocumentItem::STATUS_REVIEW)
         ->and($item->expense_category_id)->toBeNull()
         ->and(Classification::query()->count())->toBe(0)
         ->and($this->fake->requests)->toHaveCount(1);
 });
 
 it('degrada a revisión ante un error inesperado del adaptador', function (): void {
-    $invoice = aiClassifyInvoice($this->tenant->id, $this->company->id);
-    $item = aiClassifyItem($invoice, 1, 'SERVICIO PROFESIONAL');
+    $fiscal_document = aiClassifyFiscalDocument($this->tenant->id, $this->company->id);
+    $item = aiClassifyItem($fiscal_document, 1, 'SERVICIO PROFESIONAL');
 
     $this->fake->pushException(new RuntimeException('fallo inesperado del adaptador'));
 
-    expect($this->classify->handle($invoice))->toBe(0)
-        ->and($item->refresh()->classification_status)->toBe(InvoiceItem::STATUS_REVIEW)
+    expect($this->classify->handle($fiscal_document))->toBe(0)
+        ->and($item->refresh()->classification_status)->toBe(FiscalDocumentItem::STATUS_REVIEW)
         ->and(Classification::query()->count())->toBe(0)
         ->and($this->fake->requests)->toHaveCount(1);
 });
 
 it('reintenta una salida inválida y clasifica con la segunda respuesta', function (): void {
-    $invoice = aiClassifyInvoice($this->tenant->id, $this->company->id);
-    $item = aiClassifyItem($invoice, 1, 'SERVICIO PROFESIONAL');
+    $fiscal_document = aiClassifyFiscalDocument($this->tenant->id, $this->company->id);
+    $item = aiClassifyItem($fiscal_document, 1, 'SERVICIO PROFESIONAL');
 
     $this->fake->pushException(InvalidClassifierOutput::malformedJson())
         ->pushSuggestion('operativo', 0.90);
 
-    expect($this->classify->handle($invoice))->toBe(1)
-        ->and($item->refresh()->classification_status)->toBe(InvoiceItem::STATUS_AUTO)
+    expect($this->classify->handle($fiscal_document))->toBe(1)
+        ->and($item->refresh()->classification_status)->toBe(FiscalDocumentItem::STATUS_AUTO)
         ->and($this->fake->requests)->toHaveCount(2);
 });
 
 it('degrada a revisión si la IA devuelve dos salidas inválidas', function (): void {
-    $invoice = aiClassifyInvoice($this->tenant->id, $this->company->id);
-    $item = aiClassifyItem($invoice, 1, 'SERVICIO PROFESIONAL');
+    $fiscal_document = aiClassifyFiscalDocument($this->tenant->id, $this->company->id);
+    $item = aiClassifyItem($fiscal_document, 1, 'SERVICIO PROFESIONAL');
 
     $this->fake->pushException(InvalidClassifierOutput::malformedJson())
         ->pushException(InvalidClassifierOutput::unexpectedShape());
 
-    expect($this->classify->handle($invoice))->toBe(0)
-        ->and($item->refresh()->classification_status)->toBe(InvoiceItem::STATUS_REVIEW)
+    expect($this->classify->handle($fiscal_document))->toBe(0)
+        ->and($item->refresh()->classification_status)->toBe(FiscalDocumentItem::STATUS_REVIEW)
         ->and(Classification::query()->count())->toBe(0)
         ->and($this->fake->requests)->toHaveCount(2);
 });
@@ -199,58 +199,58 @@ it('degrada a revisión si la IA devuelve dos salidas inválidas', function (): 
 it('abre el circuito y deja en revisión los ítems siguientes', function (): void {
     config(['ai.classifier.circuit.failure_threshold' => 1]);
     app()->forgetInstance(Classifier::class);
-    app()->forgetInstance(ClassifyInvoiceItems::class);
-    $classify = app(ClassifyInvoiceItems::class);
+    app()->forgetInstance(ClassifyFiscalDocumentItems::class);
+    $classify = app(ClassifyFiscalDocumentItems::class);
 
-    $invoice = aiClassifyInvoice($this->tenant->id, $this->company->id);
-    $first = aiClassifyItem($invoice, 1, 'PRIMER SERVICIO');
-    $second = aiClassifyItem($invoice, 2, 'SEGUNDO SERVICIO');
+    $fiscal_document = aiClassifyFiscalDocument($this->tenant->id, $this->company->id);
+    $first = aiClassifyItem($fiscal_document, 1, 'PRIMER SERVICIO');
+    $second = aiClassifyItem($fiscal_document, 2, 'SEGUNDO SERVICIO');
 
     $this->fake->pushException(ClassifierUnavailable::rateLimited())
         ->pushSuggestion('operativo', 0.99);
 
-    expect($classify->handle($invoice))->toBe(0)
-        ->and($first->refresh()->classification_status)->toBe(InvoiceItem::STATUS_REVIEW)
-        ->and($second->refresh()->classification_status)->toBe(InvoiceItem::STATUS_REVIEW)
+    expect($classify->handle($fiscal_document))->toBe(0)
+        ->and($first->refresh()->classification_status)->toBe(FiscalDocumentItem::STATUS_REVIEW)
+        ->and($second->refresh()->classification_status)->toBe(FiscalDocumentItem::STATUS_REVIEW)
         ->and($this->fake->requests)->toHaveCount(1);
 });
 
 it('no vuelve a consultar la IA para un ítem ya clasificado', function (): void {
-    $invoice = aiClassifyInvoice($this->tenant->id, $this->company->id);
-    $item = aiClassifyItem($invoice, 1, 'SERVICIO PROFESIONAL');
+    $fiscal_document = aiClassifyFiscalDocument($this->tenant->id, $this->company->id);
+    $item = aiClassifyItem($fiscal_document, 1, 'SERVICIO PROFESIONAL');
 
     $this->fake->pushSuggestion('operativo', 0.95);
 
-    $this->classify->handle($invoice);
+    $this->classify->handle($fiscal_document);
 
-    expect($this->classify->handle($invoice))->toBe(0)
+    expect($this->classify->handle($fiscal_document))->toBe(0)
         ->and($this->fake->requests)->toHaveCount(1)
-        ->and(Classification::query()->where('invoice_item_id', $item->id)->count())->toBe(1);
+        ->and(Classification::query()->where('fiscal_document_item_id', $item->id)->count())->toBe(1);
 });
 
 it('mantiene los circuitos separados entre tenants', function (): void {
     config(['ai.classifier.circuit.failure_threshold' => 1]);
     app()->forgetInstance(Classifier::class);
-    app()->forgetInstance(ClassifyInvoiceItems::class);
-    $classify = app(ClassifyInvoiceItems::class);
+    app()->forgetInstance(ClassifyFiscalDocumentItems::class);
+    $classify = app(ClassifyFiscalDocumentItems::class);
 
-    $invoiceA = aiClassifyInvoice($this->tenant->id, $this->company->id);
-    aiClassifyItem($invoiceA, 1, 'SERVICIO DEL TENANT A');
+    $fiscal_documentA = aiClassifyFiscalDocument($this->tenant->id, $this->company->id);
+    aiClassifyItem($fiscal_documentA, 1, 'SERVICIO DEL TENANT A');
 
     $this->fake->pushException(ClassifierUnavailable::rateLimited());
 
-    expect($classify->handle($invoiceA))->toBe(0);
+    expect($classify->handle($fiscal_documentA))->toBe(0);
 
     $otherTenant = Tenant::factory()->create(['slug' => 'ai-classification-other']);
     app(TenantContext::class)->initialize($otherTenant);
 
     $otherCompany = Company::factory()->create(['tenant_id' => $otherTenant->id]);
-    $invoiceB = aiClassifyInvoice($otherTenant->id, $otherCompany->id);
-    $itemB = aiClassifyItem($invoiceB, 1, 'SERVICIO DEL TENANT B');
+    $fiscal_documentB = aiClassifyFiscalDocument($otherTenant->id, $otherCompany->id);
+    $itemB = aiClassifyItem($fiscal_documentB, 1, 'SERVICIO DEL TENANT B');
 
     $this->fake->pushSuggestion('operativo', 0.95);
 
-    expect($classify->handle($invoiceB))->toBe(1)
-        ->and($itemB->refresh()->classification_status)->toBe(InvoiceItem::STATUS_AUTO)
+    expect($classify->handle($fiscal_documentB))->toBe(1)
+        ->and($itemB->refresh()->classification_status)->toBe(FiscalDocumentItem::STATUS_AUTO)
         ->and($this->fake->requests)->toHaveCount(2);
 });

@@ -1931,6 +1931,174 @@
                 }
             }
         },
+        "/v1/fiscal_documents": {
+            "get": {
+                "operationId": "v1.fiscal_documents.index",
+                "tags": [
+                    "FiscalDocument"
+                ],
+                "parameters": [
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated set of `FiscalDocumentResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/FiscalDocumentResource"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "next_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "The \"cursor\" that points to the next set of items."
+                                                },
+                                                "prev_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "The \"cursor\" that points to the previous set of items."
+                                                }
+                                            },
+                                            "required": [
+                                                "path",
+                                                "per_page",
+                                                "next_cursor",
+                                                "prev_cursor"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "links",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/fiscal_documents/{fiscal_document}": {
+            "get": {
+                "operationId": "v1.fiscal_documents.show",
+                "tags": [
+                    "FiscalDocument"
+                ],
+                "parameters": [
+                    {
+                        "name": "fiscal_document",
+                        "in": "path",
+                        "required": true,
+                        "description": "The fiscal document public id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`FiscalDocumentResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/FiscalDocumentResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/health": {
             "get": {
                 "operationId": "v1.health",
@@ -2104,179 +2272,11 @@
                 }
             }
         },
-        "/v1/invoices": {
-            "get": {
-                "operationId": "v1.invoices.index",
-                "tags": [
-                    "Invoice"
-                ],
-                "parameters": [
-                    {
-                        "name": "cursor",
-                        "in": "query",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Paginated set of `InvoiceResource`",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/InvoiceResource"
-                                            }
-                                        },
-                                        "links": {
-                                            "type": "object",
-                                            "properties": {
-                                                "first": {
-                                                    "type": [
-                                                        "string",
-                                                        "null"
-                                                    ]
-                                                },
-                                                "last": {
-                                                    "type": [
-                                                        "string",
-                                                        "null"
-                                                    ]
-                                                },
-                                                "prev": {
-                                                    "type": [
-                                                        "string",
-                                                        "null"
-                                                    ]
-                                                },
-                                                "next": {
-                                                    "type": [
-                                                        "string",
-                                                        "null"
-                                                    ]
-                                                }
-                                            },
-                                            "required": [
-                                                "first",
-                                                "last",
-                                                "prev",
-                                                "next"
-                                            ]
-                                        },
-                                        "meta": {
-                                            "type": "object",
-                                            "properties": {
-                                                "path": {
-                                                    "type": [
-                                                        "string",
-                                                        "null"
-                                                    ],
-                                                    "description": "Base path for paginator generated URLs."
-                                                },
-                                                "per_page": {
-                                                    "type": "integer",
-                                                    "description": "Number of items shown per page.",
-                                                    "minimum": 0
-                                                },
-                                                "next_cursor": {
-                                                    "type": [
-                                                        "string",
-                                                        "null"
-                                                    ],
-                                                    "description": "The \"cursor\" that points to the next set of items."
-                                                },
-                                                "prev_cursor": {
-                                                    "type": [
-                                                        "string",
-                                                        "null"
-                                                    ],
-                                                    "description": "The \"cursor\" that points to the previous set of items."
-                                                }
-                                            },
-                                            "required": [
-                                                "path",
-                                                "per_page",
-                                                "next_cursor",
-                                                "prev_cursor"
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "data",
-                                        "links",
-                                        "meta"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/AuthorizationException"
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/AuthenticationException"
-                    }
-                }
-            }
-        },
-        "/v1/invoices/{invoice}": {
-            "get": {
-                "operationId": "v1.invoices.show",
-                "tags": [
-                    "Invoice"
-                ],
-                "parameters": [
-                    {
-                        "name": "invoice",
-                        "in": "path",
-                        "required": true,
-                        "description": "The invoice public id",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "`InvoiceResource`",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/InvoiceResource"
-                                        }
-                                    },
-                                    "required": [
-                                        "data"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/AuthorizationException"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/ModelNotFoundException"
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/AuthenticationException"
-                    }
-                }
-            }
-        },
-        "/v1/companies/{company}/invoices/manual": {
+        "/v1/companies/{company}/fiscal_documents/manual": {
             "post": {
-                "operationId": "v1.companies.invoices.manual.store",
+                "operationId": "v1.companies.fiscal_documents.manual.store",
                 "tags": [
-                    "ManualInvoice"
+                    "ManualFiscalDocument"
                 ],
                 "parameters": [
                     {
@@ -2294,7 +2294,7 @@
                     "content": {
                         "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/StoreManualInvoiceRequest"
+                                "$ref": "#/components/schemas/StoreManualFiscalDocumentRequest"
                             }
                         }
                     }
@@ -3599,7 +3599,7 @@
                             "total_cents"
                         ]
                     },
-                    "invoice": {
+                    "fiscal_document": {
                         "type": [
                             "object",
                             "null"
@@ -3686,7 +3686,7 @@
                     "prompt_version",
                     "expense_category",
                     "item",
-                    "invoice",
+                    "fiscal_document",
                     "reviewed_by",
                     "reviewed_at",
                     "created_at",
@@ -3954,43 +3954,7 @@
                 ],
                 "title": "ExpenseCategoryResource"
             },
-            "ForgotPasswordRequest": {
-                "type": "object",
-                "properties": {
-                    "email": {
-                        "type": "string",
-                        "format": "email"
-                    }
-                },
-                "required": [
-                    "email"
-                ],
-                "title": "ForgotPasswordRequest"
-            },
-            "InviteUserRequest": {
-                "type": "object",
-                "properties": {
-                    "email": {
-                        "type": "string",
-                        "format": "email"
-                    },
-                    "role": {
-                        "type": "string",
-                        "enum": [
-                            "owner",
-                            "accountant",
-                            "assistant",
-                            "viewer"
-                        ]
-                    }
-                },
-                "required": [
-                    "email",
-                    "role"
-                ],
-                "title": "InviteUserRequest"
-            },
-            "InvoiceResource": {
+            "FiscalDocumentResource": {
                 "type": "object",
                 "properties": {
                     "id": {
@@ -4126,7 +4090,43 @@
                     "created_at",
                     "updated_at"
                 ],
-                "title": "InvoiceResource"
+                "title": "FiscalDocumentResource"
+            },
+            "ForgotPasswordRequest": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    }
+                },
+                "required": [
+                    "email"
+                ],
+                "title": "ForgotPasswordRequest"
+            },
+            "InviteUserRequest": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "owner",
+                            "accountant",
+                            "assistant",
+                            "viewer"
+                        ]
+                    }
+                },
+                "required": [
+                    "email",
+                    "role"
+                ],
+                "title": "InviteUserRequest"
             },
             "LoginRequest": {
                 "type": "object",
@@ -4754,7 +4754,7 @@
                 ],
                 "title": "StoreCompanyRequest"
             },
-            "StoreManualInvoiceRequest": {
+            "StoreManualFiscalDocumentRequest": {
                 "type": "object",
                 "description": "Valida la carga manual de un XML autorizado (F2-13 / US-14).\n\nEl l\u00edmite de 2 MB se aplica antes de leer el contenido y la extensi\u00f3n se\nrestringe a XML; la guardia XXE y el parseo viven en la acci\u00f3n de dominio.",
                 "properties": {
@@ -4768,7 +4768,7 @@
                 "required": [
                     "file"
                 ],
-                "title": "StoreManualInvoiceRequest"
+                "title": "StoreManualFiscalDocumentRequest"
             },
             "StoreSriCredentialRequest": {
                 "type": "object",

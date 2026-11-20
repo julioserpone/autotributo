@@ -36,14 +36,14 @@ tests/
 ├── Unit/
 │   ├── Shared/RucTest.php
 │   ├── Shared/ClaveAccesoTest.php
-│   ├── Invoicing/XmlParserTest.php
+│   ├── FiscalDocuments/XmlParserTest.php
 │   ├── Fiscal/Form104CalculatorTest.php
 │   ├── Fiscal/ProportionalityTest.php
 │   └── Classification/RuleEngineTest.php
 ├── Feature/
 │   ├── Auth/ (login, 2fa, invitaciones)
 │   ├── Companies/
-│   ├── Invoicing/
+│   ├── FiscalDocuments/
 │   ├── Sri/ (sync, callback, reconciliación)
 │   ├── Classification/
 │   ├── Fiscal/ (declaraciones, versionado, permisos)
@@ -53,7 +53,7 @@ tests/
 │   ├── Classification/OpenAiClassifierTest.php
 │   └── Webhooks/SignatureTest.php
 ├── Fixtures/
-│   ├── xml/{invoice,credit_note,debit_note,purchase_settlement,retention}/
+│   ├── xml/{fiscal_document,credit_note,debit_note,purchase_settlement,retention}/
 │   ├── sri-runs/
 │   └── golden/{104,103,102}/
 └── Arch/ArchitectureTest.php
@@ -91,7 +91,7 @@ it('calcula el factor de proporcionalidad con 6 decimales', function () {
 
 ### 4.2 Feature (integración real)
 
-- `RefreshDatabase` + factories con estados (`Company::factory()->rimpe()`, `Invoice::factory()->creditNote()`).
+- `RefreshDatabase` + factories con estados (`Company::factory()->rimpe()`, `FiscalDocument::factory()->creditNote()`).
 - Autenticación real con Sanctum (`actingAs`) y contexto de tenant.
 - Se verifica la respuesta HTTP **y** el efecto en base de datos.
 - `Queue::fake()` solo cuando el job no es el objeto de la prueba; si se prueba la cadena, usar `Queue::fake()` + `assertPushed` y probar el job por separado.
@@ -99,18 +99,18 @@ it('calcula el factor de proporcionalidad con 6 decimales', function () {
 ```php
 it('no permite ver facturas de otro tenant', function () {
     [$tenantA, $tenantB] = Tenant::factory()->count(2)->create();
-    $invoiceA = Invoice::factory()->for($tenantA)->create();
+    $fiscal_documentA = FiscalDocument::factory()->for($tenantA)->create();
 
     tenancy()->initialize($tenantB);
     $userB = User::factory()->forTenant($tenantB)->create();
 
     $this->actingAs($userB)
-        ->getJson("/api/v1/invoices/{$invoiceA->public_id}")
+        ->getJson("/api/v1/fiscal_documents/{$fiscal_documentA->public_id}")
         ->assertNotFound();
 });
 ```
 
-**Suite de aislamiento obligatoria** (una por recurso expuesto): `invoices`, `invoice_items`, `companies`, `sync-runs`, `declarations`, `exports`, `classification_rules`, `audit_logs`.
+**Suite de aislamiento obligatoria** (una por recurso expuesto): `fiscal_documents`, `fiscal_document_items`, `companies`, `sync-runs`, `declarations`, `exports`, `classification_rules`, `audit_logs`.
 Incluye también: listados con `filter[company_id]` ajeno, `POST` con `company_id` ajeno, descarga de PDF/XLSX ajeno, y canales de broadcasting ajenos.
 
 > **Por qué se mantiene en el MVP single-tenant:** la app solo provisiona un estudio, pero el esquema ya es tenant-ready. Estos tests demuestran que el `TenantScope` funciona y que activar el modo multi (ADR-0006) no introducirá fugas. Además se prueba `TenantContext` en modo single: liga el tenant por defecto, falla sin contexto y no permite mezclar datos al cambiarlo.
@@ -252,7 +252,7 @@ arch('no se usa el facade DB en el dominio')
     ->not->toUse('Illuminate\Support\Facades\DB');
 
 arch('todos los modelos de negocio usan el trait de tenant')
-    ->expect('App\Domain\Invoicing\Models')
+    ->expect('App\Domain\FiscalDocuments\Models')
     ->toUse('App\Domain\Tenancy\Models\Concerns\BelongsToTenant');
 ```
 

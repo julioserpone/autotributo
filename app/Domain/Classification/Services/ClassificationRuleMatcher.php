@@ -6,7 +6,7 @@ namespace App\Domain\Classification\Services;
 
 use App\Domain\Classification\Enums\MatchType;
 use App\Domain\Classification\Models\ClassificationRule;
-use App\Domain\Invoicing\Models\InvoiceItem;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
 use Illuminate\Support\Str;
 
 /**
@@ -22,7 +22,7 @@ final class ClassificationRuleMatcher
     /**
      * @param  iterable<int, ClassificationRule>  $rules
      */
-    public function firstMatch(iterable $rules, InvoiceItem $item, ?string $issuerRuc): ?ClassificationRule
+    public function firstMatch(iterable $rules, FiscalDocumentItem $item, ?string $issuerRuc): ?ClassificationRule
     {
         foreach ($rules as $rule) {
             if ($this->matches($rule, $item, $issuerRuc)) {
@@ -33,7 +33,7 @@ final class ClassificationRuleMatcher
         return null;
     }
 
-    public function matches(ClassificationRule $rule, InvoiceItem $item, ?string $issuerRuc): bool
+    public function matches(ClassificationRule $rule, FiscalDocumentItem $item, ?string $issuerRuc): bool
     {
         $pattern = trim((string) $rule->pattern);
 
@@ -99,7 +99,7 @@ final class ClassificationRuleMatcher
         return @preg_match($pattern, $description) === 1;
     }
 
-    private function itemCodeMatches(InvoiceItem $item, string $pattern): bool
+    private function itemCodeMatches(FiscalDocumentItem $item, string $pattern): bool
     {
         $expected = Str::upper(trim($pattern));
 

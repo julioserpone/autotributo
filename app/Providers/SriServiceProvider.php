@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Domain\Classification\Actions\ClassifyInvoiceItems;
+use App\Domain\Classification\Actions\ClassifyFiscalDocumentItems;
 use App\Domain\Sri\Actions\FinalizeSriRun;
 use App\Domain\Sri\Actions\ImportSriKeys;
 use App\Domain\Sri\Actions\ImportSriRun;
 use App\Domain\Sri\Actions\ParseSriRun;
-use App\Domain\Sri\Actions\PersistSriInvoice;
+use App\Domain\Sri\Actions\PersistSriFiscalDocument;
 use App\Domain\Sri\Actions\ReconcileSriRun;
 use App\Domain\Sri\Actions\ReconcileSriRuns;
 use App\Domain\Sri\Actions\RecoverSriRunFromS3;
@@ -17,7 +17,7 @@ use App\Domain\Sri\Actions\ResolveStaleSriRun;
 use App\Domain\Sri\Actions\S3SriXmlRecovery;
 use App\Domain\Sri\Actions\StartSriSync;
 use App\Domain\Sri\Contracts\SriAuthorizationGateway;
-use App\Domain\Sri\Contracts\SriInvoiceParser;
+use App\Domain\Sri\Contracts\SriFiscalDocumentParser;
 use App\Domain\Sri\Contracts\SriRobotGateway;
 use App\Domain\Sri\Contracts\SriRobotObjectStore;
 use App\Domain\Sri\Contracts\SriXmlRecovery;
@@ -29,7 +29,7 @@ use App\Integrations\Sri\FakeSriRobotGateway;
 use App\Integrations\Sri\FilesystemSriRobotObjectStore;
 use App\Integrations\Sri\LambdaSriRobotGateway;
 use App\Integrations\Sri\PackageSriAuthorizationGateway;
-use App\Integrations\Sri\PackageSriInvoiceParser;
+use App\Integrations\Sri\PackageSriFiscalDocumentParser;
 use Aws\Lambda\LambdaClient;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Storage;
@@ -79,8 +79,8 @@ final class SriServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->singleton(SriInvoiceParser::class, function (Application $app): SriInvoiceParser {
-            return new PackageSriInvoiceParser;
+        $this->app->singleton(SriFiscalDocumentParser::class, function (Application $app): SriFiscalDocumentParser {
+            return new PackageSriFiscalDocumentParser;
         });
 
         $this->app->singleton(SriRobotGateway::class, function (Application $app): SriRobotGateway {
@@ -159,15 +159,15 @@ final class SriServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->singleton(PersistSriInvoice::class, fn (Application $app): PersistSriInvoice => new PersistSriInvoice(
-            $app->make(ClassifyInvoiceItems::class),
+        $this->app->singleton(PersistSriFiscalDocument::class, fn (Application $app): PersistSriFiscalDocument => new PersistSriFiscalDocument(
+            $app->make(ClassifyFiscalDocumentItems::class),
         ));
 
         $this->app->singleton(ImportSriKeys::class, function (Application $app): ImportSriKeys {
             return new ImportSriKeys(
                 $app->make(SriAuthorizationGateway::class),
-                $app->make(SriInvoiceParser::class),
-                $app->make(PersistSriInvoice::class),
+                $app->make(SriFiscalDocumentParser::class),
+                $app->make(PersistSriFiscalDocument::class),
                 $app->make(SriXmlRecovery::class),
                 (string) config('sri.robot.environment', 'dev'),
                 (bool) config('sri.authorization.fallback_to_sri', true),

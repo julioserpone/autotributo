@@ -12,7 +12,7 @@ $issuedAt = $xml->fechaEmision;
 
 // Mal: explica código PHP obvio
 // Recorre el arreglo de facturas
-foreach ($invoices as $invoice) { ... }
+foreach ($fiscal_documents as $fiscal_document) { ... }
 ```
 
 - No usar `sleep()` para rate limiting; preferir backoff configurable o colas con delay. Si es inevitable, documentar la razón y el límite.
@@ -24,16 +24,16 @@ foreach ($invoices as $invoice) { ... }
 
 ```php
 /**
- * Dispatch invoice payload to the tax authority for electronic validation.
+ * Dispatch fiscal_document payload to the tax authority for electronic validation.
  *
- * @param Invoice $invoice
+ * @param FiscalDocument $fiscal_document
  * @param Tenant $tenant
  * @return SriResponseData
  *
  * @throws SriConnectionException
  * @throws InvalidTaxRecordException
  */
-public function submitInvoice(Invoice $invoice, Tenant $tenant): SriResponseData
+public function submitFiscalDocument(FiscalDocument $fiscal_document, Tenant $tenant): SriResponseData
 {
     // Implementation...
 }

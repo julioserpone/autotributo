@@ -31,7 +31,7 @@ use Throwable;
  * - `failed` si no se pudo obtener ninguna clave.
  *
  * Todavía no persiste comprobantes: la consulta al SRI y la escritura de
- * `invoices` son de F2-06/F2-08.
+ * `fiscal_documents` son de F2-06/F2-08.
  */
 final readonly class ParseSriRun
 {

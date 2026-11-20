@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\Gate;
  *
  * La cola prioriza lo que necesita una persona (`needs_review`) sobre las
  * sugerencias automáticas, y el listado se filtra por estado, método, empresa
- * y texto. Decidir exige el permiso `invoices.review`; consultar, `invoices.view`.
+ * y texto. Decidir exige el permiso `fiscal_documents.review`; consultar, `fiscal_documents.view`.
  */
 final class ClassificationController extends Controller
 {
@@ -43,7 +43,7 @@ final class ClassificationController extends Controller
         Gate::authorize('viewAny', Classification::class);
 
         $query = Classification::query()
-            ->with(['invoiceItem.invoice', 'expenseCategory', 'reviewer']);
+            ->with(['fiscal_documentItem.fiscal_document', 'expenseCategory', 'reviewer']);
 
         $filters = (array) $request->input('filter', []);
 
@@ -63,7 +63,7 @@ final class ClassificationController extends Controller
 
         if ($companyId !== null && $companyId !== '') {
             $query->whereHas(
-                'invoiceItem.invoice',
+                'fiscal_documentItem.fiscal_document',
                 fn (Builder $builder) => $builder->where('company_id', (int) $companyId),
             );
         }
@@ -82,7 +82,7 @@ final class ClassificationController extends Controller
 
         if ($search !== '') {
             $query->whereHas(
-                'invoiceItem',
+                'fiscal_documentItem',
                 fn (Builder $builder) => $builder->where('description', 'like', "%{$search}%"),
             );
         }
@@ -121,7 +121,7 @@ final class ClassificationController extends Controller
         );
 
         return new ClassificationResource(
-            $updated->load(['invoiceItem.invoice', 'expenseCategory', 'reviewer']),
+            $updated->load(['fiscal_documentItem.fiscal_document', 'expenseCategory', 'reviewer']),
         );
     }
 

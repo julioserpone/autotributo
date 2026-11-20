@@ -118,7 +118,7 @@ Mapeo de colas locales a Cloud: `sri`, `ai`, `reports` (+ `default`). Cada nombr
 | `default` | Flex | 256 MB | ≤ 30 s | 3 |
 
 Reglas específicas de SQS/Cloud:
-- **Payload ≤ 1 MiB.** Los jobs reciben `run_id`, `invoice_id`, `s3_key`; nunca XML ni PDFs.
+- **Payload ≤ 1 MiB.** Los jobs reciben `run_id`, `fiscal_document_id`, `s3_key`; nunca XML ni PDFs.
 - **At-least-once.** Toda escritura es idempotente (upsert por clave natural).
 - **Delay máximo 15 min** en colas estándar. Para reprogramaciones mayores, usar el Scheduler.
 - **Sin Horizon.** Los fallos se gestionan en el dashboard de Queues o vía API de Cloud; reintentos de negocio se implementan en el dominio.
@@ -144,7 +144,7 @@ Activar el **Scheduler** en el App cluster (o en un worker dedicado). Cloud ejec
 
 ```php
 Schedule::command('sri:reconcile-runs')->everyTenMinutes()->onOneServer()->withoutOverlapping();
-Schedule::command('invoices:refresh-period-aggregates')->hourly()->onOneServer();
+Schedule::command('fiscal_documents:refresh-period-aggregates')->hourly()->onOneServer();
 Schedule::command('fiscal:scan-risks')->dailyAt('03:00')->onOneServer();
 Schedule::command('catalogs:check-updates')->weeklyOn(1, '05:00')->onOneServer();
 Schedule::command('ai:evaluate')->weeklyOn(1, '06:00')->onOneServer();
@@ -182,7 +182,7 @@ En local, por defecto se usa **disco** (`FILESYSTEM_DISK=local`); los tests usan
 Prefijos:
 
 ```
-tenants/{tenant_id}/companies/{company_id}/invoices/{yyyy}/{mm}/{access_key}.xml.gz
+tenants/{tenant_id}/companies/{company_id}/fiscal_documents/{yyyy}/{mm}/{access_key}.xml.gz
 tenants/{tenant_id}/declarations/{declaration_id}/v{n}.pdf|xlsx
 tenants/{tenant_id}/exports/{export_id}/...
 runs/{run_id}/...                # salida del robot (bucket -sri aparte)
@@ -264,7 +264,7 @@ El robot **no** tiene acceso a la base de datos ni a la API interna; solo escrib
 ### R3 — Cola atascada
 1. Revisar profundidad y edad del mensaje más antiguo.
 2. Pausar la cola desde el dashboard si hay un bucle tóxico.
-3. Identificar el job con `run_id`/`invoice_id`, corregir y reintentar.
+3. Identificar el job con `run_id`/`fiscal_document_id`, corregir y reintentar.
 4. Si es un veneno recurrente, mover a `failed` y documentar.
 
 ### R4 — Sospecha de fuga de credenciales

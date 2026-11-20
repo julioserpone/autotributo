@@ -6,7 +6,7 @@ namespace App\Domain\Sri\Actions;
 
 use App\Domain\Companies\Models\Company;
 use App\Domain\Sri\Contracts\SriAuthorizationGateway;
-use App\Domain\Sri\Contracts\SriInvoiceParser;
+use App\Domain\Sri\Contracts\SriFiscalDocumentParser;
 use App\Domain\Sri\Contracts\SriXmlRecovery;
 use App\Domain\Sri\Data\AuthorizationQuery;
 use App\Domain\Sri\Data\SriAccessKey;
@@ -34,8 +34,8 @@ final readonly class ImportSriKeys
 {
     public function __construct(
         private SriAuthorizationGateway $gateway,
-        private SriInvoiceParser $parser,
-        private PersistSriInvoice $persist,
+        private SriFiscalDocumentParser $parser,
+        private PersistSriFiscalDocument $persist,
         private SriXmlRecovery $recovery,
         private string $environment,
         private bool $fallbackToSri = true,

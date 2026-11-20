@@ -162,7 +162,7 @@ app/
 │   ├── Tenancy/           # Tenant, Domain, contexto, middleware, traits
 │   ├── Identity/          # User, Membership, Roles, invitaciones, 2FA
 │   ├── Companies/         # Company, credenciales SRI, obligaciones
-│   ├── Invoicing/         # Invoice, InvoiceItem, Taxes, parsers XML/TXT
+│   ├── FiscalDocuments/         # FiscalDocument, FiscalDocumentItem, Taxes, parsers XML/TXT
 │   ├── Sri/               # Gateway Lambda, SyncRun, orquestación, webhooks
 │   ├── Classification/    # Reglas, catálogo, LLM, revisión humana
 │   ├── Fiscal/            # Catálogos versionados, calculadoras, formularios
@@ -181,7 +181,7 @@ resources/js/
 ├── app.ts  router/  stores/  lib/  composables/
 ├── components/
 │   ├── ui/      charts/   tables/   forms/   # genéricos, sin dominio
-│   └── <dominio>/                             # invoices/, sri/, classification/…
+│   └── <dominio>/                             # fiscal_documents/, sri/, classification/…
 ├── layouts/  pages/
 └── types/                 # generados desde OpenAPI
 
@@ -191,7 +191,7 @@ docs/  docker/  database/{migrations,factories,seeders}
 
 **Regla de dependencias:** `Http` → `Domain`; `Domain` no conoce HTTP. `Domain` puede depender de contratos (`SriGateway`, `Classifier`, `Clock`), nunca de SDKs concretos. Los controladores solo orquestan una Action.
 
-**Regla de carpetas en `components/`:** cada carpeta agrupa componentes por dominio (`invoices/`, `sri/`, `classification/`…) y lleva el prefijo del dominio en el nombre del archivo (`SriSyncRunHistory.vue`, `InvoiceTable.vue`). Las carpetas transversales (`ui`, `charts`, `tables`, `forms`) solo contienen piezas sin conocimiento de dominio. Las páginas (`pages/`) se limitan a orquestar: llaman al store, componen componentes de dominio y no acumulan bloques de presentación reutilizables. Los textos de dominio (etiquetas de tipos, estados y errores) viven en `lib/`, no en la plantilla.
+**Regla de carpetas en `components/`:** cada carpeta agrupa componentes por dominio (`fiscal_documents/`, `sri/`, `classification/`…) y lleva el prefijo del dominio en el nombre del archivo (`SriSyncRunHistory.vue`, `FiscalDocumentTable.vue`). Las carpetas transversales (`ui`, `charts`, `tables`, `forms`) solo contienen piezas sin conocimiento de dominio. Las páginas (`pages/`) se limitan a orquestar: llaman al store, componen componentes de dominio y no acumulan bloques de presentación reutilizables. Los textos de dominio (etiquetas de tipos, estados y errores) viven en `lib/`, no en la plantilla.
 
 ### Flujo de una petición
 
@@ -239,14 +239,14 @@ StartSriSync (sync)
         └─> HandleSriRobotCallback (webhook, valida HMAC)
               └─> ParseSriManifest (queue: sri, 1 job por run)
                     └─> ImportSriDocument (1 job por archivo/lote de 25)
-                          ├─> PersistInvoice (upsert idempotente por access_key)
-                          ├─> ClassifyInvoiceItems (queue: ai)
+                          ├─> PersistFiscalDocument (upsert idempotente por access_key)
+                          ├─> ClassifyFiscalDocumentItems (queue: ai)
                           └─> RefreshPeriodAggregates (queue: fiscal)
                                 └─> FiscalRiskScan
 ```
 
 - Cada job guarda `run_id` y `tenant_id`; los logs los incluyen.
-- `PersistInvoice` usa `upsert` sobre `(tenant_id, company_id, access_key)`; el reprocesamiento no duplica.
+- `PersistFiscalDocument` usa `upsert` sobre `(tenant_id, company_id, access_key)`; el reprocesamiento no duplica.
 - Estados del run: `queued → invoking → downloading → parsing → completed | partial | failed | cancelled`. La UI se alimenta de `SriSyncRun` + eventos Reverb (best-effort) y **reconcilia con polling** cada 5 s mientras el run esté activo.
 - Errores por archivo no abortan el run: se registran en `sri_sync_run_files` y el run termina `partial` con detalle.
 
@@ -260,7 +260,7 @@ StartSriSync (sync)
 ## 8. Clasificación con IA
 
 ```
-InvoiceItem.description
+FiscalDocumentItem.description
    └─> normalización (mayúsculas, sin acentos, sin ruido)
         └─> RuleEngine (por tenant, ordenado por prioridad)
               ├─ match → categoría + confianza 1.0 (method=rule)
@@ -285,7 +285,7 @@ InvoiceItem.description
 - **Cálculo determinista**: entra un `FiscalPeriod` + movimientos, sale un `DeclarationDraft` con líneas y desglose. Sin acceso a red, sin LLM, sin `now()` implícito (se inyecta `Clock`).
 - **Trazabilidad**: cada línea del formulario guarda sus fuentes (`declaration_line_entries` → facturas/ítems), lo que habilita el drill-down y la auditoría.
 - **Invariantes verificadas en tests y en runtime**:
-  1. `sum(items.precio_total) + impuestos = invoice.total` (±0,01).
+  1. `sum(items.precio_total) + impuestos = fiscal_document.total` (±0,01).
   2. `sum(bases por tarifa) = base imponible total del período`.
   3. `IVA ventas − IVA compras − retenciones + crédito anterior = IVA a pagar`.
   4. Una declaración cerrada es inmutable; cambios generan nueva versión (`supersedes_id`).
@@ -297,10 +297,10 @@ InvoiceItem.description
 
 ### API
 
-- Base: `/api/v1`. Recursos: `companies`, `invoices`, `invoice-items`, `classification`, `sync-runs`, `declarations`, `reports`, `catalogos`.
+- Base: `/api/v1`. Recursos: `companies`, `fiscal_documents`, `fiscal_document-items`, `classification`, `sync-runs`, `declarations`, `reports`, `catalogos`.
 - Autenticación: cookie de sesión Sanctum (SPA mismo origen) + `X-XSRF-TOKEN`; tokens Bearer para integraciones.
 - Tenant: en el MVP single-tenant se usa el tenant por defecto (dominio único); en modo multi, subdominio. `X-Tenant` queda reservado para clientes API con token (nunca para sesiones de navegador).
-- Paginación: cursor para `invoices` (`?cursor=`), offset para catálogos.
+- Paginación: cursor para `fiscal_documents` (`?cursor=`), offset para catálogos.
 - Filtros declarativos: `filter[date_from]`, `filter[status]`, `filter[provider_ruc]`, `filter[category]`.
 - Acciones largas: `POST` devuelve `202 { data: { run_id } }` + `Location`.
 - Idempotencia: `Idempotency-Key` obligatorio en `POST /sync-runs` y `POST /declarations/{id}/close`.
@@ -309,7 +309,7 @@ InvoiceItem.description
 
 ### Eventos (Reverb)
 
-Canales privados: `private-tenant.{tenantId}.company.{companyId}` y `private-tenant.{tenantId}.user.{userId}`. Autorización en `routes/channels.php` verificando pertenencia. Eventos: `SriSyncProgressUpdated`, `InvoiceImported`, `ClassificationCompleted`, `FiscalRiskDetected`, `DeclarationDraftReady`. Los eventos son *notificaciones*, no fuente de verdad.
+Canales privados: `private-tenant.{tenantId}.company.{companyId}` y `private-tenant.{tenantId}.user.{userId}`. Autorización en `routes/channels.php` verificando pertenencia. Eventos: `SriSyncProgressUpdated`, `FiscalDocumentImported`, `ClassificationCompleted`, `FiscalRiskDetected`, `DeclarationDraftReady`. Los eventos son *notificaciones*, no fuente de verdad.
 
 ### Colas
 

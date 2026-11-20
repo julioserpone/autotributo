@@ -58,7 +58,7 @@ final readonly class OpenAiClassifier implements Classifier
                     'response_format' => [
                         'type' => 'json_schema',
                         'json_schema' => [
-                            'name' => 'invoice_item_classification',
+                            'name' => 'fiscal_document_item_classification',
                             'strict' => true,
                             'schema' => ClassifierOutputValidator::jsonSchema($request->categoryCodes()),
                         ],

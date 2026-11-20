@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Domain\Classification\Actions\ClassifyInvoiceItems;
+use App\Domain\Classification\Actions\ClassifyFiscalDocumentItems;
 use App\Domain\Classification\Contracts\Classifier;
 use App\Domain\Classification\Services\ClassificationRuleMatcher;
 use App\Domain\Classification\Services\ClassificationRuleRepository;
@@ -103,8 +103,8 @@ final class ClassificationServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->singleton(ClassifyInvoiceItems::class, function (Application $app): ClassifyInvoiceItems {
-            return new ClassifyInvoiceItems(
+        $this->app->singleton(ClassifyFiscalDocumentItems::class, function (Application $app): ClassifyFiscalDocumentItems {
+            return new ClassifyFiscalDocumentItems(
                 $app->make(ClassificationRuleMatcher::class),
                 $app->make(ClassificationRuleRepository::class),
                 $app->make(Classifier::class),

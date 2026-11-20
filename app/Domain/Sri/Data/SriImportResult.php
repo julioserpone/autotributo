@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Sri\Data;
 
-use App\Domain\Invoicing\Models\Invoice;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\Sri\Enums\SriImportOutcome;
 
 /**
@@ -13,7 +13,7 @@ use App\Domain\Sri\Enums\SriImportOutcome;
 final readonly class SriImportResult
 {
     public function __construct(
-        public Invoice $invoice,
+        public FiscalDocument $fiscal_document,
         public SriImportOutcome $outcome,
     ) {}
 

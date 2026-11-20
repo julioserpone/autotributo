@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\Sri\Enums\SriSyncRunStatus;
 use App\Domain\Sri\Models\SriSyncRun;
 use App\Domain\Tenancy\Enums\MembershipRole;
@@ -108,14 +108,14 @@ it('aplica la matriz de la policy de comprobantes', function (
 ): void {
     $user = ($this->makeUser)($role);
 
-    $invoice = Invoice::factory()->create([
+    $fiscal_document = FiscalDocument::factory()->create([
         'tenant_id' => $this->tenant->id,
         'company_id' => $this->company->id,
     ]);
 
-    expect(Gate::forUser($user)->allows('view', $invoice))->toBe($canView)
-        ->and(Gate::forUser($user)->allows('update', $invoice))->toBe($canReview)
-        ->and(Gate::forUser($user)->allows('export', Invoice::class))->toBe($canExport);
+    expect(Gate::forUser($user)->allows('view', $fiscal_document))->toBe($canView)
+        ->and(Gate::forUser($user)->allows('update', $fiscal_document))->toBe($canReview)
+        ->and(Gate::forUser($user)->allows('export', FiscalDocument::class))->toBe($canExport);
 })->with([
     'owner' => [MembershipRole::Owner, true, true, true],
     'accountant' => [MembershipRole::Accountant, true, true, true],
@@ -162,13 +162,13 @@ it('niega recursos de otro tenant aunque el rol sea owner', function (): void {
         'idempotency_key' => (string) Str::uuid(),
     ]);
 
-    $invoice = Invoice::factory()->create([
+    $fiscal_document = FiscalDocument::factory()->create([
         'tenant_id' => $this->tenant->id,
         'company_id' => $this->company->id,
     ]);
 
     expect(Gate::forUser($otherOwner)->denies('view', $this->company))->toBeTrue()
         ->and(Gate::forUser($otherOwner)->denies('view', $run))->toBeTrue()
-        ->and(Gate::forUser($otherOwner)->denies('view', $invoice))->toBeTrue()
+        ->and(Gate::forUser($otherOwner)->denies('view', $fiscal_document))->toBeTrue()
         ->and(Gate::forUser($otherOwner)->denies('update', $this->company))->toBeTrue();
 });

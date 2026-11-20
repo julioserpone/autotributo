@@ -39,7 +39,7 @@ function metricsXmlRow(SriSyncRun $run, string $name, SriImportOutcome $outcome,
     return $run->files()->create([
         'file_name' => $name.'.xml',
         's3_key' => '2026-09/01-recibidas-2026-09-xml/'.$name.'.xml',
-        'document_type' => SriDocumentType::Invoice,
+        'document_type' => SriDocumentType::FiscalDocument,
         'status' => $status,
         'import_outcome' => $outcome,
         'source' => $source,

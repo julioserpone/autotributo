@@ -29,16 +29,16 @@ main ──●──●──●──●──●──●──►  (protegida
 
 | Ámbito | Idioma | Ejemplos |
 |---|---|---|
-| Archivos y directorios | Inglés | `InvoiceController.php`, `Form104CalculatorTest.php`, `docs/03-data-model.md`, `tests/Fixtures/xml/credit_note/` |
-| Clases, interfaces, traits, enums, métodos, variables | Inglés | `InvoiceImported`, `SyncSriRun`, `$accessKey`, `$confidence` |
-| Tablas, columnas, índices, rutas, eventos, jobs | Inglés | `invoices`, `issue_date`, `sync-runs`, `SriSyncProgressUpdated` |
+| Archivos y directorios | Inglés | `FiscalDocumentController.php`, `Form104CalculatorTest.php`, `docs/03-data-model.md`, `tests/Fixtures/xml/credit_note/` |
+| Clases, interfaces, traits, enums, métodos, variables | Inglés | `FiscalDocumentImported`, `SyncSriRun`, `$accessKey`, `$confidence` |
+| Tablas, columnas, índices, rutas, eventos, jobs | Inglés | `fiscal_documents`, `issue_date`, `sync-runs`, `SriSyncProgressUpdated` |
 | Comentarios, documentación, ADRs | Español permitido | — |
 | UI, emails, errores de usuario | Español (vía i18n) | "Comprobantes del período" |
 | Términos oficiales ecuatorianos / acrónimos | Se conservan | `RUC`, `SRI`, `IVA`, `ATS`, `RIMPE`, `Form104` |
 
 Reglas concretas:
 
-- Prohibidos los nombres mixtos (`getFacturas`, `InvoiceFactura`). Si el término oficial no tiene traducción razonable, se usa el acrónimo (`ruc`, `sri`) o un nombre inglés: `access_key` para "clave de acceso", `line_code` para "casillero", `withholding` para "retención".
+- Prohibidos los nombres mixtos (`getFacturas`, `FiscalDocumentFactura`). Si el término oficial no tiene traducción razonable, se usa el acrónimo (`ruc`, `sri`) o un nombre inglés: `access_key` para "clave de acceso", `line_code` para "casillero", `withholding` para "retención".
 - Valores de enum en snake_case inglés (`credit_note`, `needs_review`, `in_review`), salvo nombres propios de régimen (`rimpe_emprendedor`, `rimpe_negocio_popular`).
 - Archivos de documentación y assets en `kebab-case` (`03-data-model.md`, `privacy-policy.pdf`); código según la convención del framework (`PascalCase` clases, `snake_case` columnas).
 - Ramas, commits y mensajes de log en inglés (`feat/sri-signed-callback`); mensajes de usuario en español.
@@ -101,7 +101,7 @@ final readonly class CreateCompany
 
 ### 2.3 Tipos y datos
 
-- Enums nativos para estados y tipos (`InvoiceStatus`, `DocumentType`, `DeclarationStatus`), con `tryFrom` y validación.
+- Enums nativos para estados y tipos (`FiscalDocumentStatus`, `DocumentType`, `DeclarationStatus`), con `tryFrom` y validación.
 - DTOs `readonly` (`spatie/laravel-data`) en los límites: HTTP, XML, LLM, Lambda. Nunca arrays sueltos entre capas.
 - Value Objects para `Ruc`, `ClaveAcceso`, `Period`, `Money` (centavos). Se validan al construirse.
 - `Money` con `brick/money`; prohibido `float` para importes, incluso en tests.
@@ -110,10 +110,10 @@ final readonly class CreateCompany
 
 ### 2.4 Errores
 
-- Excepciones de dominio explícitas (`InvoiceTotalsMismatch`, `SyncAlreadyRunning`, `TenantMismatch`).
+- Excepciones de dominio explícitas (`FiscalDocumentTotalsMismatch`, `SyncAlreadyRunning`, `TenantMismatch`).
 - Handler HTTP → `problem+json` (RFC 9457) con `type`, `title`, `status`, `detail`, `errors`.
 - Nunca exponer stack traces ni mensajes internos en producción.
-- Los jobs registran contexto (`run_id`, `invoice_id`) y fallan con mensaje accionable.
+- Los jobs registran contexto (`run_id`, `fiscal_document_id`) y fallan con mensaje accionable.
 
 ### 2.5 Base de datos
 

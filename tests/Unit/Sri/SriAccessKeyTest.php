@@ -9,7 +9,7 @@ use Tests\Support\Sri\AccessKeyFactory;
 it('decodifica la estructura de una clave de acceso válida', function (): void {
     $key = new SriAccessKey(AccessKeyFactory::make());
 
-    expect($key->documentType)->toBe(SriDocumentType::Invoice)
+    expect($key->documentType)->toBe(SriDocumentType::FiscalDocument)
         ->and($key->issuedAt->format('Y-m-d'))->toBe('2026-09-15')
         ->and($key->period())->toBe('2026-09')
         ->and($key->issuerRuc)->toBe('1758871873001')
@@ -24,7 +24,7 @@ it('decodifica la estructura de una clave de acceso válida', function (): void 
 it('decodifica los tipos de comprobante que descarga el robot', function (string $type, SriDocumentType $expected): void {
     expect((new SriAccessKey(AccessKeyFactory::make(type: $type)))->documentType)->toBe($expected);
 })->with([
-    'factura' => ['01', SriDocumentType::Invoice],
+    'factura' => ['01', SriDocumentType::FiscalDocument],
     'liquidación' => ['03', SriDocumentType::PurchaseSettlement],
     'nota de crédito' => ['04', SriDocumentType::CreditNote],
     'nota de débito' => ['05', SriDocumentType::DebitNote],

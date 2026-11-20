@@ -9,8 +9,8 @@ use App\Domain\Classification\Enums\ClassificationStatus;
 use App\Domain\Classification\Models\Classification;
 use App\Domain\Classification\Models\ExpenseCategory;
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
-use App\Domain\Invoicing\Models\InvoiceItem;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
 use App\Domain\Tenancy\Enums\MembershipRole;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
@@ -23,11 +23,11 @@ uses(RefreshDatabase::class);
 /**
  * @param  array<string, mixed>  $overrides
  */
-function reviewedItem(Invoice $invoice, int $line, string $description, array $overrides = []): InvoiceItem
+function reviewedItem(FiscalDocument $fiscal_document, int $line, string $description, array $overrides = []): FiscalDocumentItem
 {
-    return InvoiceItem::query()->create([
-        'tenant_id' => $invoice->tenant_id,
-        'invoice_id' => $invoice->id,
+    return FiscalDocumentItem::query()->create([
+        'tenant_id' => $fiscal_document->tenant_id,
+        'fiscal_document_id' => $fiscal_document->id,
         'line_number' => $line,
         'description' => $description,
         'normalized_description' => mb_strtoupper($description),
@@ -72,7 +72,7 @@ beforeEach(function (): void {
     $this->foodCategoryId = (int) ExpenseCategory::query()->where('code', 'alimentacion')->value('id');
     $this->transportCategoryId = (int) ExpenseCategory::query()->where('code', 'operativo')->value('id');
 
-    $this->invoice = Invoice::factory()->create([
+    $this->fiscal_document = FiscalDocument::factory()->create([
         'tenant_id' => $this->tenant->id,
         'company_id' => $this->company->id,
         'issuer_name' => 'FERRETERÍA CENTRAL S.A.',
@@ -89,7 +89,7 @@ beforeEach(function (): void {
         int $line = 1,
     ): Classification {
         $item = reviewedItem(
-            $this->invoice,
+            $this->fiscal_document,
             $line,
             "ÍTEM {$line}",
             ['expense_category_id' => $categoryId],
@@ -97,7 +97,7 @@ beforeEach(function (): void {
 
         return Classification::query()->create([
             'tenant_id' => $this->tenant->id,
-            'invoice_item_id' => $item->id,
+            'fiscal_document_item_id' => $item->id,
             'expense_category_id' => $categoryId,
             'method' => $method,
             'confidence' => $confidence,
@@ -120,7 +120,7 @@ it('lista la cola con needs_review primero y filtra por estado y método', funct
         ->assertJsonPath('data.2.status', 'accepted');
 
     expect($response->json('data.0.item.description'))->toBe('ÍTEM 2')
-        ->and($response->json('data.0.invoice.issuer_name'))->toBe('FERRETERÍA CENTRAL S.A.')
+        ->and($response->json('data.0.fiscal_document.issuer_name'))->toBe('FERRETERÍA CENTRAL S.A.')
         ->and($response->json('data.0.expense_category.code'))->toBe('operativo');
 
     $this->actingAs($this->owner)
@@ -138,7 +138,7 @@ it('lista la cola con needs_review primero y filtra por estado y método', funct
 
 it('acepta la categoría sugerida, firma la revisión y deja el ítem manual', function (): void {
     $classification = ($this->makeClassification)(ClassificationStatus::NeedsReview, $this->foodCategoryId);
-    $itemId = $classification->invoice_item_id;
+    $itemId = $classification->fiscal_document_item_id;
 
     $this->actingAs($this->owner)
         ->patchJson("/api/v1/classifications/{$classification->id}", ['decision' => 'accept'])
@@ -150,14 +150,14 @@ it('acepta la categoría sugerida, firma la revisión y deja el ítem manual', f
         ->assertJsonPath('data.confidence', 0.72);
 
     $fresh = $classification->fresh();
-    $item = InvoiceItem::query()->findOrFail($itemId);
+    $item = FiscalDocumentItem::query()->findOrFail($itemId);
 
     expect($fresh->status)->toBe(ClassificationStatus::Accepted)
         ->and($fresh->reviewed_by)->toBe($this->owner->id)
         ->and($fresh->reviewed_at)->not->toBeNull()
         ->and($fresh->method)->toBe(ClassificationMethod::Llm)
         ->and($item->expense_category_id)->toBe($this->foodCategoryId)
-        ->and($item->classification_status)->toBe(InvoiceItem::STATUS_MANUAL);
+        ->and($item->classification_status)->toBe(FiscalDocumentItem::STATUS_MANUAL);
 
     expect(AuditLog::query()
         ->where('auditable_type', Classification::class)
@@ -178,7 +178,7 @@ it('acepta con otra categoría y corrige la del ítem', function (): void {
         ->assertJsonPath('data.expense_category.code', 'operativo');
 
     expect($classification->fresh()->expense_category_id)->toBe($this->transportCategoryId)
-        ->and(InvoiceItem::query()->findOrFail($classification->invoice_item_id)->expense_category_id)
+        ->and(FiscalDocumentItem::query()->findOrFail($classification->fiscal_document_item_id)->expense_category_id)
         ->toBe($this->transportCategoryId);
 });
 
@@ -190,11 +190,11 @@ it('rechaza la clasificación y devuelve el ítem a pendiente sin categoría', f
         ->assertOk()
         ->assertJsonPath('data.status', 'rejected');
 
-    $item = InvoiceItem::query()->findOrFail($classification->invoice_item_id);
+    $item = FiscalDocumentItem::query()->findOrFail($classification->fiscal_document_item_id);
 
     expect($classification->fresh()->expense_category_id)->toBe($this->foodCategoryId)
         ->and($item->expense_category_id)->toBeNull()
-        ->and($item->classification_status)->toBe(InvoiceItem::STATUS_PENDING);
+        ->and($item->classification_status)->toBe(FiscalDocumentItem::STATUS_PENDING);
 });
 
 it('permite corregir una decisión ya tomada', function (): void {
@@ -214,14 +214,14 @@ it('revisa en bloque y reporta los ids que no existen en el tenant', function ()
 
     app(TenantContext::class)->initialize($otherTenant);
     $otherCompany = Company::factory()->create(['tenant_id' => $otherTenant->id]);
-    $otherInvoice = Invoice::factory()->create([
+    $otherFiscalDocument = FiscalDocument::factory()->create([
         'tenant_id' => $otherTenant->id,
         'company_id' => $otherCompany->id,
     ]);
-    $otherItem = reviewedItem($otherInvoice, 1, 'AJENO');
+    $otherItem = reviewedItem($otherFiscalDocument, 1, 'AJENO');
     $otherClassification = Classification::query()->create([
         'tenant_id' => $otherTenant->id,
-        'invoice_item_id' => $otherItem->id,
+        'fiscal_document_item_id' => $otherItem->id,
         'expense_category_id' => $this->foodCategoryId,
         'method' => ClassificationMethod::Llm,
         'confidence' => 0.4,
@@ -338,14 +338,14 @@ it('no expone clasificaciones de otro tenant', function (): void {
 
     app(TenantContext::class)->initialize($otherTenant);
     $otherCompany = Company::factory()->create(['tenant_id' => $otherTenant->id]);
-    $otherInvoice = Invoice::factory()->create([
+    $otherFiscalDocument = FiscalDocument::factory()->create([
         'tenant_id' => $otherTenant->id,
         'company_id' => $otherCompany->id,
     ]);
-    $otherItem = reviewedItem($otherInvoice, 1, 'AJENO');
+    $otherItem = reviewedItem($otherFiscalDocument, 1, 'AJENO');
     $otherClassification = Classification::query()->create([
         'tenant_id' => $otherTenant->id,
-        'invoice_item_id' => $otherItem->id,
+        'fiscal_document_item_id' => $otherItem->id,
         'expense_category_id' => $this->foodCategoryId,
         'method' => ClassificationMethod::Llm,
         'confidence' => 0.4,

@@ -7,7 +7,7 @@ namespace App\Domain\Classification\Models;
 use App\Domain\Audit\Concerns\Auditable;
 use App\Domain\Classification\Enums\ClassificationMethod;
 use App\Domain\Classification\Enums\ClassificationStatus;
-use App\Domain\Invoicing\Models\InvoiceItem;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
 use App\Domain\Tenancy\Models\Concerns\BelongsToTenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -23,7 +23,7 @@ use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
  * `status` y `reviewed_by`, nunca reescribe el origen.
  *
  * @property int $id
- * @property int $invoice_item_id
+ * @property int $fiscal_document_item_id
  * @property int $expense_category_id
  * @property ClassificationMethod $method
  * @property float $confidence
@@ -43,7 +43,7 @@ final class Classification extends Model implements AuditableContract
 
     /** @var array<string, string> */
     protected $casts = [
-        'invoice_item_id' => 'integer',
+        'fiscal_document_item_id' => 'integer',
         'expense_category_id' => 'integer',
         'method' => ClassificationMethod::class,
         'confidence' => 'float',
@@ -54,11 +54,11 @@ final class Classification extends Model implements AuditableContract
     ];
 
     /**
-     * @return BelongsTo<InvoiceItem, $this>
+     * @return BelongsTo<FiscalDocumentItem, $this>
      */
-    public function invoiceItem(): BelongsTo
+    public function fiscal_documentItem(): BelongsTo
     {
-        return $this->belongsTo(InvoiceItem::class);
+        return $this->belongsTo(FiscalDocumentItem::class);
     }
 
     /**

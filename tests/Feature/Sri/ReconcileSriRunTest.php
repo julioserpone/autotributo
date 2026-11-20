@@ -42,14 +42,14 @@ it('reconcilia manifiesto, TXT y claves y deja el run listo para parsing', funct
     $txt = "contenido del TXT\n";
     $keys = [str_repeat('1', 49), str_repeat('2', 49)];
 
-    ReconcileFixtures::putPeriod($this->company, '2026-09', SriDocumentType::Invoice, $txt, $keys);
+    ReconcileFixtures::putPeriod($this->company, '2026-09', SriDocumentType::FiscalDocument, $txt, $keys);
 
     $result = $this->action->handle($run);
     $manifestFile = $result->files()->where('s3_key', $path->manifest())->firstOrFail();
-    $txtFile = $result->files()->where('s3_key', $path->textReport(SriDocumentType::Invoice))->firstOrFail();
-    $keysFile = $result->files()->where('s3_key', $path->accessKeys(SriDocumentType::Invoice))->firstOrFail();
+    $txtFile = $result->files()->where('s3_key', $path->textReport(SriDocumentType::FiscalDocument))->firstOrFail();
+    $keysFile = $result->files()->where('s3_key', $path->accessKeys(SriDocumentType::FiscalDocument))->firstOrFail();
     $keysJson = json_encode(
-        ReconcileFixtures::keysPayload($this->company, '2026-09', SriDocumentType::Invoice, $keys),
+        ReconcileFixtures::keysPayload($this->company, '2026-09', SriDocumentType::FiscalDocument, $keys),
         JSON_THROW_ON_ERROR,
     );
 
@@ -59,10 +59,10 @@ it('reconcilia manifiesto, TXT y claves y deja el run listo para parsing', funct
         ->and($manifestFile->document_type)->toBeNull()
         ->and(strlen((string) $manifestFile->checksum))->toBe(64)
         ->and($txtFile->status)->toBe(SriSyncRunFileStatus::Available)
-        ->and($txtFile->document_type)->toBe(SriDocumentType::Invoice)
+        ->and($txtFile->document_type)->toBe(SriDocumentType::FiscalDocument)
         ->and($txtFile->checksum)->toBe(hash('sha256', $txt))
         ->and($keysFile->status)->toBe(SriSyncRunFileStatus::Available)
-        ->and($keysFile->document_type)->toBe(SriDocumentType::Invoice)
+        ->and($keysFile->document_type)->toBe(SriDocumentType::FiscalDocument)
         ->and($keysFile->checksum)->toBe(hash('sha256', $keysJson));
 });
 
@@ -78,9 +78,9 @@ it('mantiene el run en downloading mientras falta el TXT', function (): void {
         ->and($result->files()->count())->toBe(3)
         ->and($result->files()->where('s3_key', $path->manifest())->firstOrFail()->status)
         ->toBe(SriSyncRunFileStatus::Available)
-        ->and($result->files()->where('s3_key', $path->textReport(SriDocumentType::Invoice))->firstOrFail()->status)
+        ->and($result->files()->where('s3_key', $path->textReport(SriDocumentType::FiscalDocument))->firstOrFail()->status)
         ->toBe(SriSyncRunFileStatus::Missing)
-        ->and($result->files()->where('s3_key', $path->accessKeys(SriDocumentType::Invoice))->firstOrFail()->status)
+        ->and($result->files()->where('s3_key', $path->accessKeys(SriDocumentType::FiscalDocument))->firstOrFail()->status)
         ->toBe(SriSyncRunFileStatus::Available);
 });
 
@@ -98,10 +98,10 @@ it('marca el JSON de claves inválido y no deja el run en parsing', function ():
     $path = ReconcileFixtures::path($this->company, '2026-09');
 
     ReconcileFixtures::putPeriod($this->company, '2026-09', withKeys: false);
-    Storage::disk('sri')->put($path->accessKeys(SriDocumentType::Invoice), '{invalido');
+    Storage::disk('sri')->put($path->accessKeys(SriDocumentType::FiscalDocument), '{invalido');
 
     $result = $this->action->handle($run);
-    $keysFile = $result->files()->where('s3_key', $path->accessKeys(SriDocumentType::Invoice))->firstOrFail();
+    $keysFile = $result->files()->where('s3_key', $path->accessKeys(SriDocumentType::FiscalDocument))->firstOrFail();
 
     expect($result->status)->toBe(SriSyncRunStatus::Downloading)
         ->and($keysFile->status)->toBe(SriSyncRunFileStatus::Invalid)
@@ -114,13 +114,13 @@ it('marca el TXT inválido cuando no coincide con los bytes del manifiesto', fun
     $txt = "contenido del TXT\n";
     $keys = [str_repeat('1', 49), str_repeat('2', 49)];
 
-    ReconcileFixtures::putPeriod($this->company, '2026-09', SriDocumentType::Invoice, $txt, $keys);
-    $manifest = ReconcileFixtures::manifest($this->company, '2026-09', SriDocumentType::Invoice, $txt, $keys);
+    ReconcileFixtures::putPeriod($this->company, '2026-09', SriDocumentType::FiscalDocument, $txt, $keys);
+    $manifest = ReconcileFixtures::manifest($this->company, '2026-09', SriDocumentType::FiscalDocument, $txt, $keys);
     $manifest['descargas'][0]['bytes'] = strlen($txt) + 1;
     Storage::disk('sri')->put($path->manifest(), json_encode($manifest, JSON_THROW_ON_ERROR));
 
     $result = $this->action->handle($run);
-    $txtFile = $result->files()->where('s3_key', $path->textReport(SriDocumentType::Invoice))->firstOrFail();
+    $txtFile = $result->files()->where('s3_key', $path->textReport(SriDocumentType::FiscalDocument))->firstOrFail();
 
     expect($result->status)->toBe(SriSyncRunStatus::Downloading)
         ->and($txtFile->status)->toBe(SriSyncRunFileStatus::Invalid)
@@ -133,8 +133,8 @@ it('rechaza un manifiesto que no corresponde a la empresa del run', function ():
     $txt = "contenido del TXT\n";
     $keys = [str_repeat('1', 49), str_repeat('2', 49)];
 
-    ReconcileFixtures::putPeriod($this->company, '2026-09', SriDocumentType::Invoice, $txt, $keys);
-    $manifest = ReconcileFixtures::manifest($this->company, '2026-09', SriDocumentType::Invoice, $txt, $keys);
+    ReconcileFixtures::putPeriod($this->company, '2026-09', SriDocumentType::FiscalDocument, $txt, $keys);
+    $manifest = ReconcileFixtures::manifest($this->company, '2026-09', SriDocumentType::FiscalDocument, $txt, $keys);
     $manifest['ruc'] = '0999999999001';
     Storage::disk('sri')->put($path->manifest(), json_encode($manifest, JSON_THROW_ON_ERROR));
 

@@ -9,8 +9,8 @@ use App\Domain\Classification\Models\ClassificationRule;
 use App\Domain\Classification\Models\ExpenseCategory;
 use App\Domain\Classification\Services\ClassificationRuleRepository;
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
-use App\Domain\Invoicing\Models\InvoiceItem;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
 use App\Domain\Tenancy\Enums\MembershipRole;
 use App\Domain\Tenancy\Models\Membership;
 use App\Domain\Tenancy\Models\Tenant;
@@ -62,11 +62,11 @@ function insertGlobalRule(int $categoryId, array $overrides = []): int
     ]);
 }
 
-function classificationItem(Invoice $invoice, int $line, string $description): InvoiceItem
+function classificationItem(FiscalDocument $fiscal_document, int $line, string $description): FiscalDocumentItem
 {
-    return InvoiceItem::query()->create([
-        'tenant_id' => $invoice->tenant_id,
-        'invoice_id' => $invoice->id,
+    return FiscalDocumentItem::query()->create([
+        'tenant_id' => $fiscal_document->tenant_id,
+        'fiscal_document_id' => $fiscal_document->id,
         'line_number' => $line,
         'description' => $description,
         'normalized_description' => mb_strtoupper($description),
@@ -282,13 +282,13 @@ it('valida que la categoría de gasto exista', function (): void {
 });
 
 it('hace un dry-run sin guardar la regla ni clasificar ítems', function (): void {
-    $invoice = Invoice::factory()->create([
+    $fiscal_document = FiscalDocument::factory()->create([
         'tenant_id' => $this->tenant->id,
         'company_id' => $this->company->id,
     ]);
 
-    classificationItem($invoice, 1, 'PAN INTEGRAL');
-    classificationItem($invoice, 2, 'SERVICIOS CONTABLES');
+    classificationItem($fiscal_document, 1, 'PAN INTEGRAL');
+    classificationItem($fiscal_document, 2, 'SERVICIOS CONTABLES');
 
     $this->actingAs($this->owner)
         ->postJson('/api/v1/classification-rules/dry-run', [
@@ -307,12 +307,12 @@ it('hace un dry-run sin guardar la regla ni clasificar ítems', function (): voi
 });
 
 it('acepta el dry-run de una regla ya guardada', function (): void {
-    $invoice = Invoice::factory()->create([
+    $fiscal_document = FiscalDocument::factory()->create([
         'tenant_id' => $this->tenant->id,
         'company_id' => $this->company->id,
     ]);
 
-    classificationItem($invoice, 1, 'PAN INTEGRAL');
+    classificationItem($fiscal_document, 1, 'PAN INTEGRAL');
 
     $id = $this->actingAs($this->owner)
         ->postJson('/api/v1/classification-rules', rulePayload($this->categoryId, [

@@ -12,7 +12,7 @@
 | Tasas/porcentajes | `numeric(9,6)` (0.150000 = 15 %) |
 | Estados | `varchar(32)` + enum de PHP + `CHECK` en base. **No** usar `ENUM` nativo de Postgres |
 | JSON | `jsonb` solo para datos crudos/externos (XML normalizado, payloads, configuración). Lo que se filtra o agrega va en columnas |
-| Soft delete | Solo en entidades editables por el usuario (`companies`, `invoice_items`, `classification_rules`). Comprobantes y declaraciones se archivan por estado |
+| Soft delete | Solo en entidades editables por el usuario (`companies`, `fiscal_document_items`, `classification_rules`). Comprobantes y declaraciones se archivan por estado |
 | Nombres | Tablas en plural snake_case; FKs `<singular>_id`; booleanos `is_*`/`has_*` |
 | Migraciones | Una migración por cambio lógico; nunca editar una migración ya desplegada |
 
@@ -26,11 +26,11 @@ tenants ──< domains
    ├──< memberships >── users
    ├──< companies ──< sri_credentials
    │        │
-   │        ├──< invoices ──< invoice_items ──< classifications
-   │        │        ├──< invoice_taxes
-   │        │        ├──< invoice_payments
+   │        ├──< fiscal_documents ──< fiscal_document_items ──< classifications
+   │        │        ├──< fiscal_document_taxes
+   │        │        ├──< fiscal_document_payments
    │        │        ├──< retention_lines
-   │        │        └──< invoice_relations
+   │        │        └──< fiscal_document_relations
    │        ├──< sri_sync_runs ──< sri_sync_run_files
    │        ├──< fiscal_periods ──< period_aggregates
    │        ├──< declarations ──< declaration_lines ──< declaration_line_entries
@@ -156,7 +156,7 @@ Definición de casilleros por formulario y vigencia: `form_code`, `line_code`, `
 
 ## 6. Comprobantes
 
-### `invoices`
+### `fiscal_documents`
 | Columna | Tipo | Notas |
 |---|---|---|
 | id / public_id | | |
@@ -196,10 +196,10 @@ Definición de casilleros por formulario y vigencia: `form_code`, `line_code`, `
 - `index(tenant_id, company_id, document_type, status)`.
 - `gin(raw jsonb_path_ops)` solo si se consulta por contenido.
 
-### `invoice_items`
+### `fiscal_document_items`
 | Columna | Tipo | Notas |
 |---|---|---|
-| id / tenant_id / invoice_id | | |
+| id / tenant_id / fiscal_document_id | | |
 | line_number | smallint | |
 | main_code / auxiliary_code | varchar(50) null | |
 | description | varchar(1000) | Tal como viene del XML |
@@ -213,19 +213,19 @@ Definición de casilleros por formulario y vigencia: `form_code`, `line_code`, `
 | classification_status | varchar(20) | `pending`, `auto`, `review`, `manual` |
 | timestamps / deleted_at | | |
 
-Índice: `(tenant_id, invoice_id)`, `(tenant_id, expense_category_id)`, `(tenant_id, classification_status)`.
+Índice: `(tenant_id, fiscal_document_id)`, `(tenant_id, expense_category_id)`, `(tenant_id, classification_status)`.
 
-### `invoice_taxes`
-`id`, `tenant_id`, `invoice_id`, `tax_code` (`IVA`,`ICE`,`IRBPNR`), `sri_percentage_code`, `rate`, `base_cents`, `amount_cents`, `tax_rate_id` null.
+### `fiscal_document_taxes`
+`id`, `tenant_id`, `fiscal_document_id`, `tax_code` (`IVA`,`ICE`,`IRBPNR`), `sri_percentage_code`, `rate`, `base_cents`, `amount_cents`, `tax_rate_id` null.
 
-### `invoice_payments`
-`id`, `tenant_id`, `invoice_id`, `payment_method`, `total_cents`, `term_days`, `due_date`.
+### `fiscal_document_payments`
+`id`, `tenant_id`, `fiscal_document_id`, `payment_method`, `total_cents`, `term_days`, `due_date`.
 
 ### `retention_lines`
-Para documentos tipo `07`: `id`, `tenant_id`, `invoice_id`, `tax_type` (`IR`,`IVA`), `retention_code`, `base_cents`, `rate`, `amount_cents`, `retention_rate_id`, `document_number`.
+Para documentos tipo `07`: `id`, `tenant_id`, `fiscal_document_id`, `tax_type` (`IR`,`IVA`), `retention_code`, `base_cents`, `rate`, `amount_cents`, `retention_rate_id`, `document_number`.
 
-### `invoice_relations`
-`id`, `tenant_id`, `source_invoice_id` (NC/ND), `target_invoice_id` (factura), `relation_type` (`credit_note`, `debit_note`), `amount_cents`, `reason`.
+### `fiscal_document_relations`
+`id`, `tenant_id`, `source_fiscal_document_id` (NC/ND), `target_fiscal_document_id` (factura), `relation_type` (`credit_note`, `debit_note`), `amount_cents`, `reason`.
 
 ### `sri_sync_runs`
 | Columna | Tipo | Notas |
@@ -268,7 +268,7 @@ Log de progreso: `id`, `run_id`, `tenant_id`, `level`, `message`, `context jsonb
 | Columna | Tipo | Notas |
 |---|---|---|
 | id / tenant_id | | |
-| invoice_item_id | FK | Unique por ítem (clasificación vigente) |
+| fiscal_document_item_id | FK | Unique por ítem (clasificación vigente) |
 | expense_category_id | FK | |
 | method | varchar(16) | `rule`, `cache`, `llm`, `manual` |
 | confidence | numeric(5,4) | 0..1 |
@@ -287,7 +287,7 @@ Se conserva historial en `audit_logs`; para análisis de calidad se agrega `clas
 
 Índice: `(tenant_id, is_active, priority)` y `(tenant_id, match_type)`. Precedencia: `priority` ascendente y, en empate, la regla del tenant gana a la global. `contains`, `starts_with`, `exact` y `regex` comparan la descripción normalizada; `provider_ruc` el RUC del emisor; `item_code` el código principal o auxiliar del ítem. Validación: regex compilada al guardar; conflictos de misma prioridad detectados antes de guardar y en dry-run. Las reglas globales son de solo lectura desde un tenant.
 
-`invoice_items.classification_status` pasa a `auto` cuando una regla o una sugerencia de IA con confianza suficiente clasifica el ítem, a `review` cuando la IA no es concluyente o no está disponible, y permanece `pending` si ninguna regla coincide y el clasificador no propone nada. La clasificación vigente en `classifications` guarda `method=llm` (o `cache` si se reutilizó una sugerencia previa), `confidence`, `prompt_version` y `llm_call_id` para explicar el origen y auditar el coste.
+`fiscal_document_items.classification_status` pasa a `auto` cuando una regla o una sugerencia de IA con confianza suficiente clasifica el ítem, a `review` cuando la IA no es concluyente o no está disponible, y permanece `pending` si ninguna regla coincide y el clasificador no propone nada. La clasificación vigente en `classifications` guarda `method=llm` (o `cache` si se reutilizó una sugerencia previa), `confidence`, `prompt_version` y `llm_call_id` para explicar el origen y auditar el coste.
 
 ### `llm_calls`
 `id`, `tenant_id`, `company_id` null, `purpose` (`classify_item`), `provider`, `model`, `prompt_version`, `input_hash` char(64), `input_tokens`, `output_tokens`, `cost_micros`, `latency_ms`, `status`, `error_code`, `created_at`.
@@ -330,7 +330,7 @@ Unique `(company_id, fiscal_period_id, form_code, version)`. Índice `(tenant_id
 `id`, `tenant_id`, `declaration_id`, `line_code`, `section`, `label`, `value_cents`, `value_count`, `display_order`. Unique `(declaration_id, line_code)`.
 
 ### `declaration_line_entries`
-Trazabilidad para drill-down: `id`, `tenant_id`, `declaration_line_id`, `source_type` (`invoice`,`invoice_item`,`retention`,`adjustment`), `source_id`, `amount_cents`, `sign` (+1/−1), `meta jsonb`.
+Trazabilidad para drill-down: `id`, `tenant_id`, `declaration_line_id`, `source_type` (`fiscal_document`,`fiscal_document_item`,`retention`,`adjustment`), `source_id`, `amount_cents`, `sign` (+1/−1), `meta jsonb`.
 
 Índice `(declaration_line_id)`, `(source_type, source_id)`.
 
@@ -350,22 +350,22 @@ Unique parcial `(tenant_id, code, source_type, source_id)` para no duplicar hall
 `key` varchar(64) PK, `tenant_id`, `user_id`, `endpoint`, `request_hash`, `response_code`, `response_body jsonb`, `created_at`, `expires_at`.
 
 ### `exports`
-`id`, `public_id`, `tenant_id`, `user_id`, `type` (`declaration_pdf`,`invoices_xlsx`,`ats_csv`), `status`, `path`, `size`, `expires_at`, `error`, timestamps.
+`id`, `public_id`, `tenant_id`, `user_id`, `type` (`declaration_pdf`,`fiscal_documents_xlsx`,`ats_csv`), `status`, `path`, `size`, `expires_at`, `error`, timestamps.
 
 ### `failed_jobs`, `job_batches`, `cache`, `sessions`
 Tablas estándar de Laravel.
 
 ## 10. Invariantes (verificadas en tests y en runtime)
 
-1. `invoices.total_cents = subtotal_cents − discount_cents + tax_cents + ice_cents + irbpnr_cents + tip_cents`.
-2. `invoices.tax_cents = sum(invoice_taxes.amount_cents)`.
-3. `invoice_items.subtotal_cents` suma el subtotal de la factura (±0,01 por redondeo del emisor; se registra la diferencia).
-4. Ningún `invoice_items` de un tenant referencia una `invoice` de otro (FK compuesta o validación en Action + test).
+1. `fiscal_documents.total_cents = subtotal_cents − discount_cents + tax_cents + ice_cents + irbpnr_cents + tip_cents`.
+2. `fiscal_documents.tax_cents = sum(fiscal_document_taxes.amount_cents)`.
+3. `fiscal_document_items.subtotal_cents` suma el subtotal de la factura (±0,01 por redondeo del emisor; se registra la diferencia).
+4. Ningún `fiscal_document_items` de un tenant referencia una `fiscal_document` de otro (FK compuesta o validación en Action + test).
 5. `declaration_lines` suma exactamente el total del formulario.
 6. La suma de `declaration_line_entries.amount_cents * sign` por línea = `value_cents` (o está documentada la parte no trazable, p. ej. arrastre de crédito).
 7. Una `declaration` en `approved`/`filed` es inmutable (`updating` lanza excepción).
 8. `sri_sync_runs.idempotency_key` es único y se valida antes de invocar la Lambda.
-9. `classifications` tiene una sola fila vigente por `invoice_item_id`.
+9. `classifications` tiene una sola fila vigente por `fiscal_document_item_id`.
 10. Toda fila de negocio tiene `tenant_id` no nulo y coincide con el de su padre.
 
 ## 11. Estrategia de migraciones
@@ -382,10 +382,10 @@ Tablas estándar de Laravel.
 **No particionar en el MVP.** Con 1 M comprobantes/año, índices bien elegidos y agregados materializados, Postgres responde sobradamente.
 
 Disparadores para revisar (medir, no adivinar):
-- `invoices` > 10 M filas o p95 de listados > 500 ms tras optimizar índices.
+- `fiscal_documents` > 10 M filas o p95 de listados > 500 ms tras optimizar índices.
 - Tablas de auditoría/eventos > 50 M filas → particionar por mes o mover a almacenamiento analítico.
 
-Cuando se active, particionar `invoices` por rango de `issue_date` (año), incluyendo la clave de partición en los índices únicos: `unique(tenant_id, company_id, issue_date, access_key)`. Evaluar `pg_partman` o migración manual con `ATTACH PARTITION`.
+Cuando se active, particionar `fiscal_documents` por rango de `issue_date` (año), incluyendo la clave de partición en los índices únicos: `unique(tenant_id, company_id, issue_date, access_key)`. Evaluar `pg_partman` o migración manual con `ATTACH PARTITION`.
 
 ## 13. Retención y borrado
 

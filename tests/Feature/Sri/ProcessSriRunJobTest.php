@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Companies\Models\Company;
-use App\Domain\Invoicing\Models\Invoice;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\Sri\Actions\RecoverSriRunFromS3;
 use App\Domain\Sri\Enums\SriDocumentType;
 use App\Domain\Sri\Enums\SriSyncRunStatus;
@@ -53,12 +53,12 @@ function runReadyToImport(Company $company, string $key): SriSyncRun
     ReconcileFixtures::putPeriod(
         $company,
         '2026-09',
-        SriDocumentType::Invoice,
+        SriDocumentType::FiscalDocument,
         $key."\n",
         [$key],
     );
 
-    $template = (string) file_get_contents(__DIR__.'/../../Fixtures/xml/invoice/factura.xml');
+    $template = (string) file_get_contents(__DIR__.'/../../Fixtures/xml/fiscal_document/factura.xml');
     ReconcileFixtures::putXml($company, '2026-09', $key, str_replace('{{CLAVE}}', $key, $template));
 
     return app(RecoverSriRunFromS3::class)->handle($run);
@@ -72,7 +72,7 @@ it('importa en cola un run en parsing', function (): void {
     expect($run->refresh()->status)->toBe(SriSyncRunStatus::Completed)
         ->and($run->totals['imported'])->toBe(1)
         ->and($run->error_code)->toBeNull()
-        ->and(Invoice::query()->count())->toBe(1);
+        ->and(FiscalDocument::query()->count())->toBe(1);
 
     // El finalizador libera el bloqueo del batch aunque lo haya tomado otro
     // proceso: sin esto, un run posterior quedaría bloqueado durante 1 hora.
@@ -89,7 +89,7 @@ it('omite un run que ya no está en parsing', function (): void {
     (new ProcessSriRunJob($run->id))->handle();
 
     expect($run->refresh()->status)->toBe(SriSyncRunStatus::Completed)
-        ->and(Invoice::query()->count())->toBe(0);
+        ->and(FiscalDocument::query()->count())->toBe(0);
 });
 
 it('reparte las claves en lotes según chunk_size', function (): void {
@@ -106,7 +106,7 @@ it('reparte las claves en lotes según chunk_size', function (): void {
     ReconcileFixtures::putPeriod(
         $this->company,
         '2026-09',
-        SriDocumentType::Invoice,
+        SriDocumentType::FiscalDocument,
         implode("\n", $keys)."\n",
         $keys,
     );
@@ -152,12 +152,12 @@ it('importa un run de varios lotes de extremo a extremo', function (): void {
     ReconcileFixtures::putPeriod(
         $this->company,
         '2026-09',
-        SriDocumentType::Invoice,
+        SriDocumentType::FiscalDocument,
         implode("\n", $keys)."\n",
         $keys,
     );
 
-    $template = (string) file_get_contents(__DIR__.'/../../Fixtures/xml/invoice/factura.xml');
+    $template = (string) file_get_contents(__DIR__.'/../../Fixtures/xml/fiscal_document/factura.xml');
 
     foreach ($keys as $key) {
         ReconcileFixtures::putXml($this->company, '2026-09', $key, str_replace('{{CLAVE}}', $key, $template));
@@ -169,14 +169,14 @@ it('importa un run de varios lotes de extremo a extremo', function (): void {
 
     expect($run->refresh()->status)->toBe(SriSyncRunStatus::Completed)
         ->and($run->totals['imported'])->toBe(3)
-        ->and(Invoice::query()->count())->toBe(3)
+        ->and(FiscalDocument::query()->count())->toBe(3)
         ->and($run->files()->where('s3_key', 'like', '%-xml/%')->where('status', 'processed')->count())->toBe(3);
 });
 
 it('no falla si el run ya no existe', function (): void {
     (new ProcessSriRunJob(999_999))->handle();
 
-    expect(Invoice::query()->count())->toBe(0);
+    expect(FiscalDocument::query()->count())->toBe(0);
 });
 
 it('usa el id del run como clave de unicidad', function (): void {

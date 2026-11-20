@@ -118,7 +118,7 @@ final class ReconcileFixtures
      */
     public static function putXml(Company $company, string $period, string $accessKey, string $xml): void
     {
-        $type = SriDocumentType::tryFrom(substr($accessKey, 8, 2)) ?? SriDocumentType::Invoice;
+        $type = SriDocumentType::tryFrom(substr($accessKey, 8, 2)) ?? SriDocumentType::FiscalDocument;
         Storage::disk('sri')->put(self::path($company, $period)->xml($type, $accessKey), $xml);
     }
 
@@ -128,7 +128,7 @@ final class ReconcileFixtures
     public static function putPeriod(
         Company $company,
         string $period,
-        SriDocumentType $type = SriDocumentType::Invoice,
+        SriDocumentType $type = SriDocumentType::FiscalDocument,
         ?string $txt = null,
         ?array $keys = null,
         bool $withManifest = true,
