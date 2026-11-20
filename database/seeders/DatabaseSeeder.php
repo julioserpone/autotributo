@@ -10,8 +10,6 @@ class DatabaseSeeder extends Seeder
 {
     /**
      * Seed the application's database.
-     *
-     * Los datos de demo se añaden en F1-10 con `DemoTenantSeeder`.
      */
     public function run(): void
     {
@@ -19,8 +17,8 @@ class DatabaseSeeder extends Seeder
         $this->call(FiscalCatalogSeeder::class);
         $this->call(ExpenseCategorySeeder::class);
 
-        if (app()->environment(['local', 'testing'])) {
-            $this->call(AuthTestUsersSeeder::class);
+        if (app()->environment(['local', 'testing']) || (bool) config('demo.seed')) {
+            $this->call(DemoTenantSeeder::class);
         }
     }
 }

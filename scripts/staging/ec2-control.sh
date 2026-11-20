@@ -277,6 +277,17 @@ remote_put_config() {
         "$SSH_USER@$ip:/tmp/duckdns.env"
 }
 
+remote_put_demo() {
+    local ip="$1" tmp
+    tmp="$(mktemp)"
+    chmod 600 "$tmp"
+    printf 'DEMO_RUC=%q\nDEMO_SRI_PASSWORD=%q\n' "$DEMO_RUC" "$DEMO_SRI_PASSWORD" >"$tmp"
+    ssh_retry 5 scp "${SSH_OPTS[@]}" "$tmp" \
+        "$SSH_USER@$ip:/tmp/autotributo-demo.env" \
+        || { rm -f "$tmp"; return 1; }
+    rm -f "$tmp"
+}
+
 remote_install_script() {
     # Las variables se expanden en el cliente a propósito.
     # shellcheck disable=SC2087
@@ -351,15 +362,36 @@ backup_remote() {
 
 cmd_create() {
     DB_RECREATE="${DB_RECREATE:-0}"
+    DEMO_RUC="${DEMO_RUC:-}"
+    DEMO_SRI_PASSWORD="${DEMO_SRI_PASSWORD:-}"
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --source) DEPLOY_SOURCE=1; shift ;;
             --recreate-db) DB_RECREATE=1; shift ;;
             --inline) DASH_MODE=inline; shift ;;
+            --ruc)
+                [[ $# -ge 2 ]] || fail "--ruc requiere un valor"
+                DEMO_RUC="$2"; shift 2 ;;
+            --ruc=*) DEMO_RUC="${1#--ruc=}"; shift ;;
+            --password)
+                [[ $# -ge 2 ]] || fail "--password requiere un valor"
+                DEMO_SRI_PASSWORD="$2"; shift 2 ;;
+            --password=*) DEMO_SRI_PASSWORD="${1#--password=}"; shift ;;
             -h | --help) usage; return 0 ;;
-            *) fail "argumento desconocido para create: $1 (usa --source, --recreate-db o nada)" ;;
+            *) fail "argumento desconocido para create: $1 (usa --source, --recreate-db, --ruc, --password o nada)" ;;
         esac
     done
+
+    if [[ -n "$DEMO_RUC" || -n "$DEMO_SRI_PASSWORD" ]]; then
+        [[ -n "$DEMO_RUC" && -n "$DEMO_SRI_PASSWORD" ]] \
+            || fail "--ruc y --password deben indicarse juntos"
+        [[ "$DEMO_RUC" =~ ^[0-9]{13}$ ]] \
+            || fail "--ruc debe tener 13 dígitos"
+        [[ "$DEMO_SRI_PASSWORD" != *$'\n'* && "$DEMO_SRI_PASSWORD" != *$'\r'* ]] \
+            || fail "--password no puede contener saltos de línea"
+        (( ${#DEMO_SRI_PASSWORD} >= 6 )) \
+            || fail "--password debe tener al menos 6 caracteres"
+    fi
 
     dash_init "Autotributo staging" "create"
     dash_plan \
@@ -383,6 +415,19 @@ cmd_create() {
     local hostname
     hostname="$(staging_hostname)"
     [[ -n "$hostname" ]] || fail "falta STAGING_HOSTNAME en $BACKUP_DIR/staging.env"
+
+    if [[ -n "${DEMO_RUC:-}" ]]; then
+        # El seeder cifra la credencial SRI con SRI_CREDENTIALS_KEY. Si el
+        # respaldo no la tiene, se genera una y se persiste para no perderla
+        # en recreaciones futuras.
+        if ! grep -qE '^SRI_CREDENTIALS_KEY=.+' "$BACKUP_DIR/staging.env"; then
+            local key
+            key="$(openssl rand -base64 32)"
+            printf '\nSRI_CREDENTIALS_KEY=%s\n' "$key" >>"$BACKUP_DIR/staging.env"
+            chmod 600 "$BACKUP_DIR/staging.env"
+            dash_note "SRI_CREDENTIALS_KEY generada y guardada en el respaldo (600)"
+        fi
+    fi
 
     local app_image="" status
     if [[ "$DEPLOY_SOURCE" != "1" ]]; then
@@ -462,6 +507,11 @@ cmd_create() {
     dash_run_as "scp staging.env duckdns.env $SSH_USER@$ip:/tmp/" \
         "Copiando .env y token de DuckDNS" remote_put_config "$ip" \
         || fail "no se pudo copiar la configuración a la instancia"
+    if [[ -n "${DEMO_RUC:-}" ]]; then
+        dash_run_as "scp demo.env $SSH_USER@$ip:/tmp/" \
+            "Copiando credenciales de prueba (RUC ${DEMO_RUC})" remote_put_demo "$ip" \
+            || fail "no se pudo copiar las credenciales de prueba"
+    fi
     dash_run_as "ssh $SSH_USER@$ip bash -s" \
         "Instalando configuración y repositorio en el host" \
         remote_install_config "$ip" \
@@ -485,7 +535,7 @@ cmd_create() {
     dash_run_as "ssh $SSH_USER@$ip 'cd $APP_DIR && ./scripts/staging/deploy.sh'" \
         "Desplegando la aplicación (deploy.sh)" \
         ssh_retry 5 ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
-        "cd $APP_DIR && DB_RECREATE='$DB_RECREATE' APP_IMAGE='$(staging_app_image)' ./scripts/staging/deploy.sh" \
+        "cd $APP_DIR && DB_RECREATE='$DB_RECREATE' APP_IMAGE='$(staging_app_image)' DEMO_ENV_FILE='/tmp/autotributo-demo.env' ./scripts/staging/deploy.sh" \
         || fail "el deploy falló (instancia $instance_id sigue encendida; revisa la salida del panel)"
     dash_stage_done
 
@@ -644,7 +694,7 @@ usage() {
     cat <<EOF
 Uso: $0 <comando> [opciones]
 
-  create   [--source] [--recreate-db] [--inline]   crea la instancia y despliega
+  create   [--source] [--recreate-db] [--ruc RUC --password PASS] [--inline]   crea la instancia y despliega
   destroy  --yes [--inline]                        respalda el .env y lo borra todo
   status                                           estado, IP y coste
 

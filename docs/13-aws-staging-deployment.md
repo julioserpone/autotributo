@@ -677,3 +677,30 @@ Cuando se compre `autotributo.com` y se habilite Cloud:
 - **BD desincronizada tras un refactor.** Cuando cambian nombres de tablas o
   campos, usa `create --recreate-db`, que ejecuta `migrate:fresh --seed` en lugar
   de `migrate --force`. Verifica antes que no haya datos que quieras conservar.
+
+
+### Datos de demo en staging
+
+`create --recreate-db` ejecuta siempre `DemoTenantSeeder`, que crea el tenant por
+defecto, los cuatro roles y los tres usuarios de prueba (`owner@autotributo.test`,
+`accountant@autotributo.test`, `assistant@autotributo.test`, contraseña
+`password`). Para dejar además una empresa con credenciales SRI cifradas
+("selladas") en la base:
+
+```bash
+./scripts/staging/ec2-control.sh create --recreate-db \
+    --ruc 0990000018001 --password 'tu-clave-sri'
+```
+
+- `--ruc` debe ser un RUC ecuatoriano válido de 13 dígitos; `--password` la
+  contraseña del portal del SRI (mínimo 6 caracteres, sin saltos de línea).
+- Ambos parámetros son obligatorios juntos. Si faltan, la base se recrea con
+  los usuarios de prueba pero sin empresa de prueba.
+- La contraseña del portal **no** se muestra en el panel ni queda en `argv` del
+  host: viaja en un archivo temporal con permisos `600` que se borra al
+  terminar el deploy.
+- Si `SRI_CREDENTIALS_KEY` falta en el respaldo, `create` genera una y la
+  persiste (600) para que la credencial cifrada siga siendo descifrable en
+  recreaciones futuras.
+- La credencial se cifra con `SRI_CREDENTIALS_KEY` (sodium secretbox) y queda
+  asociada a la empresa de prueba, vinculada al tenant de los usuarios.
