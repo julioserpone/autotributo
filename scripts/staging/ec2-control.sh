@@ -364,11 +364,16 @@ cmd_create() {
     DB_RECREATE="${DB_RECREATE:-0}"
     DEMO_RUC="${DEMO_RUC:-}"
     DEMO_SRI_PASSWORD="${DEMO_SRI_PASSWORD:-}"
+    BRANCH="${BRANCH:-main}"
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --source) DEPLOY_SOURCE=1; shift ;;
             --recreate-db) DB_RECREATE=1; shift ;;
             --inline) DASH_MODE=inline; shift ;;
+            --branch)
+                [[ $# -ge 2 ]] || fail "--branch requiere un valor"
+                BRANCH="$2"; shift 2 ;;
+            --branch=*) BRANCH="${1#--branch=}"; shift ;;
             --ruc)
                 [[ $# -ge 2 ]] || fail "--ruc requiere un valor"
                 DEMO_RUC="$2"; shift 2 ;;
@@ -535,7 +540,7 @@ cmd_create() {
     dash_run_as "ssh $SSH_USER@$ip 'cd $APP_DIR && ./scripts/staging/deploy.sh'" \
         "Desplegando la aplicación (deploy.sh)" \
         ssh_retry 5 ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
-        "cd $APP_DIR && DB_RECREATE='$DB_RECREATE' APP_IMAGE='$(staging_app_image)' DEMO_ENV_FILE='/tmp/autotributo-demo.env' ./scripts/staging/deploy.sh" \
+        "cd $APP_DIR && DB_RECREATE='$DB_RECREATE' BRANCH='$BRANCH' APP_IMAGE='$(staging_app_image)' DEMO_ENV_FILE='/tmp/autotributo-demo.env' ./scripts/staging/deploy.sh" \
         || fail "el deploy falló (instancia $instance_id sigue encendida; revisa la salida del panel)"
     dash_stage_done
 
@@ -694,7 +699,7 @@ usage() {
     cat <<EOF
 Uso: $0 <comando> [opciones]
 
-  create   [--source] [--recreate-db] [--ruc RUC --password PASS] [--inline]   crea la instancia y despliega
+  create   [--source] [--recreate-db] [--branch BRANCH] [--ruc RUC --password PASS] [--inline]   crea la instancia y despliega
   destroy  --yes [--inline]                        respalda el .env y lo borra todo
   status                                           estado, IP y coste
 
