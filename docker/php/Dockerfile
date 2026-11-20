@@ -38,8 +38,11 @@ RUN apk add --no-cache \
     soap \
     sockets \
     zip \
-    && pecl install redis \
+    && curl -fsSL https://github.com/phpredis/phpredis/archive/refs/tags/6.3.0.tar.gz -o /tmp/redis.tar.gz \
+    && mkdir -p /tmp/redis-src && tar -xzf /tmp/redis.tar.gz -C /tmp/redis-src --strip-components=1 \
+    && cd /tmp/redis-src && phpize && ./configure && make && make install \
     && docker-php-ext-enable redis \
+    && rm -rf /tmp/redis.tar.gz /tmp/redis-src \
     && apk del $PHPIZE_DEPS
 
 # Herramientas de despliegue: git alinea el código con el commit de la imagen y
