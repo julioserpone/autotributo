@@ -125,6 +125,31 @@ El script hace todo el ciclo y no necesita consola de AWS:
    IP nueva**.
 6. Ejecuta `deploy.sh` (pull de la imagen, Composer/Vite en caliente si hace
    falta, migraciones, healthchecks y `/up`).
+7. Comprueba `https://<hostname>/up` desde tu máquina (DNS público + TLS) y
+   termina.
+
+#### Panel de consola
+
+Mientras corre, el script ocupa **una sola pantalla** (buffer alterno, sin
+scroll) con dos secciones de `scripts/lib/dashboard.sh`:
+
+- **Etapas**: la lista completa desde el principio. Cada etapa muestra su icono
+  (`✔` hecha, spinner en curso, `○` pendiente, `!` aviso, `✖` falló) y su
+  duración. En terminales bajas la lista se resume en una línea
+  (`✔ ✔ ⠹ ○ ○ ○ 3/6 Provisionar host…`) para dejarle espacio al panel.
+- **En curso**: el comando que se está ejecutando (`$ scp …`, `$ aws ec2 …`,
+  `$ ssh ubuntu@… deploy.sh`) y las últimas líneas de su salida. Las líneas con
+  `error`, `failed` o `denied` se pintan en rojo y dos líneas de comando se
+  envuelven sin romper argumentos.
+
+Al salir se recupera la pantalla normal y queda un resumen en el scrollback con
+el estado y la duración de cada etapa. Si algo falla, el resumen incluye el
+mensaje, las últimas líneas del log y la ruta del log completo en
+`$TMPDIR/autotributo-dash.*/session.log`.
+
+Con stdout redirigido (CI, `| tee`, `cron`) el panel cambia solo a texto plano
+equivalente (`▶ etapa`, `$ comando`, `ok`), y `--inline` lo fuerza también en
+una terminal. `NO_COLOR=1` desactiva el color.
 
 ### 4.2.1 Qué hace exactamente `deploy.sh`
 
@@ -428,6 +453,7 @@ Staging no se apaga: se destruye. Desde tu máquina local, sin consola de AWS:
 ./scripts/staging/ec2-control.sh create           # crear y desplegar (~4–6 min)
 ./scripts/staging/ec2-control.sh status           # estado, IP, AZ y coste/h
 ./scripts/staging/ec2-control.sh destroy --yes    # respaldar .env y terminar todo
+./scripts/staging/ec2-control.sh create --inline  # panel desactivado (texto plano)
 ```
 
 `create --source` despliega el código del repositorio (build del target `app` en
