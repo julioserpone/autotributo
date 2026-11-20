@@ -650,9 +650,21 @@ Cuando se compre `autotributo.com` y se habilite Cloud:
   en `~/.aws/credentials`. Si `aws sts get-caller-identity` falla con `AuthFailure`,
   regenera las claves en IAM y actualiza el archivo (no uses `aws sso login`, el
   perfil no está configurado para SSO).
-- **SSH inaccesible.** `destroy` ahora falla rápido (60 s) en `wait_ssh` y omite
-  el respaldo del `.env` con una advertencia, pero **sigue terminando la instancia**
-  con las credenciales AWS válidas. Si tu IP cambió, añádela al SG (ver §4.2).
+- **SSH inaccesible.** `destroy` espera 60 s a `wait_ssh` y, si no responde,
+  omite el respaldo del `.env` con un **aviso** (`!` en la etapa 2/4), pero
+  **sigue terminando la instancia** con las credenciales AWS válidas. Si tu IP
+  cambió, añádela al SG (ver §4.2).
+- **Qué significa el aviso de "Respaldar el .env".** La etapa termina en `AVISO`
+  (`!`) cuando no se pudo descargar la configuración, pero el `destroy` continúa
+  igual: bloquearlo dejaría la instancia encendida y facturando. El motivo
+  aparece en el resumen (`↳ no se pudo respaldar: se conserva el respaldo
+  anterior`) y en el log del panel. El respaldo anterior **no se sobrescribe con
+  un archivo vacío**: se descarga a temporales y solo se reemplaza
+  `~/.config/autotributo/{staging,duckdns}.env` si ambos llegaron con contenido.
+  Si el aviso se repite, comprueba en la instancia que existen
+  `/opt/autotributo/.env` y `/etc/autotributo/duckdns.env` y que `sudo` no pide
+  contraseña. Un `duckdns.env` local vacío hace que el siguiente `create` aborte
+  en la etapa 1 con un mensaje que indica qué escribir en el archivo.
 - **BD desincronizada tras un refactor.** Cuando cambian nombres de tablas o
   campos, usa `create --recreate-db`, que ejecuta `migrate:fresh --seed` en lugar
   de `migrate --force`. Verifica antes que no haya datos que quieras conservar.

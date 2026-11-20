@@ -61,6 +61,7 @@ DASH_MODE_LABEL=""
 DASH_META=""
 DASH_STAGES=()
 DASH_STATES=()
+DASH_NOTES=()
 DASH_STARTED=()
 DASH_STOPPED=()
 DASH_N=0
@@ -541,6 +542,9 @@ _dash_summary() {
         fi
         _dash_fit "$(( i + 1 ))/${DASH_N}  ${DASH_STAGES[$i]}" 46
         printf '  %s%s%s  %s %s\n' "$color" "$icon" "$C_RESET" "$_DASH_FIT" "$dur"
+        if [[ -n "${DASH_NOTES[$i]:-}" ]]; then
+            printf '      %s↳ %s%s\n' "$C_DIM" "${DASH_NOTES[$i]}" "$C_RESET"
+        fi
     done
 
     if [[ -n "$DASH_FINISH_MSG" ]]; then
@@ -656,6 +660,7 @@ dash_plan() {
     DASH_STAGES=("$@")
     DASH_N=${#DASH_STAGES[@]}
     DASH_STATES=()
+    DASH_NOTES=()
     local i
     for (( i = 0; i < DASH_N; i++ )); do
         DASH_STATES[$i]="pending"
@@ -717,20 +722,25 @@ dash_stage_done() {
 }
 
 dash_stage_warn() {
-    # Marca la etapa en curso como completada con aviso (no aborta).
-    local idx="${1:-}" i
-    if [[ -z "$idx" ]]; then
-        for (( i = 0; i < DASH_N; i++ )); do
-            if [[ "${DASH_STATES[$i]}" == "running" ]]; then
-                idx=$(( i + 1 ))
-                break
-            fi
-        done
-    fi
+    # dash_stage_warn [motivo]
+    # Marca la etapa en curso como completada con aviso (no aborta). El motivo
+    # se guarda y se imprime en el resumen final, para que "AVISO" no quede
+    # como una palabra suelta sin explicación.
+    local reason="${1:-}" idx="" i
+    for (( i = 0; i < DASH_N; i++ )); do
+        if [[ "${DASH_STATES[$i]}" == "running" ]]; then
+            idx=$(( i + 1 ))
+            break
+        fi
+    done
     [[ -z "$idx" ]] && return 0
     idx=$(( idx - 1 ))
     DASH_STATES[$idx]="warn"
+    DASH_NOTES[$idx]="$reason"
     DASH_STOPPED[$idx]=$SECONDS
+    if [[ "$DASH_MODE" == "inline" && -n "$reason" ]]; then
+        printf '  aviso: %s\n' "$reason"
+    fi
     [[ "$DASH_MODE" == "full" ]] && _dash_paint
     return 0
 }

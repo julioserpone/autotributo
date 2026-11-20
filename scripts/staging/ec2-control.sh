@@ -256,18 +256,45 @@ REMOTE
 }
 
 backup_remote() {
-    local ip="$1"
+    local ip="$1" tmp_env tmp_dns
     mkdir -p "$BACKUP_DIR"
     chmod 700 "$BACKUP_DIR"
 
-    scp "${SSH_OPTS[@]}" "$SSH_USER@$ip:$APP_DIR/.env" "$BACKUP_DIR/staging.env"
-    chmod 600 "$BACKUP_DIR/staging.env"
+    # Se descarga a archivos temporales y solo se reemplaza el respaldo si
+    # ambos llegaron con contenido. Así un fallo a mitad no destruye el token
+    # que ya estaba respaldado (antes la redirección lo truncaba a 0 bytes).
+    tmp_env="$BACKUP_DIR/.staging.env.new"
+    tmp_dns="$BACKUP_DIR/.duckdns.env.new"
+    rm -f "$tmp_env" "$tmp_dns"
 
-    ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
-        'sudo cat /etc/autotributo/duckdns.env' >"$BACKUP_DIR/duckdns.env"
-    chmod 600 "$BACKUP_DIR/duckdns.env"
+    if ! scp "${SSH_OPTS[@]}" "$SSH_USER@$ip:$APP_DIR/.env" "$tmp_env"; then
+        rm -f "$tmp_env" "$tmp_dns"
+        printf 'no se pudo descargar %s/.env\n' "$APP_DIR" >&2
+        return 1
+    fi
 
-    [[ -s "$BACKUP_DIR/duckdns.env" ]]
+    if ! ssh "${SSH_OPTS[@]}" "$SSH_USER@$ip" \
+        'sudo cat /etc/autotributo/duckdns.env' >"$tmp_dns"; then
+        rm -f "$tmp_env" "$tmp_dns"
+        printf 'no se pudo leer /etc/autotributo/duckdns.env (¿sudo sin permisos o archivo ausente?)\n' >&2
+        return 1
+    fi
+
+    if [[ ! -s "$tmp_env" ]]; then
+        rm -f "$tmp_env" "$tmp_dns"
+        printf '%s/.env llegó vacío\n' "$APP_DIR" >&2
+        return 1
+    fi
+    if [[ ! -s "$tmp_dns" ]]; then
+        rm -f "$tmp_env" "$tmp_dns"
+        printf '/etc/autotributo/duckdns.env llegó vacío\n' >&2
+        return 1
+    fi
+
+    chmod 600 "$tmp_env" "$tmp_dns"
+    mv -f "$tmp_env" "$BACKUP_DIR/staging.env"
+    mv -f "$tmp_dns" "$BACKUP_DIR/duckdns.env"
+    return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -298,10 +325,10 @@ cmd_create() {
     # --- 1/6 -------------------------------------------------------------
     dash_stage 1
     [[ -f "$KEY_FILE" ]] || fail "no existe la clave SSH: $KEY_FILE"
-    [[ -f "$BACKUP_DIR/staging.env" ]] \
-        || fail "falta $BACKUP_DIR/staging.env (respaldo del .env de staging)"
-    [[ -f "$BACKUP_DIR/duckdns.env" ]] \
-        || fail "falta $BACKUP_DIR/duckdns.env (respaldo del token DuckDNS)"
+    [[ -s "$BACKUP_DIR/staging.env" ]] \
+        || fail "falta o está vacío $BACKUP_DIR/staging.env (respaldo del .env de staging)"
+    [[ -s "$BACKUP_DIR/duckdns.env" ]] \
+        || fail "falta o está vacío $BACKUP_DIR/duckdns.env: escribe DUCKDNS_DOMAIN y DUCKDNS_TOKEN (duckdns.org) en ese archivo"
     mkdir -p "$BACKUP_DIR"
     chmod 700 "$BACKUP_DIR"
 
@@ -502,14 +529,14 @@ cmd_destroy() {
 
     dash_note "Esperando SSH en $ip"
     if ! wait_ssh "$ip"; then
-        dash_stage_warn
+        dash_stage_warn "SSH no respondió en 60s: se destruye sin respaldo nuevo"
         dash_note "SSH no disponible: se destruye sin respaldo"
     elif dash_run_as "scp $SSH_USER@$ip:$APP_DIR/.env ${BACKUP_DIR/#$HOME/~}/staging.env" \
         "Respaldando .env y duckdns.env" backup_remote "$ip"; then
         dash_note "respaldo en $BACKUP_DIR"
         dash_stage_done
     else
-        dash_stage_warn
+        dash_stage_warn "no se pudo respaldar: se conserva el respaldo anterior"
         dash_note "no se pudo respaldar: se destruye sin respaldo"
     fi
 
@@ -535,7 +562,7 @@ cmd_destroy() {
         if [[ "$volume_state" == "deleted" || "$volume_state" == "None" ]]; then
             dash_note "volumen $volume_id eliminado"
         else
-            dash_stage_warn
+            dash_stage_warn "el volumen $volume_id sigue en '$volume_state': bórralo para llegar a USD 0"
             dash_note "el volumen $volume_id sigue en '$volume_state': bórralo para llegar a USD 0"
         fi
     fi
