@@ -120,3 +120,140 @@ it('no auto-resuelve riesgos que requieren acción humana', function (): void {
 
     expect(FiscalFinding::query()->where('code', FiscalRiskCode::InvalidRuc->value)->where('status', FiscalRiskStatus::Open->value)->count())->toBe(1);
 });
+
+it('no genera hallazgos cuando el comprobante es sano', function (): void {
+    makeDocument([
+        'totals_mismatch' => false,
+        'issuer_ruc' => '1758871873001',
+    ]);
+
+    $result = app(DetectFiscalRisks::class)->handle($this->company);
+
+    expect($result->created)->toBe(0)
+        ->and(FiscalFinding::query()->count())->toBe(0);
+});
+
+it('no genera hallazgo de empresa fantasma si el emisor no está en la lista', function (): void {
+    makeDocument(['issuer_ruc' => '1758871873001', 'totals_mismatch' => false]);
+
+    $result = app(DetectFiscalRisks::class)->handle($this->company);
+
+    expect($result->created)->toBe(0)
+        ->and(FiscalFinding::query()->where('code', FiscalRiskCode::GhostCompany->value)->count())->toBe(0);
+});
+
+it('no genera hallazgo de duplicado si la numeración es única', function (): void {
+    makeDocument([
+        'issuer_ruc' => '1758871873001',
+        'establishment' => '001',
+        'emission_point' => '001',
+        'sequential' => '000000999',
+        'totals_mismatch' => false,
+    ]);
+
+    $result = app(DetectFiscalRisks::class)->handle($this->company);
+
+    expect(FiscalFinding::query()->where('code', FiscalRiskCode::DuplicateSequential->value)->count())->toBe(0);
+});
+
+it('auto-resuelve duplicados cuando ya no hay numeración repetida', function (): void {
+    $first = makeDocument([
+        'issuer_ruc' => '1758871873001',
+        'establishment' => '001',
+        'emission_point' => '001',
+        'sequential' => '000000777',
+        'totals_mismatch' => false,
+    ]);
+    $second = makeDocument([
+        'issuer_ruc' => '1758871873001',
+        'establishment' => '001',
+        'emission_point' => '001',
+        'sequential' => '000000777',
+        'totals_mismatch' => false,
+    ]);
+
+    app(DetectFiscalRisks::class)->handle($this->company);
+    expect(FiscalFinding::query()->where('code', FiscalRiskCode::DuplicateSequential->value)->where('status', FiscalRiskStatus::Open->value)->count())->toBe(2);
+
+    $second->sequential = '000000888';
+    $second->save();
+
+    $result = app(DetectFiscalRisks::class)->handle($this->company);
+
+    expect($result->resolved)->toBe(2)
+        ->and(FiscalFinding::query()->where('code', FiscalRiskCode::DuplicateSequential->value)->where('status', FiscalRiskStatus::Open->value)->count())->toBe(0);
+});
+
+it('no auto-resuelve empresas fantasma (requieren acción humana)', function (): void {
+    GhostCompany::query()->create([
+        'ruc' => '1758871873001',
+        'legal_name' => 'FANTASMA S.A.',
+        'published_at' => now()->toDateString(),
+        'source_url' => 'https://example.test',
+        'status' => 'active',
+        'imported_at' => now(),
+    ]);
+
+    $document = makeDocument(['issuer_ruc' => '1758871873001', 'totals_mismatch' => false]);
+
+    app(DetectFiscalRisks::class)->handle($this->company);
+    expect(FiscalFinding::query()->where('code', FiscalRiskCode::GhostCompany->value)->where('status', FiscalRiskStatus::Open->value)->count())->toBe(1);
+
+    GhostCompany::query()->where('ruc', '1758871873001')->delete();
+
+    app(DetectFiscalRisks::class)->handle($this->company);
+
+    expect(FiscalFinding::query()->where('code', FiscalRiskCode::GhostCompany->value)->where('status', FiscalRiskStatus::Open->value)->count())->toBe(1);
+});
+
+it('actualiza los datos de un hallazgo existente cuando cambia el título', function (): void {
+    $document = makeDocument(['totals_mismatch' => true, 'issuer_ruc' => '1758871873001']);
+
+    app(DetectFiscalRisks::class)->handle($this->company);
+
+    $finding = FiscalFinding::query()->firstOrFail();
+    $finding->title = 'Título desactualizado';
+    $finding->save();
+
+    $result = app(DetectFiscalRisks::class)->handle($this->company);
+
+    expect($result->updated)->toBe(1)
+        ->and($finding->fresh()->title)->toBe('Totales inconsistentes');
+});
+
+it('actualiza un hallazgo existente sin duplicarlo cuando se re-detecta', function (): void {
+    $document = makeDocument(['totals_mismatch' => true, 'issuer_ruc' => '1758871873001']);
+
+    app(DetectFiscalRisks::class)->handle($this->company);
+
+    $document->totals_mismatch = true;
+    $document->total_cents = 999_999;
+    $document->save();
+
+    $result = app(DetectFiscalRisks::class)->handle($this->company);
+
+    expect($result->created)->toBe(0)
+        ->and(FiscalFinding::query()->where('code', FiscalRiskCode::TotalsMismatch->value)->count())->toBe(1);
+});
+
+it('aisla la detección entre tenants', function (): void {
+    $otherTenant = Tenant::factory()->create(['slug' => 'other-risk']);
+
+    app(TenantContext::class)->run($otherTenant, function () use ($otherTenant): void {
+        $otherCompany = Company::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'ruc' => '0990000018002',
+        ]);
+
+        FiscalDocument::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'company_id' => $otherCompany->id,
+            'totals_mismatch' => true,
+            'issuer_ruc' => '1758871873001',
+        ]);
+
+        app(DetectFiscalRisks::class)->handle($otherCompany);
+    });
+
+    expect(FiscalFinding::query()->count())->toBe(0);
+});
