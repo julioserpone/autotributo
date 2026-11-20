@@ -2,7 +2,7 @@
 
 > Tabla viva del proyecto. Se actualiza al cerrar cada tarea (una tarea = un commit/PR). La fuente de verdad del alcance sigue siendo `docs/02-implementation-plan.md`.
 
-**Última actualización:** 2026-11-19
+**Última actualización:** 2026-11-20
 
 ## Resumen por fase
 
@@ -12,7 +12,7 @@
 | F1 · Núcleo tenant-ready | Completado | 11/11 | F1-11 · Staging efímero en AWS (EC2, Neon, DuckDNS, TLS, deploy, smoke tests) |
 | F2 · Ingesta SRI | Completado | 12/12 + F2-13 | F2-13 · Carga manual de XML (`US-14`) |
 | F3 · Motor fiscal + IA | En curso | 6/9 | F3-05 · Revisión humana de clasificaciones |
-| F4 · Frontend | En curso | 2/11 + fundaciones/auth parciales | F4-04 · Layout Dashboard de Nuxt UI con tema Mint (PR pendiente) |
+| F4 · Frontend | En curso | 4/11 + fundaciones/auth parciales | F4-06 · Monitor de sincronización con progreso en vivo (PR #73–#75) |
 | F5 · Declaraciones | Pendiente | 0/8 | — |
 | F6 · Hardening y beta | Pendiente | 0/8 | — |
 
@@ -75,7 +75,9 @@
 | ID | Tarea | Estado | Prioridad | Evidencia |
 |---|---|---|---|---|
 | F4-01 | Fundaciones | Parcial | P1 | Vite, Vue 3.5 + TypeScript estricto, Tailwind 4, router, Pinia y cliente HTTP con CSRF/errores; F4-02 añade la base de shadcn-vue (`reka-ui`, `class-variance-authority`, `clsx`, `tailwind-merge`) y el entorno de Vitest con stubs de layout. **Pendiente:** TanStack Query e i18n |
-| F4-04 | Layout | Completado (PR pendiente) | **P0** | Template Dashboard de Nuxt UI 4.13 (`UDashboardGroup`, `UDashboardSidebar` colapsable/redimensionable, `UDashboardPanel/Navbar/Toolbar/Search`) y tema Mint: `primary: teal`, `neutral: olive`, radio `0.75rem`, botones/inputs píldora, Nunito Variable (500/600/700/800) y JetBrains Mono. `AppShell`, `AppPage`, `AppSidebar`, `AppWorkspaceMenu`, `AppUserMenu`, `AuthLayout` y `lib/navigation.ts` (nav + ⌘K); selector de tema en el menú de usuario. Páginas migradas a `bg-default`/`bg-elevated`/`border-default`/`text-highlighted`/`text-muted`/`text-dimmed`. `useTheme` conserva `colorMode: false`. ADR-0009 enmendado y `docs/14-design-system.md` reescrito · 43 tests, `vue-tsc` y ESLint en verde · verificado en navegador (login, panel, bandeja, monitor y paleta ⌘K; claro y oscuro). |
+| F4-04 | Layout | Completado | **P0** | Template Dashboard de Nuxt UI 4.13 (`UDashboardGroup`, `UDashboardSidebar` colapsable/redimensionable, `UDashboardPanel/Navbar/Toolbar/Search`) y tema Mint: `primary: teal`, `neutral: olive`, radio `0.75rem`, botones/inputs píldora, Nunito Variable (500/600/700/800) y JetBrains Mono. `AppShell`, `AppPage`, `AppSidebar`, `AppWorkspaceMenu`, `AppUserMenu`, `AuthLayout` y `lib/navigation.ts` (nav + ⌘K); selector de tema en el menú de usuario. Páginas migradas a `bg-default`/`bg-elevated`/`border-default`/`text-highlighted`/`text-muted`/`text-dimmed`. `useTheme` conserva `colorMode: false`. ADR-0009 enmendado y `docs/14-design-system.md` reescrito · 43 tests, `vue-tsc` y ESLint en verde · verificado en navegador (login, panel, bandeja, monitor y paleta ⌘K; claro y oscuro). (#90) |
+| F4-05 | Bandeja de comprobantes | Completado | **P0** | `GET /api/v1/fiscal_documents` (cursor + filtros por empresa, estado, tipo, emisor, fechas), `GET /api/v1/fiscal_documents/{fiscal_document}` con líneas/impuestos/retenciones; `FiscalDocumentInboxPage` con filtros, paginación «Cargar más», drawer de detalle y selección múltiple. Migrado a `FiscalDocument` en PR #91. (#72) |
+| F4-06 | Monitor de sincronización | Completado | **P0** | `SyncMonitorPage` con formulario en una fila (empresa, tipos de documento como multiselección, desde/hasta), ayuda contextual para forzar re-descarga, progreso en vivo con polling (`poll_after_ms`) + archivos con errores, totales, historial y detalle de run. Store `sync` con `startSync` (Idempotency-Key), `loadRun`, `startPollingIfNeeded`. Refinamientos UI (#74, #75), progreso de `downloading` sin contar XML `missing`/`invalid`, historial estable durante refresco. (#73–#75) |
 | F4-02 | Design system | Completado | **P0** | Tokens semánticos dark-first en `resources/css/app.css` (`#09090b`, `#18181b`, `#27272a`, borde `#262626`, acentos violeta/rojo/verde, radios, sombras y `text-2xs`), tipografía del sistema, `prefers-reduced-motion` y foco visible; `AppField`, `AppButton`, `AppInput`, `AppSelect`, `AppCombobox`, `AppDateRange`, `AppTable` (loading/empty/error, slots y selección), `AppBadge`, `AppModal`, `AppToastHost` y `AppDrawer` con portal, foco atrapado y Escape; `useToast` y `AppToastHost` en `App.vue`; `AppLayout` con enlace de salto y `AppStatusBadge` migrados a tokens; páginas de auth migradas a las utilidades semánticas · 50 tests / 50 assertions · `docs/14-design-system.md`. Verificado en navegador: login dark, sin errores de consola. (#70) |
 
 ## Fases 3–6 · Estado resumido
@@ -83,11 +85,11 @@
 | Fase | Tareas | Estado | Prioridad actual |
 |---|---|---|---|
 | F3 · Motor fiscal + IA | F3-01…F3-09 | En curso (6/9) | P1 (catálogos, reglas, clasificador, gobierno de IA y proporcionalidad) / P2 (riesgos, revisión) |
-| F4 · Frontend | F4-01…F4-11 | En curso (1/11 + fundaciones, auth y layout parciales) | **P0** (design system, layout, bandeja, monitor) / P2 (resto) |
+| F4 · Frontend | F4-01…F4-11 | En curso (4/11 + fundaciones/auth parciales) | **P0** (design system, layout, bandeja, monitor) / P1 (F4-07) / P2 (resto) |
 | F5 · Declaraciones | F5-01…F5-08 | Pendiente | P3 (después de F3) |
 | F6 · Hardening y beta | F6-01…F6-08 | Pendiente | P3 (lanzamiento) |
 
-## Registro de PRs recientes (2026-11-06 → 2026-11-16)
+## Registro de PRs recientes (2026-11-06 → 2026-11-20)
 
 | PR | Contenido | Tarea |
 |---|---|---|
@@ -119,6 +121,24 @@
 | #75 | Alineación de rutas de componentes del monitor | F4-06 |
 | #76 | Identidad de ejecución del robot, importación manual y sondeo sin callback | F2-10d |
 | #77 | Sondeo automático de S3 sin callback y reconciliación cada 5 min | F2-10d |
+| #78 | Actualización de progreso y changelog para identidad de ejecución del robot | Docs · F2-10d |
+| #79 | Progreso, alertas transitorias e historial estable del monitor SRI | F2-09/F4-06 |
+| #80 | Instancias efímeras con Neon e imagen base de PHP pre-construida | F1-11/Staging |
+| #81 | Mover `ARG BASE_IMAGE` al alcance global | Staging |
+| #82 | Documentar la imagen base de PHP en GHCR | Staging |
+| #83 | Imagen completa de la app en GHCR (opción E) | Staging |
+| #84 | No copiar archivos generados en el stage assets | Staging |
+| #85 | Documentar la imagen completa de la app | Staging |
+| #86 | Flujo por defecto sin `APP_IMAGE` | Staging |
+| #87 | Corregir sintaxis de `deploy.sh` (comillas en `APP_IMAGE`) | Staging |
+| #88 | Usar la imagen de GHCR como toolchain y tomar código de git | Staging |
+| #89 | Tolerar filas XML no registradas y permitir sondeo completo del robot | F2-10d |
+| #90 | Adoptar layout Dashboard de Nuxt UI y tema Mint (F4-04) | F4-04 |
+| #91 | Renombrar `Invoice` a `FiscalDocument` (refactor, etapa 2) | FiscalDocument refactor |
+| #92 | Compilar `phpredis` desde GitHub en lugar de pecl.php.net | Staging |
+| #93 | UI estilo dashboard y flag `--recreate-db` en `ec2-control` | Staging |
+| #94 | UI de dashboard en destroy y fallo rápido por timeout SSH | Staging |
+| #96 | Mejorar UI de dashboard y fallo rápido SSH en destroy | Staging |
 
 ## Cómo actualizar
 
