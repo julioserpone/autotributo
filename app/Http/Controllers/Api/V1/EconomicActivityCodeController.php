@@ -15,6 +15,12 @@ final class EconomicActivityCodeController extends Controller
     {
         $query = EconomicActivityCode::query()->orderBy('code');
 
+        $includeAll = (bool) $request->boolean('all');
+
+        if (! $includeAll) {
+            $query->where('is_selectable', true);
+        }
+
         $search = trim((string) $request->query('q', ''));
 
         if ($search !== '') {

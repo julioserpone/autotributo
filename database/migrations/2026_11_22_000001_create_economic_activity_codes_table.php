@@ -13,10 +13,12 @@ return new class extends Migration
         Schema::create('economic_activity_codes', function (Blueprint $table): void {
             $table->string('code', 10)->primary();
             $table->string('description', 500);
-            $table->string('level', 40)->default('SUBNIVEL ACTIVIDAD');
+            $table->string('level', 40);
+            $table->boolean('is_selectable')->default(false);
             $table->timestamps();
 
             $table->index('description');
+            $table->index('is_selectable');
         });
     }
 

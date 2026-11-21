@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Domain\Companies\Models\EconomicActivityCode;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Carga los códigos CIIU seleccionables (último subnivel) del SRI.
+ * Carga el catálogo completo de actividades económicas (CIIU v4 del SRI).
+ *
+ * Solo los nodos hoja (`is_selectable = true`) son seleccionables por el
+ * usuario; los niveles superiores se conservan para trazabilidad y futuras
+ * consultas jerárquicas.
  *
  * La fuente es `database/seeders/data/ciiu.csv` (generado desde el clasificador
- * oficial CIIU v4). La carga es idempotente: se hace upsert por `code`.
+ * oficial). La carga es idempotente: se hace upsert por `code`.
  */
 final class EconomicActivityCodeSeeder extends Seeder
 {
@@ -39,12 +42,14 @@ final class EconomicActivityCodeSeeder extends Seeder
         $header = fgetcsv($handle);
 
         while (($line = fgetcsv($handle)) !== false) {
-            if (count($line) < 2) {
+            if (count($line) < 4) {
                 continue;
             }
 
             $code = trim((string) $line[0]);
             $description = trim((string) $line[1]);
+            $level = trim((string) $line[2]);
+            $selectable = trim((string) $line[3]) === '1';
 
             if ($code === '' || $description === '') {
                 continue;
@@ -53,7 +58,8 @@ final class EconomicActivityCodeSeeder extends Seeder
             $rows[] = [
                 'code' => $code,
                 'description' => mb_substr($description, 0, 500),
-                'level' => 'SUBNIVEL ACTIVIDAD',
+                'level' => $level !== '' ? $level : 'SUBNIVEL ACTIVIDAD',
+                'is_selectable' => $selectable,
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
@@ -70,7 +76,7 @@ final class EconomicActivityCodeSeeder extends Seeder
             $this->upsert($rows);
         }
 
-        $this->command?->info('EconomicActivityCodeSeeder: códigos CIIU cargados.');
+        $this->command?->info('EconomicActivityCodeSeeder: catálogo CIIU cargado.');
     }
 
     /**
@@ -81,7 +87,7 @@ final class EconomicActivityCodeSeeder extends Seeder
         DB::table('economic_activity_codes')->upsert(
             $rows,
             ['code'],
-            ['description', 'level', 'updated_at'],
+            ['description', 'level', 'is_selectable', 'updated_at'],
         );
     }
 }
