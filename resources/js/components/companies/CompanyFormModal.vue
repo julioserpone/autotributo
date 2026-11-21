@@ -138,8 +138,28 @@ async function submit(): Promise<void> {
         return;
     }
 
+    if (!/^\d{13}$/.test(form.value.ruc.trim())) {
+        fieldErrors.value.ruc = ['El RUC debe contener solo dígitos.'];
+        return;
+    }
+
     if (form.value.legal_name.trim() === '') {
         fieldErrors.value.legal_name = ['La razón social es obligatoria.'];
+        return;
+    }
+
+    if (form.value.legal_name.trim().length > 300) {
+        fieldErrors.value.legal_name = ['La razón social no puede superar 300 caracteres.'];
+        return;
+    }
+
+    if (form.value.email.trim() !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email.trim())) {
+        fieldErrors.value.email = ['El correo electrónico no es válido.'];
+        return;
+    }
+
+    if (form.value.economic_activity_code.trim() !== '' && !/^[A-Za-z0-9]{1,10}$/.test(form.value.economic_activity_code.trim())) {
+        fieldErrors.value.economic_activity_code = ['El código debe ser alfanumérico de hasta 10 caracteres.'];
         return;
     }
 
@@ -209,6 +229,7 @@ async function submit(): Promise<void> {
               variant="soft"
               size="md"
               maxlength="13"
+              inputmode="numeric"
               placeholder="1790016919001"
               class="w-full"
             />
@@ -263,6 +284,7 @@ async function submit(): Promise<void> {
           <UFormField
             label="Actividad económica (código)"
             name="economic_activity_code"
+            hint="Código CIIU del SRI (opcional)."
             :error="fieldErrors.economic_activity_code?.[0] ?? false"
           >
             <UInput

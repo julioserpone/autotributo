@@ -120,7 +120,7 @@ function statusColor(status: string): 'success' | 'warning' | 'neutral' {
             <UBadge
               :color="statusColor(company.status)"
               variant="soft"
-              size="xs"
+              size="sm"
             >
               {{ statusLabel(company.status) }}
             </UBadge>
