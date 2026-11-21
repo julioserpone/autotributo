@@ -4708,7 +4708,8 @@
                 "description": "Decisi\u00f3n de una persona sobre una clasificaci\u00f3n sugerida. Aceptar confirma la categor\u00eda (la sugerida o una elegida); rechazar deja el \u00edtem sin categor\u00eda y pendiente, para que una regla futura lo vuelva a intentar.\n",
                 "enum": [
                     "accept",
-                    "reject"
+                    "reject",
+                    "revert"
                 ],
                 "title": "ReviewDecision"
             },

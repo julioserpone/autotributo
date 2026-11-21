@@ -40,4 +40,14 @@ final readonly class ClassificationReviewData
     {
         return $this->decision === ReviewDecision::Accept;
     }
+
+    public function isReject(): bool
+    {
+        return $this->decision === ReviewDecision::Reject;
+    }
+
+    public function isRevert(): bool
+    {
+        return $this->decision === ReviewDecision::Revert;
+    }
 }

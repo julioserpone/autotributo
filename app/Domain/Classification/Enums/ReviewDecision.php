@@ -15,12 +15,14 @@ enum ReviewDecision: string
 {
     case Accept = 'accept';
     case Reject = 'reject';
+    case Revert = 'revert';
 
     public function label(): string
     {
         return match ($this) {
             self::Accept => 'Aceptar',
             self::Reject => 'Rechazar',
+            self::Revert => 'Revertir',
         };
     }
 }

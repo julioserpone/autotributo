@@ -17,6 +17,7 @@ export interface AppNavItem {
 export const primaryNav: AppNavItem[] = [
     { label: 'Panel', icon: 'i-lucide-layout-dashboard', route: 'dashboard' },
     { label: 'Comprobantes', icon: 'i-lucide-file-text', route: 'fiscal_documents' },
+    { label: 'Revisión de clasificación', icon: 'i-lucide-tags', route: 'classifications' },
     { label: 'Sincronización SRI', icon: 'i-lucide-refresh-cw', route: 'sync' },
     { label: 'Declaraciones', icon: 'i-lucide-chart-column', soon: true },
     { label: 'Contribuyentes', icon: 'i-lucide-users', soon: true },

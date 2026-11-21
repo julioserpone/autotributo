@@ -28,6 +28,38 @@ function csrfToken(): string {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 }
 
+export async function patchJson<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
+    const response = await fetch(path, {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': csrfToken(),
+            ...headers,
+        },
+        body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+        let message = `La API respondió con estado ${response.status}.`;
+
+        try {
+            const data = (await response.json()) as { message?: string };
+            if (data.message) {
+                message = data.message;
+            }
+        } catch {
+            // El cuerpo no es JSON; se conserva el mensaje genérico.
+        }
+
+        throw new ApiError(response.status, message);
+    }
+
+    return (await response.json()) as T;
+}
+
 export async function postJson<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
     const response = await fetch(path, {
         method: 'POST',

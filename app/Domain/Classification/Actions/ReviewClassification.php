@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Classification\Actions;
 
 use App\Domain\Classification\Data\ClassificationReviewData;
+use App\Domain\Classification\Enums\ClassificationMethod;
 use App\Domain\Classification\Enums\ClassificationStatus;
 use App\Domain\Classification\Models\Classification;
 use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
@@ -43,6 +44,31 @@ final readonly class ReviewClassification
                 ->whereKey($locked->fiscal_document_item_id)
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            if ($data->isRevert()) {
+                // Restaura el estado previo a la revisión humana: la categoría
+                // sugerida se conserva y el ítem vuelve a su estado automático
+                // o a revisión según la confianza original.
+                $highConfidence = (float) $locked->confidence >= 0.8
+                    || $locked->method === ClassificationMethod::Rule;
+
+                $item->forceFill([
+                    'expense_category_id' => $locked->expense_category_id,
+                    'classification_status' => $highConfidence
+                        ? FiscalDocumentItem::STATUS_AUTO
+                        : FiscalDocumentItem::STATUS_REVIEW,
+                ])->save();
+
+                $locked->forceFill([
+                    'status' => $highConfidence
+                        ? ClassificationStatus::Suggested
+                        : ClassificationStatus::NeedsReview,
+                    'reviewed_by' => null,
+                    'reviewed_at' => null,
+                ])->save();
+
+                return $locked;
+            }
 
             $accepted = $data->isAccept();
 
