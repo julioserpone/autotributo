@@ -2,8 +2,9 @@
 import { computed, ref, watch } from 'vue';
 
 import type { Company, CompanyPayload } from '@/stores/company';
-import { useCompanyStore } from '@/stores/company';
 import { ApiError } from '@/lib/api';
+import { useCompanyStore } from '@/stores/company';
+import { useToast } from '@nuxt/ui/composables/useToast';
 
 const props = defineProps<{
     open: boolean;
@@ -16,7 +17,7 @@ const emit = defineEmits<{
 }>();
 
 const companyStore = useCompanyStore();
-const toast = useToast(); // eslint-disable-line no-undef
+const toast = useToast();
 
 const isEdit = computed(() => props.company !== null);
 

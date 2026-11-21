@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 
 import type { Company } from '@/stores/company';
 
+import { useToast } from '@nuxt/ui/composables/useToast';
 import { useCompanyStore } from '@/stores/company';
 
 const props = defineProps<{
@@ -16,7 +17,7 @@ const emit = defineEmits<{
 }>();
 
 const companyStore = useCompanyStore();
-const toast = useToast(); // eslint-disable-line no-undef
+const toast = useToast();
 
 const openModel = ref(props.open);
 const confirmText = ref('');
