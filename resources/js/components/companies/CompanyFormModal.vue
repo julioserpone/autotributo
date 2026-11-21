@@ -62,16 +62,26 @@ interface ActivityCode {
 
 const activityCodes = ref<ActivityCode[]>([]);
 const loadingActivityCodes = ref(false);
+const activitySearch = ref('');
 
-async function loadActivityCodes(): Promise<void> {
-    if (activityCodes.value.length > 0) {
-        return;
-    }
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
 
+async function fetchActivityCodes(query: string): Promise<void> {
     loadingActivityCodes.value = true;
 
     try {
-        const response = await getJson<{ data: ActivityCode[] }>('/api/v1/economic-activity-codes');
+        const params = new URLSearchParams();
+        const trimmed = query.trim();
+
+        if (trimmed !== '') {
+            params.set('q', trimmed);
+        }
+
+        params.set('limit', trimmed !== '' ? '50' : '10');
+
+        const response = await getJson<{ data: ActivityCode[] }>(
+            `/api/v1/economic-activity-codes?${params.toString()}`,
+        );
         activityCodes.value = response.data;
     } catch {
         activityCodes.value = [];
@@ -80,13 +90,17 @@ async function loadActivityCodes(): Promise<void> {
     }
 }
 
-const activityCodeItems = computed(() =>
-    activityCodes.value.map((item) => ({
-        code: item.code,
-        description: item.description,
-        label: `${item.code} — ${item.description}`,
-    })),
-);
+function onActivitySearch(term: string): void {
+    if (searchTimer !== null) {
+        clearTimeout(searchTimer);
+    }
+
+    searchTimer = setTimeout(() => {
+        void fetchActivityCodes(term);
+    }, 250);
+}
+
+const activityCodeItems = computed(() => activityCodes.value);
 
 const selectedActivityDescription = computed(() =>
     activityCodes.value.find((item) => item.code === form.value.economic_activity_code)?.description ?? '',
@@ -134,7 +148,9 @@ watch(() => props.open, (value) => {
 
     if (value) {
         resetForm(props.company);
-        void loadActivityCodes();
+        activityCodes.value = [];
+        activitySearch.value = '';
+        void fetchActivityCodes('');
     }
 });
 
@@ -336,16 +352,21 @@ async function submit(): Promise<void> {
             </template>
             <USelectMenu
               v-model="form.economic_activity_code"
+              v-model:search-term="activitySearch"
               :items="activityCodeItems"
               value-key="code"
-              label-key="label"
-              searchable
+              label-key="code"
+              description-key="description"
+              :ignore-filter="true"
+              :virtualize="true"
               :loading="loadingActivityCodes"
+              searchable
               placeholder="Escribe el código o la descripción…"
               color="neutral"
               variant="soft"
               size="md"
               class="w-full"
+              @update:search-term="onActivitySearch"
             />
           </UFormField>
 
