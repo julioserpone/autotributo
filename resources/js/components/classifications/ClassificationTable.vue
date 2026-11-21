@@ -13,7 +13,7 @@ const emit = defineEmits<{
     'update:focusIndex': [value: number];
     toggleSelection: [id: number];
     accept: [id: number, categoryId: number | undefined];
-    reject: [id: number];
+    requestReject: [id: number];
     view: [item: ClassificationApi];
     createRule: [item: ClassificationApi];
 }>();
@@ -96,7 +96,7 @@ function statusColor(status: string): 'success' | 'warning' | 'error' | 'neutral
             <UBadge
               :color="statusColor(item.status)"
               variant="soft"
-              size="xs"
+              size="sm"
               :label="statusLabels[item.status] ?? item.status"
             />
           </td>
@@ -111,7 +111,7 @@ function statusColor(status: string): 'success' | 'warning' | 'error' | 'neutral
             <UBadge
               :color="confidenceColor(item.confidence)"
               variant="soft"
-              size="xs"
+              size="sm"
               :label="`${Math.round(item.confidence * 100)}%`"
             />
           </td>
@@ -128,7 +128,8 @@ function statusColor(status: string): 'success' | 'warning' | 'error' | 'neutral
                 variant="soft"
                 size="xs"
                 icon="i-lucide-check"
-                label="Aceptar"
+                title="Aceptar"
+                aria-label="Aceptar"
                 @click.stop="emit('accept', item.id, item.expense_category?.id)"
               />
               <UButton
@@ -136,15 +137,17 @@ function statusColor(status: string): 'success' | 'warning' | 'error' | 'neutral
                 variant="soft"
                 size="xs"
                 icon="i-lucide-x"
-                label="Rechazar"
-                @click.stop="emit('reject', item.id)"
+                title="Rechazar"
+                aria-label="Rechazar"
+                @click.stop="emit('requestReject', item.id)"
               />
               <UButton
                 color="neutral"
                 variant="ghost"
                 size="xs"
                 icon="i-lucide-eye"
-                label="Comprobante"
+                title="Ver comprobante"
+                aria-label="Ver comprobante"
                 @click.stop="emit('view', item)"
               />
               <UButton
@@ -152,7 +155,8 @@ function statusColor(status: string): 'success' | 'warning' | 'error' | 'neutral
                 variant="ghost"
                 size="xs"
                 icon="i-lucide-wand-2"
-                label="Regla"
+                title="Crear regla"
+                aria-label="Crear regla"
                 @click.stop="emit('createRule', item)"
               />
             </div>

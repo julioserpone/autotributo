@@ -21,6 +21,8 @@ const store = useClassificationStore();
 const focusIndex = ref(0);
 const detailOpen = ref(false);
 const detailItem = ref<ClassificationApi | null>(null);
+const rejectConfirmOpen = ref(false);
+const pendingRejectId = ref<number | null>(null);
 const helpOpen = ref(false);
 const createRuleOpen = ref(false);
 const createRuleSource = ref<number | null>(null);
@@ -58,6 +60,18 @@ function openCreateRule(item: ClassificationApi): void {
     createRuleCategory.value = item.expense_category?.id ?? 0;
     createRulePattern.value = item.item?.description ?? '';
     createRuleOpen.value = true;
+}
+
+function requestReject(id: number): void {
+    pendingRejectId.value = id;
+    rejectConfirmOpen.value = true;
+}
+
+async function confirmReject(): Promise<void> {
+    if (pendingRejectId.value === null) return;
+    await store.reject(pendingRejectId.value);
+    pendingRejectId.value = null;
+    rejectConfirmOpen.value = false;
 }
 
 function onKeyDown(event: KeyboardEvent): void {
@@ -136,17 +150,6 @@ watch(() => store.items, (items) => {
       title="Revisión de clasificación"
       description="Cola de ítems clasificados por reglas o IA que requieren decisión humana."
     >
-      <div class="flex justify-end">
-        <UButton
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          icon="i-lucide-help-circle"
-          label="¿Cómo clasificar?"
-          @click="helpOpen = true"
-        />
-      </div>
-
       <ClassificationFilters
         :status="store.filters.status"
         :method="store.filters.method"
@@ -157,6 +160,7 @@ watch(() => store.items, (items) => {
         @update:company-id="(value: string) => (store.filters.companyId = value)"
         @update:search="(value: string) => (store.filters.search = value)"
         @apply="store.fetchQueue(1)"
+        @help="helpOpen = true"
       />
 
       <ClassificationBulkBar
@@ -212,7 +216,7 @@ watch(() => store.items, (items) => {
         @update:focus-index="(value: number) => (focusIndex = value)"
         @toggle-selection="store.toggleSelection"
         @accept="(id: number, categoryId: number | undefined) => store.accept(id, categoryId)"
-        @reject="(id: number) => store.reject(id)"
+        @request-reject="requestReject"
         @view="openDetail"
         @create-rule="openCreateRule"
       />
@@ -250,6 +254,31 @@ watch(() => store.items, (items) => {
         v-model:open="detailOpen"
         :item="detailItem"
       />
+
+      <UModal
+        v-model:open="rejectConfirmOpen"
+        title="¿Rechazar clasificación?"
+        description="El ítem volverá a estado pendiente para que una regla posterior lo reintente."
+      >
+        <template #footer>
+          <div class="flex justify-end gap-2">
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              label="Cancelar"
+              @click="rejectConfirmOpen = false"
+            />
+            <UButton
+              color="error"
+              variant="solid"
+              size="sm"
+              label="Rechazar"
+              @click="confirmReject"
+            />
+          </div>
+        </template>
+      </UModal>
 
       <ClassificationHelpModal v-model:open="helpOpen" />
 

@@ -16,11 +16,23 @@ const emit = defineEmits<{
     'update:companyId': [value: string];
     'update:search': [value: string];
     apply: [];
+    help: [];
 }>();
 </script>
 
 <template>
   <section class="rounded-lg border border-default bg-elevated/50 p-4">
+    <div class="mb-3 flex items-center justify-between">
+      <span class="text-xs text-muted">Filtra la cola de revisión.</span>
+      <UButton
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        icon="i-lucide-help-circle"
+        label="¿Cómo clasificar?"
+        @click="emit('help')"
+      />
+    </div>
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <UFormField
         label="Estado"
