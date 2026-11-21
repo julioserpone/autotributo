@@ -35,6 +35,8 @@ final class EconomicActivityCodeController extends Controller
         $limit = max(1, min((int) $request->integer('limit', 50), 100));
         $offset = max(0, (int) $request->integer('offset', 0));
 
+        $total = (clone $query)->count();
+
         $codes = $query->skip($offset)->take($limit)->get(['code', 'description']);
 
         return response()->json([
@@ -45,6 +47,7 @@ final class EconomicActivityCodeController extends Controller
             'meta' => [
                 'limit' => $limit,
                 'offset' => $offset,
+                'total' => $total,
             ],
         ]);
     }
