@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ClassificationApi } from '@/stores/classifications';
 
+import ClassificationRowActions from '@/components/classifications/ClassificationRowActions.vue';
 import { confidenceColor, methodLabels, statusLabels } from '@/stores/classifications';
 
 defineProps<{
@@ -14,6 +15,7 @@ const emit = defineEmits<{
     toggleSelection: [id: number];
     accept: [id: number, categoryId: number | undefined];
     requestReject: [id: number];
+    revert: [item: ClassificationApi];
     view: [item: ClassificationApi];
     createRule: [item: ClassificationApi];
 }>();
@@ -122,44 +124,14 @@ function statusColor(status: string): 'success' | 'warning' | 'error' | 'neutral
             {{ money(item.item?.total_cents ?? 0) }}
           </td>
           <td class="px-3 py-2 text-right">
-            <div class="flex justify-end gap-1">
-              <UButton
-                color="success"
-                variant="soft"
-                size="xs"
-                icon="i-lucide-check"
-                title="Aceptar"
-                aria-label="Aceptar"
-                @click.stop="emit('accept', item.id, item.expense_category?.id)"
-              />
-              <UButton
-                color="error"
-                variant="soft"
-                size="xs"
-                icon="i-lucide-x"
-                title="Rechazar"
-                aria-label="Rechazar"
-                @click.stop="emit('requestReject', item.id)"
-              />
-              <UButton
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                icon="i-lucide-eye"
-                title="Ver comprobante"
-                aria-label="Ver comprobante"
-                @click.stop="emit('view', item)"
-              />
-              <UButton
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                icon="i-lucide-wand-2"
-                title="Crear regla"
-                aria-label="Crear regla"
-                @click.stop="emit('createRule', item)"
-              />
-            </div>
+            <ClassificationRowActions
+              :item="item"
+              @accept="(id, categoryId) => emit('accept', id, categoryId)"
+              @request-reject="(id) => emit('requestReject', id)"
+              @revert="(item) => emit('revert', item)"
+              @view="(item) => emit('view', item)"
+              @create-rule="(item) => emit('createRule', item)"
+            />
           </td>
         </tr>
       </tbody>

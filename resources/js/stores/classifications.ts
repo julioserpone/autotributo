@@ -132,7 +132,7 @@ export const useClassificationStore = defineStore('classifications', () => {
         selectedIds.value = new Set();
     }
 
-    async function reviewOne(id: number, decision: 'accept' | 'reject', expenseCategoryId?: number): Promise<ClassificationApi | null> {
+    async function reviewOne(id: number, decision: 'accept' | 'reject' | 'revert', expenseCategoryId?: number): Promise<ClassificationApi | null> {
         try {
             const body: Record<string, unknown> = { decision };
             if (expenseCategoryId !== undefined) body.expense_category_id = expenseCategoryId;
@@ -155,6 +155,10 @@ export const useClassificationStore = defineStore('classifications', () => {
 
     async function reject(id: number): Promise<void> {
         await reviewOne(id, 'reject');
+    }
+
+    async function revert(id: number): Promise<void> {
+        await reviewOne(id, 'revert');
     }
 
     async function bulkReview(ids: number[], decision: 'accept' | 'reject', expenseCategoryId?: number): Promise<{ updated: number; failed: { id: number; reason: string }[] }> {
@@ -185,6 +189,7 @@ export const useClassificationStore = defineStore('classifications', () => {
         clearSelection,
         accept,
         reject,
+        revert,
         bulkReview,
     };
 });

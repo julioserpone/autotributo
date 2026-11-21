@@ -8,6 +8,7 @@ import AppShell from '@/layouts/AppShell.vue';
 import AppPage from '@/components/layout/AppPage.vue';
 import ClassificationBulkBar from '@/components/classifications/ClassificationBulkBar.vue';
 import ClassificationDetailModal from '@/components/classifications/ClassificationDetailModal.vue';
+import ClassificationRejectModal from '@/components/classifications/ClassificationRejectModal.vue';
 import ClassificationFilters from '@/components/classifications/ClassificationFilters.vue';
 import ClassificationHelpModal from '@/components/classifications/ClassificationHelpModal.vue';
 import ClassificationTable from '@/components/classifications/ClassificationTable.vue';
@@ -28,7 +29,7 @@ const createRuleOpen = ref(false);
 const createRuleSource = ref<number | null>(null);
 const createRuleCategory = ref<number>(0);
 const createRulePattern = ref('');
-const bulkCategory = ref<number>(0);
+const bulkCategory = ref<number | null>(null);
 
 const expenseCategories = ref<{ id: number; code: string; name: string }[]>([]);
 
@@ -72,6 +73,17 @@ async function confirmReject(): Promise<void> {
     await store.reject(pendingRejectId.value);
     pendingRejectId.value = null;
     rejectConfirmOpen.value = false;
+    await store.fetchQueue(store.meta?.current_page ?? 1);
+}
+
+async function acceptItem(id: number, categoryId: number | undefined): Promise<void> {
+    await store.accept(id, categoryId);
+    await store.fetchQueue(store.meta?.current_page ?? 1);
+}
+
+async function revertItem(item: ClassificationApi): Promise<void> {
+    await store.revert(item.id);
+    await store.fetchQueue(store.meta?.current_page ?? 1);
 }
 
 function onKeyDown(event: KeyboardEvent): void {
@@ -114,14 +126,22 @@ function onKeyDown(event: KeyboardEvent): void {
 
 async function bulkAccept(): Promise<void> {
     const ids = Array.from(store.selectedIds);
-    if (ids.length === 0 || bulkCategory.value === 0) return;
-    await store.bulkReview(ids, 'accept', bulkCategory.value);
+    if (ids.length === 0 || bulkCategory.value === null) return;
+    await store.bulkReview(ids, 'accept', bulkCategory.value ?? undefined);
 }
+
+const bulkRejectConfirmOpen = ref(false);
 
 async function bulkReject(): Promise<void> {
     const ids = Array.from(store.selectedIds);
     if (ids.length === 0) return;
+    bulkRejectConfirmOpen.value = true;
+}
+
+async function confirmBulkReject(): Promise<void> {
+    const ids = Array.from(store.selectedIds);
     await store.bulkReview(ids, 'reject');
+    bulkRejectConfirmOpen.value = false;
 }
 
 onMounted(() => {
@@ -215,8 +235,9 @@ watch(() => store.items, (items) => {
         :selected-ids="store.selectedIds"
         @update:focus-index="(value: number) => (focusIndex = value)"
         @toggle-selection="store.toggleSelection"
-        @accept="(id: number, categoryId: number | undefined) => store.accept(id, categoryId)"
+        @accept="acceptItem"
         @request-reject="requestReject"
+        @revert="revertItem"
         @view="openDetail"
         @create-rule="openCreateRule"
       />
@@ -255,30 +276,17 @@ watch(() => store.items, (items) => {
         :item="detailItem"
       />
 
-      <UModal
+      <ClassificationRejectModal
         v-model:open="rejectConfirmOpen"
-        title="¿Rechazar clasificación?"
-        description="El ítem volverá a estado pendiente para que una regla posterior lo reintente."
-      >
-        <template #footer>
-          <div class="flex justify-end gap-2">
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              label="Cancelar"
-              @click="rejectConfirmOpen = false"
-            />
-            <UButton
-              color="error"
-              variant="solid"
-              size="sm"
-              label="Rechazar"
-              @click="confirmReject"
-            />
-          </div>
-        </template>
-      </UModal>
+        @confirm="confirmReject"
+      />
+
+      <ClassificationRejectModal
+        v-model:open="bulkRejectConfirmOpen"
+        title="¿Rechazar seleccionados?"
+        description="Los ítems seleccionados volverán a estado pendiente."
+        @confirm="confirmBulkReject"
+      />
 
       <ClassificationHelpModal v-model:open="helpOpen" />
 

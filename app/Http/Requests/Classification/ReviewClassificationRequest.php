@@ -39,7 +39,7 @@ final class ReviewClassificationRequest extends FormRequest
             'expense_category_id' => [
                 'nullable',
                 'integer',
-                'prohibited_if:decision,'.ReviewDecision::Reject->value,
+                'prohibited_if:decision,'.ReviewDecision::Reject->value.','.ReviewDecision::Revert->value,
                 Rule::exists('expense_categories', 'id')->where(
                     fn ($query) => $query
                         ->where('valid_from', '<=', now()->toDateString())

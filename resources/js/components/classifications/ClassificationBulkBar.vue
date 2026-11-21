@@ -2,7 +2,7 @@
 defineProps<{
     count: number;
     categories: { label: string; value: number }[];
-    category: number;
+    category: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -17,7 +17,7 @@ const emit = defineEmits<{
   <section class="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-lg border border-primary/40 bg-elevated p-3">
     <span class="text-sm font-medium">{{ count }} seleccionados</span>
     <USelect
-      :model-value="category"
+      :model-value="(category ?? undefined) as number"
       :items="categories"
       placeholder="Categoría…"
       color="neutral"
@@ -32,7 +32,7 @@ const emit = defineEmits<{
       size="sm"
       label="Aceptar sugeridas"
       icon="i-lucide-check"
-      :disabled="category === 0"
+      :disabled="category === null"
       @click="emit('accept')"
     />
     <UButton
