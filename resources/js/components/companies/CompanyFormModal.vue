@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 
 import type { Company, CompanyPayload } from '@/stores/company';
-import { ApiError } from '@/lib/api';
+import { ApiError, getJson } from '@/lib/api';
 import { useCompanyStore } from '@/stores/company';
 import { useToast } from '@nuxt/ui/composables/useToast';
 
@@ -55,6 +55,43 @@ const fieldErrors = ref<Record<string, string[]>>({});
 const generalError = ref<string | null>(null);
 const submitting = ref(false);
 
+interface ActivityCode {
+    code: string;
+    description: string;
+}
+
+const activityCodes = ref<ActivityCode[]>([]);
+const loadingActivityCodes = ref(false);
+
+async function loadActivityCodes(): Promise<void> {
+    if (activityCodes.value.length > 0) {
+        return;
+    }
+
+    loadingActivityCodes.value = true;
+
+    try {
+        const response = await getJson<{ data: ActivityCode[] }>('/api/v1/economic-activity-codes');
+        activityCodes.value = response.data;
+    } catch {
+        activityCodes.value = [];
+    } finally {
+        loadingActivityCodes.value = false;
+    }
+}
+
+const activityCodeItems = computed(() =>
+    activityCodes.value.map((item) => ({
+        code: item.code,
+        description: item.description,
+        label: `${item.code} — ${item.description}`,
+    })),
+);
+
+const selectedActivityDescription = computed(() =>
+    activityCodes.value.find((item) => item.code === form.value.economic_activity_code)?.description ?? '',
+);
+
 function resetForm(company: Company | null): void {
     if (company) {
         form.value = {
@@ -97,6 +134,7 @@ watch(() => props.open, (value) => {
 
     if (value) {
         resetForm(props.company);
+        void loadActivityCodes();
     }
 });
 
@@ -282,17 +320,46 @@ async function submit(): Promise<void> {
 
         <div class="grid gap-4 sm:grid-cols-2">
           <UFormField
-            label="Actividad económica (código)"
+            label="Actividad económica"
             name="economic_activity_code"
-            hint="Código CIIU del SRI (opcional)."
             :error="fieldErrors.economic_activity_code?.[0] ?? false"
           >
-            <UInput
+            <template #label>
+              <span class="flex items-center gap-1">
+                Actividad económica
+                <UIcon
+                  name="i-lucide-help-circle"
+                  class="size-3.5 text-dimmed"
+                  title="Código CIIU del SRI"
+                />
+              </span>
+            </template>
+            <USelectMenu
               v-model="form.economic_activity_code"
+              :items="activityCodeItems"
+              value-key="code"
+              label-key="label"
+              searchable
+              :loading="loadingActivityCodes"
+              placeholder="Escribe el código o la descripción…"
               color="neutral"
               variant="soft"
               size="md"
-              maxlength="10"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            label="Descripción de la actividad"
+            name="economic_activity_description"
+            class="sm:col-span-2"
+          >
+            <UInput
+              :model-value="selectedActivityDescription"
+              color="neutral"
+              variant="soft"
+              size="md"
+              readonly
               class="w-full"
             />
           </UFormField>
