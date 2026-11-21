@@ -35,7 +35,7 @@ describe('DashboardPage', () => {
 
         const wrapper = mount(DashboardPage, { global: { plugins: [pinia, router], stubs: { AppSidebar: true, UDashboardSearch: true } } });
 
-        expect(wrapper.text()).toContain('Sin datos todavía');
+        expect(wrapper.text()).toContain('Registra tu primer contribuyente');
         expect(wrapper.text()).not.toContain('Vista previa con datos de ejemplo');
     });
 

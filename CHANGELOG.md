@@ -8,7 +8,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ### Added
 
-- F4-03a (slice 1): cliente HTTP de la SPA sobre `problem+json` (RFC 9457): `ApiError` expone `errors` y `fieldError`, `deleteJson` para respuestas `204` y cuerpos vacíos tolerados; `postJson`/`patchJson` mantienen `Idempotency-Key`. Store `company` con `createCompany`, `updateCompany`, `archiveCompany` y `fetchCompany` (orden por razón social, selección activa y propagación de errores de validación). 17 tests nuevos (`lib/api.spec.ts`, `company.spec.ts`). Base del CRUD de contribuyentes desde la UI (F4-03a slices 2 y 3 pendientes).- Staging: `create` acepta `--ruc RUC --password PASS`. Al recrear la base
+- F4-03a (slice 2): página `CompaniesPage` con tabla de contribuyentes, modal de alta/edición (`CompanyFormModal`), modal de archivo con confirmación escribiendo el RUC (`CompanyArchiveModal`), estado vacío con CTA, ruta `/companies`, entrada activa en la navegación y en el menú de empresa, y estado vacío del panel. Permisos por rol (`owner`/`accountant` gestionan; `viewer` solo lectura). 2 tests de smoke. Base para los slices restantes (onboarding, credencial SRI, invitaciones).- Staging: `create` acepta `--ruc RUC --password PASS`. Al recrear la base
   (`--recreate-db`) se ejecuta siempre `DemoTenantSeeder`, que crea el tenant, los
   cuatro roles y los tres usuarios de prueba (owner/accountant/assistant). Si se
   pasan `--ruc` y `--password`, además se crea una empresa de prueba con su

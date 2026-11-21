@@ -62,6 +62,7 @@ onMounted(() => {
           icon="i-lucide-refresh-cw"
           label="Sincronizar SRI"
           class="h-8"
+          :disabled="!companyStore.hasCompany"
           @click="syncOpen = true"
         />
         <UButton
@@ -71,9 +72,34 @@ onMounted(() => {
           icon="i-lucide-plus"
           label="Nueva consulta"
           class="h-8"
+          :disabled="!companyStore.hasCompany"
           @click="queryOpen = true"
         />
       </template>
+
+      <div
+        v-if="!isPreview && !companyStore.hasCompany"
+        class="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-default bg-elevated/40 px-6 py-12 text-center"
+      >
+        <UIcon
+          name="i-lucide-building-2"
+          class="size-10 text-dimmed"
+        />
+        <div>
+          <p class="text-base font-medium text-highlighted">
+            Registra tu primer contribuyente
+          </p>
+          <p class="mt-1 text-sm text-muted">
+            Sin empresas no hay comprobantes que sincronizar ni clasificar.
+          </p>
+        </div>
+        <UButton
+          color="primary"
+          icon="i-lucide-plus"
+          label="Registrar contribuyente"
+          to="/companies"
+        />
+      </div>
 
       <div
         v-if="isPreview"

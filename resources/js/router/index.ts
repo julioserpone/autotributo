@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import DashboardPage from '@/pages/DashboardPage.vue';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage.vue';
+import CompaniesPage from '@/pages/CompaniesPage.vue';
 import ClassificationReviewPage from '@/pages/ClassificationReviewPage.vue';
 import FiscalDocumentInboxPage from '@/pages/FiscalDocumentInboxPage.vue';
 import LoginPage from '@/pages/LoginPage.vue';
@@ -50,6 +51,12 @@ const router = createRouter({
             name: 'dashboard',
             component: DashboardPage,
             meta: { title: 'Panel' },
+        },
+        {
+            path: '/companies',
+            name: 'companies',
+            component: CompaniesPage,
+            meta: { title: 'Contribuyentes' },
         },
         {
             path: '/fiscal_documents',
