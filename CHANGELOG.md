@@ -12,6 +12,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 - F4-03a (slice 2): página `CompaniesPage` con tabla de contribuyentes, modal de alta/edición (`CompanyFormModal`), modal de archivo con confirmación escribiendo el RUC (`CompanyArchiveModal`), estado vacío con CTA, ruta `/companies`, entrada activa en la navegación y en el menú de empresa, y estado vacío del panel. Permisos por rol (`owner`/`accountant` gestionan; `viewer` solo lectura). Validación de tipos en el formulario (RUC de 13 dígitos numéricos, correo, código de actividad alfanumérico, razón social) y badge de estado en tamaño `sm`. 2 tests de smoke. Base para los slices restantes (onboarding, credencial SRI, invitaciones).
 
+- Catálogo CIIU: tabla `economic_activity_codes` (catálogo completo de 6378 códigos de todos los niveles, con columna `is_selectable` para los 3125 nodos hoja), seeder `EconomicActivityCodeSeeder` (CSV `database/seeders/data/ciiu.csv`, idempotente por `code`) y endpoint `GET /api/v1/economic-activity-codes` (por defecto solo seleccionables; `?all=1` devuelve el catálogo completo; búsqueda case-insensitive por código o descripción). Migración `2026_11_22_000001`. Test de feature (listado seleccionables, listado completo, filtro, 401). El combobox en `CompanyFormModal` se añadirá en una rama dependiente de `feat/F4-03-companies-page` (#101).
+
 - Staging: `create` acepta `--ruc RUC --password PASS`. Al recrear la base
   (`--recreate-db`) se ejecuta siempre `DemoTenantSeeder`, que crea el tenant, los
   cuatro roles y los tres usuarios de prueba (owner/accountant/assistant). Si se

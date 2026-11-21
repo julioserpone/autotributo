@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\BroadcastingAuthController;
 use App\Http\Controllers\Api\V1\ClassificationController;
 use App\Http\Controllers\Api\V1\ClassificationRuleController;
 use App\Http\Controllers\Api\V1\CompanyController;
+use App\Http\Controllers\Api\V1\EconomicActivityCodeController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\ExpenseCategoryController;
 use App\Http\Controllers\Api\V1\FiscalDocumentController;
@@ -139,6 +140,10 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
             ->name('api.v1.sync-runs.show');
         Route::get('sync-runs/{run}/files', [SyncRunController::class, 'files'])
             ->name('api.v1.sync-runs.files');
+
+        // Códigos CIIU del SRI (actividades económicas seleccionables).
+        Route::get('economic-activity-codes', [EconomicActivityCodeController::class, 'index'])
+            ->name('api.v1.economic-activity-codes.index');
 
         // Clasificación automática (F3-02 / US-16): reglas por tenant y
         // globales, dry-run antes de guardar y catálogo de categorías.
