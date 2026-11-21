@@ -1,4 +1,6 @@
-# 15 — Plan de implementación: F4-07 + F3-06 + sincronización de documentación
+# 15 — Plan de implementación: F4-07 + F3-06 + sincronización de documentación (ARCHIVADO)
+
+> **Archivado el 2026-11-21.** Ambas tareas están cerradas (F3-06 en PR #97 y F4-07 en PR #98) y la documentación quedó sincronizada. El alcance vive en `docs/02-implementation-plan.md` y el avance en `docs/09-progress.md`. No se actualiza ni se usa para planificar.
 
 > **Objetivo:** cerrar el último ítem P1 del frontend (revisión de clasificación) y avanzar el motor fiscal con la detección de riesgos (F3-06), dejando la documentación viva al día. Una tarea = un PR; las subtareas de este plan se ejecutan en PRs separados y pequeños.
 

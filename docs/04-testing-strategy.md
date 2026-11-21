@@ -189,6 +189,8 @@ Dónde se ejecutan: **en local** (`make up && make migrate && make seed` y `make
 
 En tests normales, `FakeClassifier` es determinista y no consume red. F3-03 cubre con `Http::fake` la respuesta válida, la salida inválida, el JSON truncado, el timeout de conexión, el 429, el 5xx y el circuito abierto, tanto en los adaptadores como en el flujo de clasificación. F3-04 cubre el registro en `llm_calls` (tokens, coste, latencia, estado y `error_code`), la caché por huella (hit/miss, desactivación y aislamiento entre tenants), el presupuesto (corte, motivo persistido y suma solo del mes en curso) y el cálculo de coste con enteros. `ai:evaluate`, el dataset dorado y la comparación de prompts llegan en F3-08.
 
+> **Estado 2026-11-21:** el dataset (`tests/Fixtures/ai/golden.jsonl`) **no existe** y no hay ningún informe `ai-eval-*` en `docs/reports/`. Mientras falte, F3-08 no puede ejecutarse ni demostrar el criterio M3; el bloqueo es de datos (descripciones reales anonimizadas + categoría correcta), no de código.
+
 ## 5. Casos obligatorios por módulo
 
 | Módulo | Casos mínimos |

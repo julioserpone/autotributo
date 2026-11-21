@@ -1,4 +1,8 @@
-# 11 — Siguiente etapa: plan de trabajo
+# 11 — Siguiente etapa: plan de trabajo (ARCHIVADO)
+
+> **Archivado el 2026-11-21.** Documento histórico de la etapa F2-06/F2-07. La
+> fuente de verdad del alcance es `docs/02-implementation-plan.md` y el avance
+> real vive en `docs/09-progress.md`. No se actualiza ni se usa para planificar.
 
 > Documento de planificación. La fuente de verdad del alcance sigue siendo
 > `docs/02-implementation-plan.md` y el avance real vive en `docs/09-progress.md`.

@@ -2,23 +2,25 @@
 
 > Tabla viva del proyecto. Se actualiza al cerrar cada tarea (una tarea = un commit/PR). La fuente de verdad del alcance sigue siendo `docs/02-implementation-plan.md`.
 
-**Última actualización:** 2026-11-20
+**Última actualización:** 2026-11-21
 
 ## Resumen por fase
 
 | Fase | Estado | Avance | Último hito |
 |---|---|---|---|
-| F0 · Descubrimiento | Completado | 9/9 | Decisiones, ADRs y entorno local |
+| F0 · Descubrimiento | Completado (con pendiente) | 9/9 | Decisiones, ADRs y entorno local · **falta el informe de `F0-05` en `docs/reports/`** |
 | F1 · Núcleo tenant-ready | Completado | 11/11 | F1-11 · Staging efímero en AWS (EC2, Neon, DuckDNS, TLS, deploy, smoke tests) |
 | F2 · Ingesta SRI | Completado | 12/12 + F2-13 | F2-13 · Carga manual de XML (`US-14`) |
-| F3 · Motor fiscal + IA | En curso | 7/9 | F3-06 · Riesgos fiscales y hallazgos |
-| F4 · Frontend | En curso | 4/11 + fundaciones/auth parciales | F4-06 · Monitor de sincronización con progreso en vivo (PR #73–#75) |
+| F3 · Motor fiscal + IA | En curso | 7/9 | F3-06 · Riesgos fiscales y hallazgos (#97) |
+| F4 · Frontend | En curso | 5/11 + fundaciones/auth parciales | F4-07 · Revisión de clasificación con teclado (#98) |
 | F5 · Declaraciones | Pendiente | 0/8 | — |
 | F6 · Hardening y beta | Pendiente | 0/8 | — |
 
-> El recuento usa las tareas de `docs/02-implementation-plan.md`. Las slices de F1-03 y las tareas nuevas (F1-03e/f/g, F2-13/14/15, F4-03b/12) se detallan abajo y no alteran el denominador de la fase.
+> El recuento usa las tareas de `docs/02-implementation-plan.md`. Las slices de F1-03 y F4-03 y las tareas nuevas (F1-03e/f/g, F2-13/14/15, F4-03a/b/c, F4-08b, F4-12, F4-13) se detallan abajo y no alteran el denominador de la fase.
 >
-> **Siguiente etapa (Sprint A, tramo final → Sprint B).** Ambos documentos maestros deben coincidir: `docs/02` §3 (tareas) y §9/§17 (orden y prioridad) y esta tabla. Orden acordado: **F1-06 → F1-07 → F1-08 → F1-09 → F2-09 (a+b) → F1-03e → F1-11**. Justificación, diseño y pruebas obligatorias de cada tarea viven en `docs/02` §3 y no en un documento aparte.
+> **Siguiente etapa (Etapa G, revisión 2026-11-21).** Ambos documentos maestros deben coincidir: `docs/02` §6 (tareas) y §9/§17 (orden y prioridad) y esta tabla. Orden acordado: **docs sync → F4-03a → F4-03b → F4-03c → F5-01 → F4-08 → F4-08b → F3-09**. F3-08 queda bloqueada por el dataset dorado y la firma del contador; F5-02 espera la firma de la convención del 104. Justificación, diseño y pruebas obligatorias viven en `docs/02` §6, §9 y §17, no en un documento aparte.
+>
+> **Estado de cierre de fase:** F1 y F2 están cerradas. F3 está funcionalmente completa pero **no puede declararse cerrada** sin `F3-08` ni la firma del contador (`docs/fiscal-signoff.md` sigue sin firmas). F4 no puede alcanzar M4 mientras no exista UI para empresas, credenciales SRI e invitaciones.
 
 ## Fase 1 · Núcleo tenant-ready, identidad y empresas
 
@@ -26,7 +28,7 @@
 |---|---|---|---|---|
 | F1-01 | Esqueleto Laravel 13 + SPA | Completado | — | `042d1bf` · Pest, PHPStan 8, Pint, Vitest, E2E y 100% cobertura |
 | F1-02 | Tenancy-ready | Completado | — | `bcf5896` · `stancl/tenancy` 3.10.1 sin DB por tenant · TenantContext, TenantScope, BelongsToTenant, TenantAware, caché/storage prefijados · 30 tests, 98.2% cobertura |
-| F1-03 | Identidad | En curso (80 %) | P1 | Slice F1-03a (#36): `memberships`, Argon2id, login/logout/me por sesión, `LoginPage` y store de auth · Slice F1-03b (#37): recuperación y verificación de correo · Slice F1-03c (#38): Spatie Permission con teams por tenant, 2FA TOTP opcional · Slice F1-03d (#39): invitaciones con token, roles y aceptación · **Pendiente:** F1-03e sesiones revocables, F1-03f 2FA obligatorio para owner, F1-03g validaciones de invitación |
+| F1-03 | Identidad | Completado (slices a–f) | P1 | Slice F1-03a (#36): `memberships`, Argon2id, login/logout/me por sesión, `LoginPage` y store de auth · Slice F1-03b (#37): recuperación y verificación de correo · Slice F1-03c (#38): Spatie Permission con teams por tenant, 2FA TOTP opcional · Slice F1-03d (#39): invitaciones con token, roles y aceptación · Slice F1-03e: sesiones revocables · Slice F1-03f: 2FA obligatorio para owner. **Único pendiente del alcance:** F1-03g (validaciones de invitación) |
 | F1-03e | Sesiones revocables y seguridad de cuenta (`US-05`) | Completado | P1 | `POST /api/v1/auth/password` (revoca otras sesiones), `GET /api/v1/auth/sessions`, `DELETE /api/v1/auth/sessions/{session}`, `GET /api/v1/auth/login-history`; 5 tests de feature |
 | F1-03f | 2FA obligatorio para owner (`US-03`) | Completado | P1 | Login de owner sin 2FA devuelve `two_factor_setup_required` y bloquea endpoints de negocio; bloqueo tras 5 intentos por 15 min; registro de eventos en auditoría; UI de configuración (`/two-factor/setup`) con QR TOTP, clave manual y códigos de recuperación; tests de backend + store |
 | F1-03g | Validaciones de invitación (`US-02`) | Pendiente | P2 | Email ya activo → 409; revocación de acceso invalida sesiones del tenant |
@@ -70,27 +72,38 @@
 | F3-05 | Revisión humana | Completado | P1 | `GET /api/v1/classifications` (cola paginada que prioriza `needs_review` y filtra por `status`, `method`, `company_id`, `reviewed` y texto), `PATCH /api/v1/classifications/{classification}` (`decision=accept|reject`, categoría opcional para corregir) y `POST /api/v1/classifications/bulk-review` (máximo 100 ids, resultado parcial con `{updated, failed:[{id, reason}]}`); `ReviewClassification` acepta y deja el ítem `manual` con la categoría confirmada o lo rechaza devolviéndolo a `pending` sin categoría, siempre en transacción con bloqueo y conservando el origen (`method`, `rule_id`, `llm_call_id`); `Classification` pasa a ser auditable (`audit_logs` con `old_values`/`new_values`); `ClassificationPolicy` con `fiscal_documents.view` para leer y `fiscal_documents.review` para decidir (owner, accountant y assistant); revisar dos veces es válido y queda auditado · 12 tests / 71 assertions. OpenAPI regenerado (#69) |
 | F3-06 | Riesgos fiscales | Completado | P2 | `fiscal_findings` y `ghost_companies`; `DetectFiscalRisks` con `TOTALS_MISMATCH`, `INVALID_RUC`, `GHOST_COMPANY` y `DUPLICATE_SEQUENTIAL`; auto-resolución para riesgos técnicos objetivos; endpoints `GET/PATCH /api/v1/fiscal-findings` y `POST /api/v1/companies/{company}/fiscal-findings/detect`; integración best-effort en `FinalizeSriRun`; comando `fiscal:detect-risks` · 14 tests / 30 assertions. Pendiente firma del contador para severidades y códigos (`docs/fiscal-signoff.md`). |
 | F3-07 | Proporcionalidad IVA | Completado | P1 | `App\Domain\Shared\Values\Money` (value object inmutable sobre `brick/money` ^0.15: `cents()`, `ofDecimal()` con HALF_UP, `toCents()`, `decimal()`, `plus`/`minus`/`multipliedBy`, sin `float`) y `App\Domain\Fiscal\Services\Proportionality` (`factor()` = ventas 0 % / total con 6 decimales y `RoundingMode::HalfUp`; `complement()` calculado como `1 − factor` para que ambas caras sumen `1.000000` exacto; `apply()` del factor a un importe con redondeo a centavos; período sin ventas → `0.000000`; ventas negativas y factor fuera de [0,1] → `InvalidArgumentException`) · 33 tests / 66 assertions. Cierra el hueco del ADR-0002 (enmienda 2026-11-15): `brick/money` no estaba instalado y no existía `Money`. **Convención del 104 pendiente de firma del contador** (`docs/fiscal-signoff.md`) (#65) |
+| F3-08 | Evaluación offline | Pendiente | P1 | **Bloqueada por datos:** exige un dataset dorado de ~300 descripciones reales anonimizadas que no existe en el repositorio (`docs/reports/` solo tiene el README y no hay informe de `F0-05`). Entregables: `ai:evaluate` (grupo `ai-eval`), reporte de accuracy/precisión/coste en `docs/reports/ai-eval-YYYY-MM-DD.md` y ejecución semanal. Sin ella, el criterio de salida M3 (≥ 70 % automático, accuracy ≥ 92 %, coste < USD 0,002/ítem) **no es demostrable** |
+| F3-09 | Administración de catálogos | Pendiente | P2 | Endpoints de solo lectura (`tax_rates`, `retention_rates`, `form_lines`, `personal_expense_caps`) y comando de importación desde CSV oficial. Hoy solo existen `catalogs:validate` y el seeder; no hay API para que la UI muestre vigencias |
 
 ## Fase 4 · Frontend
 
 | ID | Tarea | Estado | Prioridad | Evidencia |
 |---|---|---|---|---|
-| F4-01 | Fundaciones | Parcial | P1 | Vite, Vue 3.5 + TypeScript estricto, Tailwind 4, router, Pinia y cliente HTTP con CSRF/errores; F4-02 añade la base de shadcn-vue (`reka-ui`, `class-variance-authority`, `clsx`, `tailwind-merge`) y el entorno de Vitest con stubs de layout. **Pendiente:** TanStack Query e i18n |
+| F4-01 | Fundaciones | Parcial | P1 | Vite, Vue 3.5 + TypeScript estricto, Tailwind 4, router, Pinia y cliente HTTP con CSRF/errores. El entorno de Vitest con stubs de layout existe. **Pendiente:** TanStack Query, i18n y endurecer `lib/api.ts` (hoy descarta los `errors` de `problem+json` y no soporta respuestas `204`) |
+| F4-02 | Design system | Completado | **P0** | Tokens semánticos dark-first en `resources/css/app.css`, tipografía, `prefers-reduced-motion` y foco visible; componentes base `AppField`, `AppButton`, `AppInput`, `AppSelect`, `AppCombobox`, `AppDateRange`, `AppTable`, `AppBadge`, `AppModal`, `AppToastHost` y `AppDrawer` · 50 tests · `docs/14-design-system.md`. **Superado por F4-04:** los wrappers propios se sustituyeron por Nuxt UI (ADR-0009). (#70) |
+| F4-03 | Auth y primer acceso | En curso (slices a–c) | **P0** | Hecho: login, 2FA (setup y challenge), recuperación y restablecimiento de contraseña, cierre de sesión. **Pendiente:** **F4-03a** gestión de contribuyentes en la UI (alta/edición/archivo y estado vacío), **F4-03b** credencial SRI en la UI (alta, rotación, estado), **F4-03c** invitaciones en la UI (invitar y aceptar). Hoy estas tres operaciones solo existen por API, por lo que el flujo completo no se puede completar desde la app |
 | F4-04 | Layout | Completado | **P0** | Template Dashboard de Nuxt UI 4.13 (`UDashboardGroup`, `UDashboardSidebar` colapsable/redimensionable, `UDashboardPanel/Navbar/Toolbar/Search`) y tema Mint: `primary: teal`, `neutral: olive`, radio `0.75rem`, botones/inputs píldora, Nunito Variable (500/600/700/800) y JetBrains Mono. `AppShell`, `AppPage`, `AppSidebar`, `AppWorkspaceMenu`, `AppUserMenu`, `AuthLayout` y `lib/navigation.ts` (nav + ⌘K); selector de tema en el menú de usuario. Páginas migradas a `bg-default`/`bg-elevated`/`border-default`/`text-highlighted`/`text-muted`/`text-dimmed`. `useTheme` conserva `colorMode: false`. ADR-0009 enmendado y `docs/14-design-system.md` reescrito · 43 tests, `vue-tsc` y ESLint en verde · verificado en navegador (login, panel, bandeja, monitor y paleta ⌘K; claro y oscuro). (#90) |
 | F4-05 | Bandeja de comprobantes | Completado | **P0** | `GET /api/v1/fiscal_documents` (cursor + filtros por empresa, estado, tipo, emisor, fechas), `GET /api/v1/fiscal_documents/{fiscal_document}` con líneas/impuestos/retenciones; `FiscalDocumentInboxPage` con filtros, paginación «Cargar más», drawer de detalle y selección múltiple. Migrado a `FiscalDocument` en PR #91. (#72) |
 | F4-06 | Monitor de sincronización | Completado | **P0** | `SyncMonitorPage` con formulario en una fila (empresa, tipos de documento como multiselección, desde/hasta), ayuda contextual para forzar re-descarga, progreso en vivo con polling (`poll_after_ms`) + archivos con errores, totales, historial y detalle de run. Store `sync` con `startSync` (Idempotency-Key), `loadRun`, `startPollingIfNeeded`. Refinamientos UI (#74, #75), progreso de `downloading` sin contar XML `missing`/`invalid`, historial estable durante refresco. (#73–#75) |
-| F4-02 | Design system | Completado | **P0** | Tokens semánticos dark-first en `resources/css/app.css` (`#09090b`, `#18181b`, `#27272a`, borde `#262626`, acentos violeta/rojo/verde, radios, sombras y `text-2xs`), tipografía del sistema, `prefers-reduced-motion` y foco visible; `AppField`, `AppButton`, `AppInput`, `AppSelect`, `AppCombobox`, `AppDateRange`, `AppTable` (loading/empty/error, slots y selección), `AppBadge`, `AppModal`, `AppToastHost` y `AppDrawer` con portal, foco atrapado y Escape; `useToast` y `AppToastHost` en `App.vue`; `AppLayout` con enlace de salto y `AppStatusBadge` migrados a tokens; páginas de auth migradas a las utilidades semánticas · 50 tests / 50 assertions · `docs/14-design-system.md`. Verificado en navegador: login dark, sin errores de consola. (#70) |
+| F4-07 | Revisión de clasificación | Completado | **P1** | `ClassificationReviewPage` con cola que prioriza `needs_review`, filtros, confianza y método visuales, atajos `j`/`k`/`Enter`/`a`/`r`/`espacio`, aceptación y rechazo en bloque con resultado parcial y creación de regla desde un ítem; store `classifications` y componentes en `components/classifications/`. Ruta `/classifications` y entrada en la navegación. (#98) |
+| F4-08 | Dashboards | Pendiente | **P1** | **Depende de F5-01:** hoy `DashboardPage` solo muestra ceros o datos de `?preview=1` (`dashboardPreview.ts`). Entregables: IVA ventas vs. compras por mes, top proveedores, topes de gastos personales y alertas reales desde `fiscal_findings` |
+| F4-08b | Bandeja de hallazgos | Pendiente | **P1** | Nueva tarea derivada de F3-06: el contrato `GET/PATCH /api/v1/fiscal-findings` ya existe, pero no hay UI para reconocer, resolver o descartar hallazgos ni para lanzar la detección manual |
+| F4-09 | Vista 104 (estructura) | Pendiente | P2 | Casilleros, totales, drill-down y estados de borrador; los datos reales llegan en F5-02/F5-06 |
+| F4-10 | Calidad de UI | Pendiente | P2 | Estados vacíos/carga/error, responsive, foco visible, contraste AA y `prefers-reduced-motion` en todas las pantallas |
+| F4-11 | Pruebas frontend | Pendiente | P2 | MSW, `axe` y Playwright para los 5 flujos críticos; hoy solo hay Vitest parcial y Playwright configurado |
+| F4-12 | Indicador de Reverb | Pendiente | P2 | Nueva tarea derivada de F1-08/F2-09b: estado de conexión y reconexión del WebSocket en el monitor (hoy el polling cubre el caso) |
+| F4-13 | Credenciales SRI en la UI | Pendiente | **P0** | Nueva tarea derivada de F1-06: sin formulario de credencial (alta, rotación, borrado y estado) no se puede iniciar una sincronización real desde la app. Se ejecuta como F4-03b |
 
 ## Fases 3–6 · Estado resumido
 
 | Fase | Tareas | Estado | Prioridad actual |
 |---|---|---|---|
-| F3 · Motor fiscal + IA | F3-01…F3-09 | En curso (7/9) | P1 (catálogos, reglas, clasificador, gobierno de IA y proporcionalidad) / P2 (riesgos, revisión) |
-| F4 · Frontend | F4-01…F4-11 | En curso (4/11 + fundaciones/auth parciales) | **P0** (design system, layout, bandeja, monitor) / P1 (F4-07) / P2 (resto) |
-| F5 · Declaraciones | F5-01…F5-08 | Pendiente | P3 (después de F3) |
+| F3 · Motor fiscal + IA | F3-01…F3-09 | En curso (7/9) | P1 (F3-08 evaluación, bloqueada por dataset) / P2 (F3-09 catálogos) |
+| F4 · Frontend | F4-01…F4-11 (+ F4-08b, F4-12, F4-13) | En curso (5/11 + fundaciones/auth parciales) | **P0** (F4-03a/b/c) / **P1** (F4-08, F4-08b) / P2 (F4-09/10/11/12) |
+| F5 · Declaraciones | F5-01…F5-08 | Pendiente | **P1** (F5-01 agregados) / P2 (resto, tras firma del 104) |
 | F6 · Hardening y beta | F6-01…F6-08 | Pendiente | P3 (lanzamiento) |
 
-## Registro de PRs recientes (2026-11-06 → 2026-11-20)
+## Registro de PRs recientes (2026-11-06 → 2026-11-21)
 
 | PR | Contenido | Tarea |
 |---|---|---|
@@ -140,6 +153,20 @@
 | #93 | UI estilo dashboard y flag `--recreate-db` en `ec2-control` | Staging |
 | #94 | UI de dashboard en destroy y fallo rápido por timeout SSH | Staging |
 | #96 | Mejorar UI de dashboard y fallo rápido SSH en destroy | Staging |
+| #97 | Detectar riesgos fiscales y exponer hallazgos | F3-06 |
+| #98 | Página de revisión de clasificación con navegación por teclado | F4-07 |
+
+## Pendientes transversales (2026-11-21)
+
+| Pendiente | Impacto | Siguiente paso |
+|---|---|---|
+| Firma del contador (`docs/fiscal-signoff.md` vacío) | Bloquea el cierre formal de F3 y el arranque de F5-02 | Enviar catálogos, categorías, proporcionalidad, códigos de riesgo y escenarios del 104 |
+| Dataset dorado de F3-08 | M3 no es demostrable (accuracy/coste) | Extraer ~300 descripciones reales anonimizadas y congelar la categoría correcta |
+| Informe de F0-05 en `docs/reports/` | F0 figura 9/9 sin su entregable | Versionar el informe base de evaluación IA |
+| F1-03g validaciones de invitación | 409 por email activo y revocación de sesiones al retirar acceso | PR pequeño tras F4-03c |
+| F2-14 cancelación de run | Archivar empresa no detiene un run en curso (`ArchiveCompany` lo delega) | PR pequeño, P2 |
+| F2-15 runbook de runs huérfanos | Procedimiento operativo de `sri:recover-run` | Documento + prueba de restauración |
+| F4-01 TanStack Query / i18n / cliente HTTP | `lib/api.ts` no expone `errors` de `problem+json` ni soporta `204` | Se corrige en F4-03a (slice 1); TanStack/i18n quedan para después |
 
 ## Cómo actualizar
 
