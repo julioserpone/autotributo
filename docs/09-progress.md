@@ -167,6 +167,7 @@
 | F2-14 cancelación de run | Archivar empresa no detiene un run en curso (`ArchiveCompany` lo delega) | PR pequeño, P2 |
 | F2-15 runbook de runs huérfanos | Procedimiento operativo de `sri:recover-run` | Documento + prueba de restauración |
 | F4-01 TanStack Query / i18n / cliente HTTP | `lib/api.ts` no expone `errors` de `problem+json` ni soporta `204` | Se corrige en F4-03a (slice 1); TanStack/i18n quedan para después |
+| Catálogo CIIU (actividades económicas) | Tabla `economic_activity_codes` + seeder (3125 códigos seleccionables) + endpoint `GET /api/v1/economic-activity-codes` (búsqueda case-insensitive) en rama `feat/ciiu-activity-codes`. El combobox en `CompanyFormModal` queda para una rama dependiente de `feat/F4-03-companies-page` (#101) | Backend listo; frontend pendiente de la fusión de #101 |
 
 ## Cómo actualizar
 
