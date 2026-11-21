@@ -1,93 +1,127 @@
+/**
+ * Cliente HTTP de la SPA.
+ *
+ * La API responde con `application/problem+json` (RFC 9457, F1-09), por lo que
+ * el error expone `title`, `detail` y, en validaciones, `errors` por campo.
+ * Los endpoints que no devuelven cuerpo (`204`) se resuelven con `undefined`
+ * en lugar de intentar parsear JSON.
+ */
+
+export interface ProblemDetails {
+    type?: string;
+    title?: string;
+    status?: number;
+    detail?: string;
+    errors?: Record<string, string[]>;
+    [key: string]: unknown;
+}
+
 export class ApiError extends Error {
     public constructor(
         public readonly status: number,
         message: string,
+        public readonly problem: ProblemDetails | null = null,
     ) {
         super(message);
         this.name = 'ApiError';
     }
-}
 
-export async function getJson<T>(path: string): Promise<T> {
-    const response = await fetch(path, {
-        credentials: 'same-origin',
-        headers: {
-            Accept: 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-        },
-    });
-
-    if (!response.ok) {
-        throw new ApiError(response.status, `La API respondió con estado ${response.status}.`);
+    /** Errores de validación por campo (`422`). Vacío si no es una validación. */
+    public get errors(): Record<string, string[]> {
+        return this.problem?.errors ?? {};
     }
 
-    return (await response.json()) as T;
+    /** Primer mensaje de un campo concreto, para pintarlo junto al input. */
+    public fieldError(field: string): string | null {
+        return this.errors[field]?.[0] ?? null;
+    }
+}
+
+type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+
+interface RequestOptions {
+    method?: HttpMethod;
+    body?: unknown;
+    headers?: Record<string, string> | undefined;
 }
 
 function csrfToken(): string {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 }
 
-export async function patchJson<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
-    const response = await fetch(path, {
-        method: 'PATCH',
-        credentials: 'same-origin',
-        headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': csrfToken(),
-            ...headers,
-        },
-        body: JSON.stringify(body),
-    });
+async function toApiError(response: Response): Promise<ApiError> {
+    let problem: ProblemDetails | null = null;
 
-    if (!response.ok) {
-        let message = `La API respondió con estado ${response.status}.`;
+    try {
+        const data = (await response.json()) as ProblemDetails & { message?: string };
 
-        try {
-            const data = (await response.json()) as { message?: string };
-            if (data.message) {
-                message = data.message;
-            }
-        } catch {
-            // El cuerpo no es JSON; se conserva el mensaje genérico.
+        if (data !== null && typeof data === 'object') {
+            problem = data;
         }
-
-        throw new ApiError(response.status, message);
+    } catch {
+        // El cuerpo no es JSON; se conserva el mensaje genérico.
     }
 
-    return (await response.json()) as T;
+    const message =
+        problem?.detail ??
+        (typeof problem?.['message'] === 'string' ? problem['message'] : undefined) ??
+        problem?.title ??
+        `La API respondió con estado ${response.status}.`;
+
+    return new ApiError(response.status, message, problem);
 }
 
-export async function postJson<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+    const { method = 'GET', body, headers } = options;
+    const sendsBody = body !== undefined;
+
     const response = await fetch(path, {
-        method: 'POST',
+        method,
         credentials: 'same-origin',
         headers: {
-            'Content-Type': 'application/json',
             Accept: 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': csrfToken(),
+            ...(method === 'GET'
+                ? {}
+                : {
+                      'X-CSRF-TOKEN': csrfToken(),
+                      ...(sendsBody ? { 'Content-Type': 'application/json' } : {}),
+                  }),
             ...headers,
         },
-        body: JSON.stringify(body),
+        ...(sendsBody ? { body: JSON.stringify(body) } : {}),
     });
 
     if (!response.ok) {
-        let message = `La API respondió con estado ${response.status}.`;
-
-        try {
-            const data = (await response.json()) as { message?: string };
-            if (data.message) {
-                message = data.message;
-            }
-        } catch {
-            // El cuerpo no es JSON; se conserva el mensaje genérico.
-        }
-
-        throw new ApiError(response.status, message);
+        throw await toApiError(response);
     }
 
-    return (await response.json()) as T;
+    // `DELETE` y otras acciones sin cuerpo: no hay JSON que parsear.
+    if (response.status === 204 || response.status === 205) {
+        return undefined as T;
+    }
+
+    const text = await response.text();
+
+    if (text.trim() === '') {
+        return undefined as T;
+    }
+
+    return JSON.parse(text) as T;
+}
+
+export function getJson<T>(path: string): Promise<T> {
+    return request<T>(path);
+}
+
+export function postJson<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
+    return request<T>(path, { method: 'POST', body, headers });
+}
+
+export function patchJson<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
+    return request<T>(path, { method: 'PATCH', body, headers });
+}
+
+export function deleteJson<T = void>(path: string, headers?: Record<string, string>): Promise<T> {
+    return request<T>(path, { method: 'DELETE', headers });
 }
