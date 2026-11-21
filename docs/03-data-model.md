@@ -335,7 +335,9 @@ Trazabilidad para drill-down: `id`, `tenant_id`, `declaration_line_id`, `source_
 Índice `(declaration_line_id)`, `(source_type, source_id)`.
 
 ### `fiscal_findings`
-`id`, `tenant_id`, `company_id`, `fiscal_period_id` null, `code` (`DUPLICATE_INVOICE`,`TOTALS_MISMATCH`,`GHOST_COMPANY`,`MISSING_RETENTION`,`OUT_OF_PERIOD`,`EXPENSE_CAP_EXCEEDED`,`INVALID_RUC`…), `severity` (`info`,`warning`,`critical`), `title`, `description`, `source_type/source_id`, `metadata jsonb`, `status` (`open`,`acknowledged`,`resolved`,`dismissed`), `resolved_by/at`, timestamps.
+`id`, `tenant_id`, `company_id`, `fiscal_period_id` null, `code` (`TOTALS_MISMATCH`,`INVALID_RUC`,`DUPLICATE_SEQUENTIAL`,`GHOST_COMPANY`,`OUT_OF_PERIOD`,`MISSING_RETENTION`,`EXPENSE_CAP_EXCEEDED`), `severity` (`info`,`warning`,`critical`), `title`, `description`, `source_type/source_id`, `metadata jsonb`, `status` (`open`,`acknowledged`,`resolved`,`dismissed`), `resolved_by/at`, timestamps.
+
+Implementados en F3-06: `TOTALS_MISMATCH`, `INVALID_RUC`, `DUPLICATE_SEQUENTIAL` (mismo `(company_id, issuer_ruc, establishment, emission_point, sequential)`) y `GHOST_COMPANY`. `OUT_OF_PERIOD`, `MISSING_RETENTION` y `EXPENSE_CAP_EXCEEDED` están reservados en `FiscalRiskCode` y el detector devuelve `[]` para ellos hasta que el contador firme la convención y exista F5. Los códigos y severidades vigentes deben coincidir con `app/Domain/Fiscal/Enums/FiscalRiskCode.php`.
 
 Unique parcial `(tenant_id, code, source_type, source_id)` para no duplicar hallazgos abiertos.
 
