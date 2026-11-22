@@ -6,12 +6,20 @@ import SriSyncRunHistory from '@/components/sri/SriSyncRunHistory.vue';
 import AppPage from '@/components/layout/AppPage.vue';
 import AppShell from '@/layouts/AppShell.vue';
 import CompanyRequiredEmptyState from '@/components/companies/CompanyRequiredEmptyState.vue';
+import { useRouter } from 'vue-router';
+
 import { documentTypeOptions } from '@/lib/sri';
 import { useCompanyStore } from '@/stores/company';
+import { useSriCredentialStore } from '@/stores/sriCredential';
 import { useSyncStore } from '@/stores/sync';
 
+const router = useRouter();
 const companyStore = useCompanyStore();
 const syncStore = useSyncStore();
+const credentialStore = useSriCredentialStore();
+
+const credentialMissing = ref(false);
+const credentialCompanyName = ref('');
 
 /** Período actual en formato `AAAA-MM`, usado como rango por defecto. */
 function currentPeriod(): string {
@@ -116,6 +124,15 @@ async function startSync(): Promise<void> {
  * El `clearSelection` evita que el drawer muestre por un instante el run
  * anterior mientras llega la información del seleccionado.
  */
+function goToCredential(): void {
+    const company = companyStore.activeCompany ?? companyStore.companies[0] ?? null;
+
+    void router.push({
+        name: 'companies',
+        query: company ? { credential: company.id } : {},
+    });
+}
+
 function selectRun(id: string): void {
     syncStore.clearSelection();
     detailOpen.value = true;
@@ -124,9 +141,29 @@ function selectRun(id: string): void {
 
 let historyTimer: ReturnType<typeof setInterval> | null = null;
 
+async function checkCredential(): Promise<void> {
+    const company = companyStore.activeCompany ?? companyStore.companies[0] ?? null;
+
+    if (!company) {
+        credentialMissing.value = false;
+        credentialCompanyName.value = '';
+
+        return;
+    }
+
+    credentialCompanyName.value = company.trade_name || company.legal_name;
+
+    await credentialStore.fetchCredential(company.id);
+    credentialMissing.value = credentialStore.credential === null;
+}
+
 onMounted(() => {
     if (!companyStore.loaded) {
-        void companyStore.fetchCompanies();
+        void companyStore.fetchCompanies().then(() => {
+            void checkCredential();
+        });
+    } else {
+        void checkCredential();
     }
 
     if (companyStore.hasCompany) {
@@ -166,6 +203,27 @@ onUnmounted(() => {
           <h2 class="text-sm font-medium text-highlighted">
             Nueva sincronización
           </h2>
+
+          <UAlert
+            v-if="credentialMissing"
+            color="warning"
+            variant="soft"
+            icon="i-lucide-key-round"
+            title="Sin credenciales SRI"
+            :description="`La empresa ${credentialCompanyName} no tiene credenciales SRI activas.`"
+            class="mt-3"
+          >
+            <template #actions>
+              <UButton
+                color="warning"
+                variant="solid"
+                size="sm"
+                icon="i-lucide-key-round"
+                label="Configurar credencial"
+                @click="goToCredential"
+              />
+            </template>
+          </UAlert>
 
           <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <UFormField
@@ -257,13 +315,13 @@ onUnmounted(() => {
               label="Iniciar sincronización"
               class="sm:ml-auto"
               :loading="starting"
-              :disabled="starting"
+              :disabled="starting || credentialMissing"
               @click="startSync"
             />
           </div>
 
           <UAlert
-            v-if="startError"
+            v-if="startError && !credentialMissing"
             color="error"
             variant="soft"
             icon="i-lucide-alert-circle"
@@ -273,7 +331,7 @@ onUnmounted(() => {
         </section>
 
         <UAlert
-          v-if="syncStore.error"
+          v-if="syncStore.error && !credentialMissing"
           color="error"
           variant="soft"
           icon="i-lucide-alert-circle"

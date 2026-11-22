@@ -33,13 +33,32 @@ const canManage = computed(() => {
 
 onMounted(() => {
     if (!companyStore.loaded) {
-        void companyStore.fetchCompanies();
+        void companyStore.fetchCompanies().then(() => {
+            handleCredentialQuery();
+        });
+    } else {
+        handleCredentialQuery();
     }
 
     if (isOnboarding.value && canManage.value && !companyStore.hasCompany) {
         openCreate();
     }
 });
+
+function handleCredentialQuery(): void {
+    const credentialId = route.query.credential;
+
+    if (typeof credentialId !== 'string') {
+        return;
+    }
+
+    const company = companyStore.companies.find((item) => item.id === credentialId);
+
+    if (company && canManage.value) {
+        openCredential(company);
+        void router.replace({ name: 'companies', query: { ...route.query, credential: undefined } });
+    }
+}
 
 function openCreate(): void {
     editingCompany.value = null;
