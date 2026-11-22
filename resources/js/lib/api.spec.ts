@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiError, deleteJson, getJson, patchJson, postJson } from '@/lib/api';
+import { ApiError, deleteJson, getJson, patchJson, postJson, putJson } from '@/lib/api';
 
 const fetchMock = vi.fn();
 
@@ -81,6 +81,20 @@ describe('lib/api', () => {
         expect(headers['Content-Type']).toBe('application/json');
         expect(headers['X-CSRF-TOKEN']).toBe('token-de-prueba');
         expect(headers['Idempotency-Key']).toBe('abc');
+    });
+
+    it('putJson envía JSON y CSRF', async () => {
+        fetchMock.mockResolvedValueOnce(jsonResponse({ data: { id: 'cred-1' } }, 200));
+
+        await putJson('/api/v1/companies/c1/credential', { username: '1790016919001', password: 'secret' });
+
+        const { init } = firstCall();
+        const headers = headersOf(init);
+
+        expect(init.method).toBe('PUT');
+        expect(init.body).toBe(JSON.stringify({ username: '1790016919001', password: 'secret' }));
+        expect(headers['Content-Type']).toBe('application/json');
+        expect(headers['X-CSRF-TOKEN']).toBe('token-de-prueba');
     });
 
     it('deleteJson resuelve sin cuerpo en un 204 y envía CSRF', async () => {
