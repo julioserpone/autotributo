@@ -25,8 +25,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
         {
             label: 'Gestionar empresas',
             icon: 'i-lucide-settings-2',
-            to: { name: 'dashboard' },
-            disabled: true,
+            to: { name: 'companies' },
         },
     ],
 ]);

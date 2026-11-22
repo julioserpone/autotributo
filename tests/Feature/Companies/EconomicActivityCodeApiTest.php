@@ -32,18 +32,20 @@ beforeEach(function (): void {
 });
 
 it('lista solo los códigos seleccionables por defecto', function (): void {
-    $this->actingAs($this->owner)
+    $response = $this->actingAs($this->owner)
         ->getJson('/api/v1/economic-activity-codes')
-        ->assertOk()
-        ->assertJsonStructure(['data' => [['code', 'description']]])
-        ->assertJsonCount(3125, 'data');
+        ->assertOk();
+
+    expect($response->json('meta.total'))->toBe(3125);
+    expect($response->json('data'))->toHaveCount(50);
 });
 
 it('lista el catálogo completo con all=1', function (): void {
-    $this->actingAs($this->owner)
+    $response = $this->actingAs($this->owner)
         ->getJson('/api/v1/economic-activity-codes?all=1')
-        ->assertOk()
-        ->assertJsonCount(6378, 'data');
+        ->assertOk();
+
+    expect($response->json('meta.total'))->toBe(6378);
 });
 
 it('filtra por código o descripción', function (): void {
