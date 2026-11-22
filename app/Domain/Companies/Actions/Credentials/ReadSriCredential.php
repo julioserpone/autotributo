@@ -36,7 +36,7 @@ final readonly class ReadSriCredential
             ->first();
 
         if (! $credential instanceof SriCredential) {
-            throw SriCredentialsMissing::forCompany((string) $company->public_id);
+            throw SriCredentialsMissing::forCompany((string) ($company->trade_name ?: $company->legal_name));
         }
 
         if (! $credential->isActive()) {

@@ -8,6 +8,7 @@ import AppPage from '@/components/layout/AppPage.vue';
 import CompanyTable from '@/components/companies/CompanyTable.vue';
 import CompanyFormModal from '@/components/companies/CompanyFormModal.vue';
 import CompanyArchiveModal from '@/components/companies/CompanyArchiveModal.vue';
+import SriCredentialManageModal from '@/components/companies/SriCredentialManageModal.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useCompanyStore, type Company } from '@/stores/company';
 
@@ -22,6 +23,8 @@ const formOpen = ref(false);
 const editingCompany = ref<Company | null>(null);
 const archiveOpen = ref(false);
 const archivingCompany = ref<Company | null>(null);
+const credentialManageOpen = ref(false);
+const credentialCompany = ref<Company | null>(null);
 
 const canManage = computed(() => {
     const role = authStore.user?.memberships?.[0]?.role ?? '';
@@ -30,13 +33,32 @@ const canManage = computed(() => {
 
 onMounted(() => {
     if (!companyStore.loaded) {
-        void companyStore.fetchCompanies();
+        void companyStore.fetchCompanies().then(() => {
+            handleCredentialQuery();
+        });
+    } else {
+        handleCredentialQuery();
     }
 
     if (isOnboarding.value && canManage.value && !companyStore.hasCompany) {
         openCreate();
     }
 });
+
+function handleCredentialQuery(): void {
+    const credentialId = route.query.credential;
+
+    if (typeof credentialId !== 'string') {
+        return;
+    }
+
+    const company = companyStore.companies.find((item) => item.id === credentialId);
+
+    if (company && canManage.value) {
+        openCredential(company);
+        void router.replace({ name: 'companies', query: { ...route.query, credential: undefined } });
+    }
+}
 
 function openCreate(): void {
     editingCompany.value = null;
@@ -51,6 +73,11 @@ function openEdit(company: Company): void {
 function openArchive(company: Company): void {
     archivingCompany.value = company;
     archiveOpen.value = true;
+}
+
+function openCredential(company: Company): void {
+    credentialCompany.value = company;
+    credentialManageOpen.value = true;
 }
 
 function onSaved(): void {
@@ -168,6 +195,7 @@ function goToSync(): void {
           :can-archive="canManage"
           @edit="openEdit"
           @archive="openArchive"
+          @credential="openCredential"
         />
 
         <div
@@ -196,6 +224,11 @@ function goToSync(): void {
         v-model:open="archiveOpen"
         :company="archivingCompany"
         @archived="onArchived"
+      />
+
+      <SriCredentialManageModal
+        v-model:open="credentialManageOpen"
+        :company="credentialCompany"
       />
     </AppPage>
   </AppShell>

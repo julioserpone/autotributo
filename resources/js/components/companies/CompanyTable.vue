@@ -13,6 +13,7 @@ defineProps<{
 const emit = defineEmits<{
     (e: 'edit', company: Company): void;
     (e: 'archive', company: Company): void;
+    (e: 'credential', company: Company): void;
 }>();
 
 function statusLabel(status: string): string {
@@ -41,7 +42,7 @@ function statusColor(status: string): 'success' | 'warning' | 'neutral' {
 </script>
 
 <template>
-  <section class="overflow-hidden rounded-lg border border-default bg-elevated/50">
+  <section class="overflow-x-auto rounded-lg border border-default bg-elevated/50">
     <div
       v-if="loading"
       class="flex items-center justify-center gap-2 p-8 text-sm text-muted"
@@ -81,10 +82,10 @@ function statusColor(status: string): 'success' | 'warning' | 'neutral' {
           <th class="px-4 py-2 text-left font-medium">
             Razón social
           </th>
-          <th class="px-4 py-2 text-left font-medium">
+          <th class="hidden px-4 py-2 text-left font-medium sm:table-cell">
             Nombre comercial
           </th>
-          <th class="px-4 py-2 text-left font-medium">
+          <th class="hidden px-4 py-2 text-left font-medium md:table-cell">
             Régimen
           </th>
           <th class="px-4 py-2 text-left font-medium">
@@ -110,10 +111,10 @@ function statusColor(status: string): 'success' | 'warning' | 'neutral' {
           <td class="px-4 py-3 text-highlighted">
             {{ company.legal_name }}
           </td>
-          <td class="px-4 py-3 text-muted">
+          <td class="hidden px-4 py-3 text-muted sm:table-cell">
             {{ company.trade_name || '—' }}
           </td>
-          <td class="px-4 py-3 text-muted">
+          <td class="hidden px-4 py-3 text-muted md:table-cell">
             {{ company.regime_label }}
           </td>
           <td class="px-4 py-3">
@@ -130,6 +131,15 @@ function statusColor(status: string): 'success' | 'warning' | 'neutral' {
             class="px-4 py-3 text-right"
           >
             <div class="flex items-center justify-end gap-1">
+              <UButton
+                v-if="canManage"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                icon="i-lucide-key-round"
+                aria-label="Gestionar credencial SRI"
+                @click="emit('credential', company)"
+              />
               <UButton
                 v-if="canManage"
                 color="neutral"

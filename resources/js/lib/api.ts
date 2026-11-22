@@ -37,7 +37,7 @@ export class ApiError extends Error {
     }
 }
 
-type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 interface RequestOptions {
     method?: HttpMethod;
@@ -120,6 +120,10 @@ export function postJson<T>(path: string, body: unknown, headers?: Record<string
 
 export function patchJson<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
     return request<T>(path, { method: 'PATCH', body, headers });
+}
+
+export function putJson<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
+    return request<T>(path, { method: 'PUT', body, headers });
 }
 
 export function deleteJson<T = void>(path: string, headers?: Record<string, string>): Promise<T> {
