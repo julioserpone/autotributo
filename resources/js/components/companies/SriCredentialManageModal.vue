@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 import type { Company } from '@/stores/company';
 
@@ -22,6 +22,14 @@ const formOpen = ref(false);
 const rotateOpen = ref(false);
 const confirmDelete = ref(false);
 const deleting = ref(false);
+
+const companyLabel = computed(() => {
+    if (!props.company) {
+        return '';
+    }
+
+    return `${props.company.legal_name} · RUC ${props.company.ruc}`;
+});
 
 watch(() => props.open, (value) => {
     if (value && props.company) {
@@ -87,7 +95,7 @@ function formatDate(value: string | null): string {
   <UModal
     :open="open"
     title="Credencial del portal SRI"
-    description="Gestiona el acceso del robot al portal del SRI para este contribuyente."
+    :description="companyLabel || 'Gestiona el acceso del robot al portal del SRI para este contribuyente.'"
     @update:open="emit('update:open', $event)"
   >
     <template #body>
@@ -173,14 +181,6 @@ function formatDate(value: string | null): string {
         </div>
 
         <div class="flex flex-wrap gap-2">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-pencil"
-            label="Actualizar"
-            @click="formOpen = true"
-          />
           <UButton
             color="neutral"
             variant="outline"

@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import type { Company } from '@/stores/company';
 
 import { useSriCredentialStore } from '@/stores/sriCredential';
+import PasswordRevealButton from '@/components/ui/PasswordRevealButton.vue';
 
 const props = defineProps<{
     open: boolean;
@@ -20,6 +21,8 @@ const store = useSriCredentialStore();
 const password = ref('');
 const confirmation = ref('');
 const fieldErrors = ref<Record<string, string>>({});
+const revealPassword = ref(false);
+const revealConfirmation = ref(false);
 
 const canSubmit = computed(() => password.value.length >= 6 && password.value === confirmation.value);
 
@@ -71,12 +74,19 @@ async function submit(): Promise<void> {
         >
           <UInput
             v-model="password"
-            type="password"
+            :type="revealPassword ? 'text' : 'password'"
             color="neutral"
             variant="outline"
             class="w-full"
             autocomplete="new-password"
-          />
+          >
+            <template #trailing>
+              <PasswordRevealButton
+                :revealed="revealPassword"
+                @toggle="revealPassword = !revealPassword"
+              />
+            </template>
+          </UInput>
         </UFormField>
 
         <UFormField
@@ -86,12 +96,19 @@ async function submit(): Promise<void> {
         >
           <UInput
             v-model="confirmation"
-            type="password"
+            :type="revealConfirmation ? 'text' : 'password'"
             color="neutral"
             variant="outline"
             class="w-full"
             autocomplete="new-password"
-          />
+          >
+            <template #trailing>
+              <PasswordRevealButton
+                :revealed="revealConfirmation"
+                @toggle="revealConfirmation = !revealConfirmation"
+              />
+            </template>
+          </UInput>
         </UFormField>
 
         <UAlert
