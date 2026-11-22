@@ -14,6 +14,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 - Catálogo CIIU: tabla `economic_activity_codes` (catálogo completo de 6378 códigos de todos los niveles, con columna `is_selectable` para los 3125 nodos hoja), seeder `EconomicActivityCodeSeeder` (CSV `database/seeders/data/ciiu.csv`, idempotente por `code`) y endpoint `GET /api/v1/economic-activity-codes` (por defecto solo seleccionables; `?all=1` devuelve el catálogo completo; búsqueda case-insensitive por código o descripción). Migración `2026_11_22_000001`. Test de feature (listado seleccionables, listado completo, filtro, 401). El combobox en `CompanyFormModal` se añadirá en una rama dependiente de `feat/F4-03-companies-page` (#101).
 
+- F4-03a (refinamiento): combobox CIIU del formulario de contribuyentes (`components/companies/EconomicActivityField.vue`): búsqueda contra el endpoint con retardo de 300 ms y descarte de respuestas fuera de orden, 10 resultados iniciales con carga incremental al hacer scroll («Cargar más» solo aparece al llegar al final), lista alineada a la izquierda del control, ítems con código y descripción en dos líneas, icono de ayuda con tooltip que no abre la lista, autoselección del código al editar, descripción en solo lectura con caché por código y aviso de carga. El formulario se separó en `composables/useCompanyForm.ts` (estado, validación de tipos, payload y guardado) y el modal queda como presentación; 9 tests nuevos (`useCompanyForm.spec.ts`).
+
 - Staging: `create` acepta `--ruc RUC --password PASS`. Al recrear la base
   (`--recreate-db`) se ejecuta siempre `DemoTenantSeeder`, que crea el tenant, los
   cuatro roles y los tres usuarios de prueba (owner/accountant/assistant). Si se
