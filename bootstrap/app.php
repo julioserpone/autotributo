@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 use App\Domain\Classification\Exceptions\ClassificationRuleConflict;
 use App\Domain\Companies\Exceptions\SriCredentialsMissing;
-use App\Domain\Tenancy\Exceptions\UserAlreadyInTenant;
 use App\Domain\Companies\Exceptions\SriCredentialUnavailable;
 use App\Domain\Sri\Exceptions\SriRateLimitExceeded;
 use App\Domain\Sri\Exceptions\SriSyncAlreadyRunning;
 use App\Domain\Sri\Http\Middleware\VerifySriRobotCallback;
+use App\Domain\Tenancy\Exceptions\UserAlreadyInTenant;
 use App\Domain\Tenancy\Http\Middleware\EnsureTenantIsActive;
 use App\Domain\Tenancy\Http\Middleware\EnsureTwoFactorSetupComplete;
 use App\Domain\Tenancy\Http\Middleware\InitializeTenantContext;
