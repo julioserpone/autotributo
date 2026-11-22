@@ -34,7 +34,7 @@ final readonly class RotateSriCredential
                 ->first();
 
             if (! $credential instanceof SriCredential) {
-                throw SriCredentialsMissing::forCompany((string) $company->public_id);
+                throw SriCredentialsMissing::forCompany((string) ($company->trade_name ?: $company->legal_name));
             }
 
             $credential->forceFill([
