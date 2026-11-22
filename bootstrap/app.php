@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domain\Classification\Exceptions\ClassificationRuleConflict;
 use App\Domain\Companies\Exceptions\SriCredentialsMissing;
+use App\Domain\Tenancy\Exceptions\UserAlreadyInTenant;
 use App\Domain\Companies\Exceptions\SriCredentialUnavailable;
 use App\Domain\Sri\Exceptions\SriRateLimitExceeded;
 use App\Domain\Sri\Exceptions\SriSyncAlreadyRunning;
@@ -104,6 +105,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Errores de dominio con un status honesto y un `type` estable.
         $exceptions->render(function (SriCredentialsMissing $e): JsonResponse {
             return ProblemDetails::conflict('sri-credentials-missing', $e->getMessage());
+        });
+
+        $exceptions->render(function (UserAlreadyInTenant $e): JsonResponse {
+            return ProblemDetails::conflict('user-already-in-tenant', $e->getMessage());
         });
 
         $exceptions->render(function (SriCredentialUnavailable $e): JsonResponse {

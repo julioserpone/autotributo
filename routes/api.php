@@ -93,6 +93,8 @@ Route::middleware(['web', 'tenant.context', 'tenant.active'])
         Route::post('/invitations', [InvitationController::class, 'store'])
             ->middleware('auth')
             ->name('api.v1.invitations.store');
+        Route::get('/invitations/validate', [InvitationController::class, 'validate'])
+            ->name('api.v1.invitations.validate');
         Route::post('/invitations/accept', [InvitationController::class, 'accept'])
             ->name('api.v1.invitations.accept');
     });
