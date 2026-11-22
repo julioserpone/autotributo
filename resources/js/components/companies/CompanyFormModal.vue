@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 
-import type { Company, CompanyPayload } from '@/stores/company';
-import { ApiError, getJson } from '@/lib/api';
-import { useCompanyStore } from '@/stores/company';
-import { useToast } from '@nuxt/ui/composables/useToast';
+import type { Company } from '@/stores/company';
+import { useCompanyForm, monthOptions, regimeOptions } from '@/composables/useCompanyForm';
+import EconomicActivityField from '@/components/companies/EconomicActivityField.vue';
 
 const props = defineProps<{
     open: boolean;
@@ -16,141 +15,24 @@ const emit = defineEmits<{
     saved: [];
 }>();
 
-const companyStore = useCompanyStore();
-const toast = useToast();
-
 const isEdit = computed(() => props.company !== null);
 
 const openModel = ref(props.open);
 
-const regimeOptions = [
-    { label: 'Régimen general', value: 'general' },
-    { label: 'RIMPE emprendedor', value: 'rimpe_emprendedor' },
-    { label: 'RIMPE negocio popular', value: 'rimpe_negocio_popular' },
-    { label: 'Persona natural', value: 'persona_natural' },
-    { label: 'Sociedad', value: 'sociedad' },
-];
-
-const monthOptions = Array.from({ length: 12 }, (_, index) => ({
-    label: `Mes ${index + 1}`,
-    value: index + 1,
-}));
-
-const form = ref({
-    ruc: '',
-    legal_name: '',
-    trade_name: '',
-    regime: 'general',
-    is_accounting_required: true,
-    is_withholding_agent: false,
-    withholding_resolution: '',
-    economic_activity_code: '',
-    address: '',
-    email: '',
-    phone: '',
-    fiscal_year_start_month: 1,
-});
-
-const fieldErrors = ref<Record<string, string[]>>({});
-const generalError = ref<string | null>(null);
-const submitting = ref(false);
-
-interface ActivityCode {
-    code: string;
-    description: string;
-}
-
-const activityCodes = ref<ActivityCode[]>([]);
-const loadingActivityCodes = ref(false);
-const activitySearch = ref('');
-
-let searchTimer: ReturnType<typeof setTimeout> | null = null;
-
-async function fetchActivityCodes(query: string): Promise<void> {
-    loadingActivityCodes.value = true;
-
-    try {
-        const params = new URLSearchParams();
-        const trimmed = query.trim();
-
-        if (trimmed !== '') {
-            params.set('q', trimmed);
-        }
-
-        params.set('limit', trimmed !== '' ? '50' : '10');
-
-        const response = await getJson<{ data: ActivityCode[] }>(
-            `/api/v1/economic-activity-codes?${params.toString()}`,
-        );
-        activityCodes.value = response.data;
-    } catch {
-        activityCodes.value = [];
-    } finally {
-        loadingActivityCodes.value = false;
-    }
-}
-
-function onActivitySearch(term: string): void {
-    if (searchTimer !== null) {
-        clearTimeout(searchTimer);
-    }
-
-    searchTimer = setTimeout(() => {
-        void fetchActivityCodes(term);
-    }, 250);
-}
-
-const activityCodeItems = computed(() => activityCodes.value);
-
-const selectedActivityDescription = computed(() =>
-    activityCodes.value.find((item) => item.code === form.value.economic_activity_code)?.description ?? '',
-);
-
-function resetForm(company: Company | null): void {
-    if (company) {
-        form.value = {
-            ruc: company.ruc,
-            legal_name: company.legal_name,
-            trade_name: company.trade_name ?? '',
-            regime: company.regime,
-            is_accounting_required: company.is_accounting_required,
-            is_withholding_agent: company.is_withholding_agent,
-            withholding_resolution: company.withholding_resolution ?? '',
-            economic_activity_code: company.economic_activity_code ?? '',
-            address: company.address ?? '',
-            email: company.email ?? '',
-            phone: company.phone ?? '',
-            fiscal_year_start_month: company.fiscal_year_start_month,
-        };
-    } else {
-        form.value = {
-            ruc: '',
-            legal_name: '',
-            trade_name: '',
-            regime: 'general',
-            is_accounting_required: true,
-            is_withholding_agent: false,
-            withholding_resolution: '',
-            economic_activity_code: '',
-            address: '',
-            email: '',
-            phone: '',
-            fiscal_year_start_month: 1,
-        };
-    }
-
-    fieldErrors.value = {};
-    generalError.value = null;
-}
+const {
+    form,
+    fieldErrors,
+    generalError,
+    submitting,
+    resetForm,
+    submit: submitForm,
+} = useCompanyForm();
 
 watch(() => props.open, (value) => {
     openModel.value = value;
 
     if (value) {
         resetForm(props.company);
-        activityCodes.value = [];
-        activitySearch.value = '';
-        void fetchActivityCodes('');
     }
 });
 
@@ -162,91 +44,12 @@ watch(() => props.company, (value) => {
     }
 });
 
-function buildPayload(): CompanyPayload {
-    const payload: CompanyPayload = {
-        ruc: form.value.ruc.trim(),
-        legal_name: form.value.legal_name.trim(),
-        trade_name: form.value.trade_name.trim() || null,
-        regime: form.value.regime,
-        is_accounting_required: form.value.is_accounting_required,
-        is_withholding_agent: form.value.is_withholding_agent,
-        withholding_resolution: form.value.is_withholding_agent
-            ? form.value.withholding_resolution.trim() || null
-            : null,
-        economic_activity_code: form.value.economic_activity_code.trim() || null,
-        address: form.value.address.trim() || null,
-        email: form.value.email.trim() || null,
-        phone: form.value.phone.trim() || null,
-        fiscal_year_start_month: form.value.fiscal_year_start_month,
-    };
-
-    return payload;
-}
-
 async function submit(): Promise<void> {
-    fieldErrors.value = {};
-    generalError.value = null;
+    const saved = await submitForm(props.company);
 
-    if (form.value.ruc.trim().length !== 13) {
-        fieldErrors.value.ruc = ['El RUC debe tener 13 caracteres.'];
-        return;
-    }
-
-    if (!/^\d{13}$/.test(form.value.ruc.trim())) {
-        fieldErrors.value.ruc = ['El RUC debe contener solo dígitos.'];
-        return;
-    }
-
-    if (form.value.legal_name.trim() === '') {
-        fieldErrors.value.legal_name = ['La razón social es obligatoria.'];
-        return;
-    }
-
-    if (form.value.legal_name.trim().length > 300) {
-        fieldErrors.value.legal_name = ['La razón social no puede superar 300 caracteres.'];
-        return;
-    }
-
-    if (form.value.email.trim() !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email.trim())) {
-        fieldErrors.value.email = ['El correo electrónico no es válido.'];
-        return;
-    }
-
-    if (form.value.economic_activity_code.trim() !== '' && !/^[A-Za-z0-9]{1,10}$/.test(form.value.economic_activity_code.trim())) {
-        fieldErrors.value.economic_activity_code = ['El código debe ser alfanumérico de hasta 10 caracteres.'];
-        return;
-    }
-
-    if (form.value.is_withholding_agent && form.value.withholding_resolution.trim() === '') {
-        fieldErrors.value.withholding_resolution = ['La resolución es obligatoria para agentes de retención.'];
-        return;
-    }
-
-    submitting.value = true;
-
-    try {
-        if (isEdit.value && props.company) {
-            await companyStore.updateCompany(props.company.id, buildPayload());
-            toast.add({ title: 'Contribuyente actualizado', color: 'success' });
-        } else {
-            await companyStore.createCompany(buildPayload());
-            toast.add({ title: 'Contribuyente registrado', color: 'success' });
-        }
-
+    if (saved) {
         emit('saved');
         openModel.value = false;
-    } catch (caught: unknown) {
-        if (caught instanceof ApiError) {
-            for (const [field, messages] of Object.entries(caught.errors)) {
-                fieldErrors.value[field] = messages;
-            }
-
-            generalError.value = caught.message;
-        } else {
-            generalError.value = caught instanceof Error ? caught.message : 'No se pudo guardar el contribuyente.';
-        }
-    } finally {
-        submitting.value = false;
     }
 }
 </script>
@@ -335,55 +138,11 @@ async function submit(): Promise<void> {
         </UFormField>
 
         <div class="grid gap-4 sm:grid-cols-2">
-          <UFormField
-            label="Actividad económica"
-            name="economic_activity_code"
+          <EconomicActivityField
+            v-model="form.economic_activity_code"
             :error="fieldErrors.economic_activity_code?.[0] ?? false"
-          >
-            <template #label>
-              <span class="flex items-center gap-1">
-                Actividad económica
-                <UIcon
-                  name="i-lucide-help-circle"
-                  class="size-3.5 text-dimmed"
-                  title="Código CIIU del SRI"
-                />
-              </span>
-            </template>
-            <USelectMenu
-              v-model="form.economic_activity_code"
-              v-model:search-term="activitySearch"
-              :items="activityCodeItems"
-              value-key="code"
-              label-key="code"
-              description-key="description"
-              :ignore-filter="true"
-              :virtualize="true"
-              :loading="loadingActivityCodes"
-              searchable
-              placeholder="Escribe el código o la descripción…"
-              color="neutral"
-              variant="soft"
-              size="md"
-              class="w-full"
-              @update:search-term="onActivitySearch"
-            />
-          </UFormField>
-
-          <UFormField
-            label="Descripción de la actividad"
-            name="economic_activity_description"
-            class="sm:col-span-2"
-          >
-            <UInput
-              :model-value="selectedActivityDescription"
-              color="neutral"
-              variant="soft"
-              size="md"
-              readonly
-              class="w-full"
-            />
-          </UFormField>
+            :open="openModel"
+          />
 
           <UFormField
             label="Mes de inicio del ejercicio"
