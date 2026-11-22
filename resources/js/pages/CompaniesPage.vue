@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import AppShell from '@/layouts/AppShell.vue';
 import AppPage from '@/components/layout/AppPage.vue';
@@ -12,8 +12,11 @@ import { useAuthStore } from '@/stores/auth';
 import { useCompanyStore, type Company } from '@/stores/company';
 
 const router = useRouter();
+const route = useRoute();
 const companyStore = useCompanyStore();
 const authStore = useAuthStore();
+
+const isOnboarding = computed(() => route.query.onboarding === '1');
 
 const formOpen = ref(false);
 const editingCompany = ref<Company | null>(null);
@@ -28,6 +31,10 @@ const canManage = computed(() => {
 onMounted(() => {
     if (!companyStore.loaded) {
         void companyStore.fetchCompanies();
+    }
+
+    if (isOnboarding.value && canManage.value && !companyStore.hasCompany) {
+        openCreate();
     }
 });
 
@@ -76,6 +83,16 @@ function goToSync(): void {
       </template>
 
       <div class="space-y-4">
+        <UAlert
+          v-if="isOnboarding && !companyStore.hasCompany"
+          color="info"
+          variant="soft"
+          icon="i-lucide-rocket"
+          title="Primer contribuyente"
+          description="Registra tu primer contribuyente para continuar con la sincronización y la clasificación."
+          class="mb-2"
+        />
+
         <div
           v-if="!companyStore.loading && !companyStore.hasCompany && !companyStore.requiresTwoFactorSetup"
           class="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-default bg-elevated/40 px-6 py-12 text-center"

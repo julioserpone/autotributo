@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 
 import AppShell from '@/layouts/AppShell.vue';
 import AppPage from '@/components/layout/AppPage.vue';
+import CompanyRequiredEmptyState from '@/components/companies/CompanyRequiredEmptyState.vue';
 import FiscalDocumentTable from '@/components/fiscal-documents/FiscalDocumentTable.vue';
 import { useCompanyStore } from '@/stores/company';
 import { previewFiscalDocuments, previewKpis } from '@/pages/dashboardPreview';
@@ -77,29 +78,10 @@ onMounted(() => {
         />
       </template>
 
-      <div
+      <CompanyRequiredEmptyState
         v-if="!isPreview && !companyStore.hasCompany"
-        class="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-default bg-elevated/40 px-6 py-12 text-center"
-      >
-        <UIcon
-          name="i-lucide-building-2"
-          class="size-10 text-dimmed"
-        />
-        <div>
-          <p class="text-base font-medium text-highlighted">
-            Registra tu primer contribuyente
-          </p>
-          <p class="mt-1 text-sm text-muted">
-            Sin empresas no hay comprobantes que sincronizar ni clasificar.
-          </p>
-        </div>
-        <UButton
-          color="primary"
-          icon="i-lucide-plus"
-          label="Registrar contribuyente"
-          to="/companies"
-        />
-      </div>
+        description="Sin empresas no hay comprobantes que sincronizar ni clasificar."
+      />
 
       <div
         v-if="isPreview"

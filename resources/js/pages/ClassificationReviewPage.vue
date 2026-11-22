@@ -6,6 +6,7 @@ import type { ClassificationApi } from '@/stores/classifications';
 import { getJson } from '@/lib/api';
 import AppShell from '@/layouts/AppShell.vue';
 import AppPage from '@/components/layout/AppPage.vue';
+import CompanyRequiredEmptyState from '@/components/companies/CompanyRequiredEmptyState.vue';
 import ClassificationBulkBar from '@/components/classifications/ClassificationBulkBar.vue';
 import ClassificationDetailModal from '@/components/classifications/ClassificationDetailModal.vue';
 import ClassificationRejectModal from '@/components/classifications/ClassificationRejectModal.vue';
@@ -148,8 +149,13 @@ onMounted(() => {
     if (!companyStore.loaded) {
         void companyStore.fetchCompanies();
     }
+
     void loadCategories();
-    void store.fetchQueue();
+
+    if (companyStore.hasCompany) {
+        void store.fetchQueue();
+    }
+
     window.addEventListener('keydown', onKeyDown);
 });
 
@@ -170,136 +176,143 @@ watch(() => store.items, (items) => {
       title="Revisión de clasificación"
       description="Cola de ítems clasificados por reglas o IA que requieren decisión humana."
     >
-      <ClassificationFilters
-        :status="store.filters.status"
-        :method="store.filters.method"
-        :company-id="store.filters.companyId"
-        :search="store.filters.search"
-        @update:status="(value: string) => (store.filters.status = value)"
-        @update:method="(value: string) => (store.filters.method = value)"
-        @update:company-id="(value: string) => (store.filters.companyId = value)"
-        @update:search="(value: string) => (store.filters.search = value)"
-        @apply="store.fetchQueue(1)"
-        @help="helpOpen = true"
+      <CompanyRequiredEmptyState
+        v-if="!companyStore.loading && !companyStore.hasCompany"
+        description="Necesitas una empresa activa para revisar clasificaciones."
       />
 
-      <ClassificationBulkBar
-        v-if="store.selectedCount > 0"
-        :count="store.selectedCount"
-        :categories="categoryOptions"
-        :category="bulkCategory"
-        @update:category="(value: number) => (bulkCategory = value)"
-        @accept="bulkAccept"
-        @reject="bulkReject"
-        @clear="store.clearSelection()"
-      />
-
-      <div
-        v-if="store.loading"
-        class="flex items-center justify-center py-12 text-muted"
-      >
-        Cargando cola…
-      </div>
-      <div
-        v-else-if="store.error"
-        class="flex flex-col items-center gap-3 py-12"
-      >
-        <p class="text-sm text-error">
-          {{ store.error }}
-        </p>
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          label="Reintentar"
-          @click="store.fetchQueue(1)"
+      <template v-else>
+        <ClassificationFilters
+          :status="store.filters.status"
+          :method="store.filters.method"
+          :company-id="store.filters.companyId"
+          :search="store.filters.search"
+          @update:status="(value: string) => (store.filters.status = value)"
+          @update:method="(value: string) => (store.filters.method = value)"
+          @update:company-id="(value: string) => (store.filters.companyId = value)"
+          @update:search="(value: string) => (store.filters.search = value)"
+          @apply="store.fetchQueue(1)"
+          @help="helpOpen = true"
         />
-      </div>
-      <div
-        v-else-if="store.items.length === 0"
-        class="flex flex-col items-center gap-2 py-12 text-muted"
-      >
-        <UIcon
-          name="i-lucide-inbox"
-          class="size-8"
+
+        <ClassificationBulkBar
+          v-if="store.selectedCount > 0"
+          :count="store.selectedCount"
+          :categories="categoryOptions"
+          :category="bulkCategory"
+          @update:category="(value: number) => (bulkCategory = value)"
+          @accept="bulkAccept"
+          @reject="bulkReject"
+          @clear="store.clearSelection()"
         />
-        <p class="text-sm">
-          No hay clasificaciones pendientes de revisión.
-        </p>
-      </div>
 
-      <ClassificationTable
-        v-else
-        :items="store.items"
-        :focus-index="focusIndex"
-        :selected-ids="store.selectedIds"
-        @update:focus-index="(value: number) => (focusIndex = value)"
-        @toggle-selection="store.toggleSelection"
-        @accept="acceptItem"
-        @request-reject="requestReject"
-        @revert="revertItem"
-        @view="openDetail"
-        @create-rule="openCreateRule"
-      />
-
-      <div
-        v-if="store.meta && store.meta.last_page > 1"
-        class="flex items-center justify-between text-sm text-muted"
-      >
-        <span>Página {{ store.meta.current_page }} de {{ store.meta.last_page }} ({{ store.meta.total }} ítems)</span>
-        <div class="flex gap-2">
+        <div
+          v-if="store.loading"
+          class="flex items-center justify-center py-12 text-muted"
+        >
+          Cargando cola…
+        </div>
+        <div
+          v-else-if="store.error"
+          class="flex flex-col items-center gap-3 py-12"
+        >
+          <p class="text-sm text-error">
+            {{ store.error }}
+          </p>
           <UButton
             color="neutral"
             variant="outline"
             size="sm"
-            label="Anterior"
-            :disabled="store.meta.current_page <= 1"
-            @click="store.fetchQueue((store.meta?.current_page ?? 1) - 1)"
-          />
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            label="Siguiente"
-            :disabled="store.meta.current_page >= store.meta.last_page"
-            @click="store.fetchQueue((store.meta?.current_page ?? 1) + 1)"
+            label="Reintentar"
+            @click="store.fetchQueue(1)"
           />
         </div>
-      </div>
+        <div
+          v-else-if="store.items.length === 0"
+          class="flex flex-col items-center gap-2 py-12 text-muted"
+        >
+          <UIcon
+            name="i-lucide-inbox"
+            class="size-8"
+          />
+          <p class="text-sm">
+            No hay clasificaciones pendientes de revisión.
+          </p>
+        </div>
 
-      <p class="text-xs text-muted">
-        Atajos: <kbd>j</kbd>/<kbd>k</kbd> navegar · <kbd>espacio</kbd> seleccionar · <kbd>a</kbd> aceptar · <kbd>r</kbd> rechazar · <kbd>Enter</kbd> crear regla.
-      </p>
+        <ClassificationTable
+          v-else
+          :items="store.items"
+          :focus-index="focusIndex"
+          :selected-ids="store.selectedIds"
+          @update:focus-index="(value: number) => (focusIndex = value)"
+          @toggle-selection="store.toggleSelection"
+          @accept="acceptItem"
+          @request-reject="requestReject"
+          @revert="revertItem"
+          @view="openDetail"
+          @create-rule="openCreateRule"
+        />
 
-      <ClassificationDetailModal
-        v-model:open="detailOpen"
-        :item="detailItem"
-      />
+        <div
+          v-if="store.meta && store.meta.last_page > 1"
+          class="flex items-center justify-between text-sm text-muted"
+        >
+          <span>Página {{ store.meta.current_page }} de {{ store.meta.last_page }} ({{ store.meta.total }} ítems)</span>
+          <div class="flex gap-2">
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              label="Anterior"
+              :disabled="store.meta.current_page <= 1"
+              @click="store.fetchQueue((store.meta?.current_page ?? 1) - 1)"
+            />
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              label="Siguiente"
+              :disabled="store.meta.current_page >= store.meta.last_page"
+              @click="store.fetchQueue((store.meta?.current_page ?? 1) + 1)"
+            />
+          </div>
+        </div>
 
-      <ClassificationRejectModal
-        v-model:open="rejectConfirmOpen"
-        @confirm="confirmReject"
-      />
+        <p class="text-xs text-muted">
+          Atajos: <kbd>j</kbd>/<kbd>k</kbd> navegar · <kbd>espacio</kbd> seleccionar · <kbd>a</kbd> aceptar · <kbd>r</kbd> rechazar · <kbd>Enter</kbd> crear regla.
+        </p>
 
-      <ClassificationRejectModal
-        v-model:open="bulkRejectConfirmOpen"
-        title="¿Rechazar seleccionados?"
-        description="Los ítems seleccionados volverán a estado pendiente."
-        @confirm="confirmBulkReject"
-      />
+        <ClassificationDetailModal
+          v-model:open="detailOpen"
+          :item="detailItem"
+        />
 
-      <ClassificationHelpModal v-model:open="helpOpen" />
+        <ClassificationRejectModal
+          v-model:open="rejectConfirmOpen"
+          @confirm="confirmReject"
+        />
 
-      <CreateRuleModal
-        v-model:open="createRuleOpen"
-        :source-id="createRuleSource"
-        :category="createRuleCategory"
-        :pattern="createRulePattern"
-        :categories="categoryOptions"
-        @update:category="(value: number) => (createRuleCategory = value)"
-        @update:pattern="(value: string) => (createRulePattern = value)"
-        @created="store.fetchQueue(store.meta?.current_page ?? 1)"
-      />
+        <ClassificationRejectModal
+          v-model:open="bulkRejectConfirmOpen"
+          title="¿Rechazar seleccionados?"
+          description="Los ítems seleccionados volverán a estado pendiente."
+          @confirm="confirmBulkReject"
+        />
+
+        <ClassificationHelpModal v-model:open="helpOpen" />
+
+        <CreateRuleModal
+          v-model:open="createRuleOpen"
+          :source-id="createRuleSource"
+          :category="createRuleCategory"
+          :pattern="createRulePattern"
+          :categories="categoryOptions"
+          @update:category="(value: number) => (createRuleCategory = value)"
+          @update:pattern="(value: string) => (createRulePattern = value)"
+          @created="store.fetchQueue(store.meta?.current_page ?? 1)"
+        />
+      </template>
     </AppPage>
   </AppShell>
 </template>

@@ -43,7 +43,7 @@ describe('CompaniesPage', () => {
         await router.push('/companies');
 
         const wrapper = mount(CompaniesPage, {
-            global: { plugins: [pinia, router], stubs: { AppSidebar: true, UDashboardSearch: true } },
+            global: { plugins: [pinia, router], stubs: { AppSidebar: true, UDashboardSearch: true, CompanyFormModal: true, CompanyArchiveModal: true } },
         });
 
         expect(wrapper.text()).toContain('Aún no hay contribuyentes');
@@ -60,9 +60,25 @@ describe('CompaniesPage', () => {
         await router.push('/companies');
 
         const wrapper = mount(CompaniesPage, {
-            global: { plugins: [pinia, router], stubs: { AppSidebar: true, UDashboardSearch: true } },
+            global: { plugins: [pinia, router], stubs: { AppSidebar: true, UDashboardSearch: true, CompanyFormModal: true, CompanyArchiveModal: true } },
         });
 
         expect(wrapper.text()).not.toContain('Registrar contribuyente');
+    });
+
+    it('muestra el banner de onboarding con ?onboarding=1', async () => {
+        currentRole.value = 'owner';
+
+        const router = createRouter({
+            history: createMemoryHistory(),
+            routes: [{ path: '/companies', name: 'companies', component: CompaniesPage }],
+        });
+        await router.push('/companies?onboarding=1');
+
+        const wrapper = mount(CompaniesPage, {
+            global: { plugins: [pinia, router], stubs: { AppSidebar: true, UDashboardSearch: true, CompanyFormModal: true, CompanyArchiveModal: true } },
+        });
+
+        expect(wrapper.text()).toContain('Primer contribuyente');
     });
 });

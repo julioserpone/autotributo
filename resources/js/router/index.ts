@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
+import { useCompanyStore } from '@/stores/company';
 import DashboardPage from '@/pages/DashboardPage.vue';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage.vue';
 import CompaniesPage from '@/pages/CompaniesPage.vue';
@@ -62,19 +63,19 @@ const router = createRouter({
             path: '/fiscal_documents',
             name: 'fiscal_documents',
             component: FiscalDocumentInboxPage,
-            meta: { title: 'Comprobantes' },
+            meta: { title: 'Comprobantes', requiresCompany: true },
         },
         {
             path: '/classifications',
             name: 'classifications',
             component: ClassificationReviewPage,
-            meta: { title: 'Revisión de clasificación' },
+            meta: { title: 'Revisión de clasificación', requiresCompany: true },
         },
         {
             path: '/sync',
             name: 'sync',
             component: SyncMonitorPage,
-            meta: { title: 'Sincronización' },
+            meta: { title: 'Sincronización', requiresCompany: true },
         },
         {
             path: '/:pathMatch(.*)*',
@@ -99,6 +100,22 @@ router.beforeEach(async (to) => {
 
     if (auth.user === null) {
         return { name: 'login', query: { redirect: to.fullPath } };
+    }
+
+    if (to.meta.requiresCompany === true) {
+        const companyStore = useCompanyStore();
+
+        if (!companyStore.loaded) {
+            await companyStore.fetchCompanies();
+        }
+
+        if (companyStore.requiresTwoFactorSetup) {
+            return { name: 'two-factor-setup' };
+        }
+
+        if (!companyStore.hasCompany) {
+            return { name: 'companies', query: { onboarding: '1' } };
+        }
     }
 
     return true;
