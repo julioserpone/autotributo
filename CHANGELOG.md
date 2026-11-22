@@ -83,6 +83,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - Hooks locales `pre-push` y `commit-msg`.
 - Documentación de IA (`AGENTS.md`, `docs/ai/01-04`): alineada con Laravel 13/PHP 8.5, tenancy de BD única con `tenant_id`, rutas reales `app/Domain`, convención `handle()`, montos en centavos enteros y plantilla oficial de PR.
 
+- F4-03a (slice 3): guard central en el router (`requiresCompany` en sync, comprobantes y clasificación) con redirección a `/companies?onboarding=1` sin contribuyentes y a `/two-factor/setup` con 2FA pendiente; auto-apertura del modal de alta y banner de onboarding en `CompaniesPage`; componente reusable `CompanyRequiredEmptyState` usado en panel, sync, comprobantes y clasificación. Tests del guard (6) y estados vacíos (2). Base para F4-03b/c.
+
 ### Changed
 
 - Docs: sincronización completa de `docs/02`, `docs/09`, `docs/03`, `docs/04`, `docs/fiscal-signoff` y `docs/reports` con el estado real de `main` (2026-11-21). Se marcan F3-06 (#97) y F4-07 (#98) como completadas, se añaden F3-08/F3-09 y las tareas F4-03a/b/c, F4-08b, F4-12 y F4-13, se corrige `DUPLICATE_INVOICE` → `DUPLICATE_SEQUENTIAL` y se documenta que la fase F3 no puede cerrarse sin la firma del contador ni el dataset de evaluación. El calendario pasa a las etapas G–J y `docs/11`/`docs/15` quedan archivados como referencia histórica.
