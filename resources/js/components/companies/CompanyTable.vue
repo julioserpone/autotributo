@@ -13,6 +13,7 @@ defineProps<{
 const emit = defineEmits<{
     (e: 'edit', company: Company): void;
     (e: 'archive', company: Company): void;
+    (e: 'credential', company: Company): void;
 }>();
 
 function statusLabel(status: string): string {
@@ -130,6 +131,15 @@ function statusColor(status: string): 'success' | 'warning' | 'neutral' {
             class="px-4 py-3 text-right"
           >
             <div class="flex items-center justify-end gap-1">
+              <UButton
+                v-if="canManage"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                icon="i-lucide-key-round"
+                aria-label="Gestionar credencial SRI"
+                @click="emit('credential', company)"
+              />
               <UButton
                 v-if="canManage"
                 color="neutral"
