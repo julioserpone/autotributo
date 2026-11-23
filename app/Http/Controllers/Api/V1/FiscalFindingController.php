@@ -8,12 +8,15 @@ use App\Domain\Companies\Models\Company;
 use App\Domain\Fiscal\Actions\DetectFiscalRisks;
 use App\Domain\Fiscal\Enums\FiscalRiskStatus;
 use App\Domain\Fiscal\Models\FiscalFinding;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\FiscalFinding\UpdateFiscalFindingRequest;
 use App\Http\Resources\FiscalFindingResource;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 
 final class FiscalFindingController extends Controller
@@ -26,21 +29,15 @@ final class FiscalFindingController extends Controller
     {
         Gate::authorize('viewAny', FiscalFinding::class);
 
-        $query = FiscalFinding::query()->with('resolver');
-
         $filters = (array) $request->input('filter', []);
 
-        $companyId = $filters['company_id'] ?? $request->query('company_id');
+        $query = FiscalFinding::query()->with(['company', 'resolver']);
 
-        if ($companyId !== null && $companyId !== '') {
-            $query->where('company_id', (int) $companyId);
-        }
+        $this->applyFilters($query, $filters, $request);
 
-        $code = trim((string) ($filters['code'] ?? $request->query('code', '')));
-
-        if ($code !== '') {
-            $query->where('code', $code);
-        }
+        // Los contadores ignoran el filtro de estado: alimentan las pestañas de
+        // la bandeja, que necesitan ver el total de cada estado.
+        $counts = $this->counts($query);
 
         $status = trim((string) ($filters['status'] ?? $request->query('status', '')));
 
@@ -48,15 +45,14 @@ final class FiscalFindingController extends Controller
             $query->where('status', $status);
         }
 
-        $severity = trim((string) ($filters['severity'] ?? $request->query('severity', '')));
-
-        if ($severity !== '') {
-            $query->where('severity', $severity);
-        }
-
         $perPage = max(1, min((int) $request->integer('per_page', 25), 100));
 
-        return FiscalFindingResource::collection($query->latest('id')->paginate($perPage));
+        $findings = $query->latest('id')->paginate($perPage);
+
+        $this->loadSourceDocuments($findings->getCollection());
+
+        return FiscalFindingResource::collection($findings)
+            ->additional(['meta' => ['counts' => $counts]]);
     }
 
     public function update(UpdateFiscalFindingRequest $request, FiscalFinding $fiscal_finding): FiscalFindingResource
@@ -85,7 +81,7 @@ final class FiscalFindingController extends Controller
 
         $finding->save();
 
-        return new FiscalFindingResource($finding->load('resolver'));
+        return new FiscalFindingResource($finding->load(['company', 'resolver', 'sourceDocument']));
     }
 
     public function detect(Request $request, Company $company): JsonResponse
@@ -102,5 +98,96 @@ final class FiscalFindingController extends Controller
                 'total' => $result->total(),
             ],
         ]);
+    }
+
+    /**
+     * @param  Builder<FiscalFinding>  $query
+     * @param  array<string, mixed>  $filters
+     */
+    private function applyFilters(Builder $query, array $filters, Request $request): void
+    {
+        $companyId = $filters['company_id'] ?? $request->query('company_id');
+
+        if ($companyId !== null && $companyId !== '') {
+            $company = is_numeric($companyId)
+                ? Company::query()->find((int) $companyId)
+                : Company::query()->where('public_id', (string) $companyId)->first();
+
+            if ($company !== null) {
+                $query->where('company_id', $company->id);
+            }
+        }
+
+        $code = trim((string) ($filters['code'] ?? $request->query('code', '')));
+
+        if ($code !== '') {
+            $query->where('code', $code);
+        }
+
+        $severity = trim((string) ($filters['severity'] ?? $request->query('severity', '')));
+
+        if ($severity !== '') {
+            $query->where('severity', $severity);
+        }
+
+        $search = trim((string) ($filters['search'] ?? $request->query('search', '')));
+
+        if ($search !== '') {
+            $query->where(function (Builder $builder) use ($search): void {
+                $builder->where('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+    }
+
+    /**
+     * @param  Builder<FiscalFinding>  $query
+     * @return array{total: int, by_status: array<string, int>, by_severity: array<string, int>}
+     */
+    private function counts(Builder $query): array
+    {
+        $base = (clone $query)->toBase();
+
+        /** @var Collection<string, int|string> $byStatus */
+        $byStatus = (clone $base)
+            ->selectRaw('status, count(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        /** @var Collection<string, int|string> $bySeverity */
+        $bySeverity = (clone $base)
+            ->selectRaw('severity, count(*) as aggregate')
+            ->groupBy('severity')
+            ->pluck('aggregate', 'severity');
+
+        return [
+            'total' => (int) $byStatus->sum(),
+            'by_status' => $byStatus->map(static fn (int|string $value): int => (int) $value)->all(),
+            'by_severity' => $bySeverity->map(static fn (int|string $value): int => (int) $value)->all(),
+        ];
+    }
+
+    /**
+     * Carga en lote el comprobante de origen de la página actual.
+     *
+     * @param  Collection<int, FiscalFinding>  $findings
+     */
+    private function loadSourceDocuments(Collection $findings): void
+    {
+        $ids = $findings
+            ->where('source_type', 'fiscal_document')
+            ->pluck('source_id')
+            ->unique()
+            ->all();
+
+        if ($ids === []) {
+            return;
+        }
+
+        $documents = FiscalDocument::query()->whereIn('id', $ids)->get()->keyBy('id');
+
+        foreach ($findings as $finding) {
+            $finding->setRelation('sourceDocument', $documents->get($finding->source_id));
+        }
     }
 }

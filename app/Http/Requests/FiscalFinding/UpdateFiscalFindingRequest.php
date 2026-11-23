@@ -20,13 +20,32 @@ final class UpdateFiscalFindingRequest extends FormRequest
      */
     public function rules(): array
     {
+        $dismissing = $this->input('status') === FiscalRiskStatus::Dismissed->value;
+
         return [
             'status' => ['required', 'string', Rule::in([
                 FiscalRiskStatus::Acknowledged->value,
                 FiscalRiskStatus::Resolved->value,
                 FiscalRiskStatus::Dismissed->value,
             ])],
-            'note' => ['nullable', 'string', 'max:500'],
+            // Descartar exige justificación: el hallazgo deja de mostrarse y el
+            // motivo queda en la auditoría del comprobante.
+            'note' => [
+                'nullable',
+                'string',
+                'max:500',
+                Rule::requiredIf($dismissing),
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'note.required' => 'Indica el motivo para descartar el hallazgo.',
         ];
     }
 }

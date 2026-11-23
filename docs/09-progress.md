@@ -12,15 +12,15 @@
 | F1 · Núcleo tenant-ready | Completado | 11/11 | F1-11 · Staging efímero en AWS (EC2, Neon, DuckDNS, TLS, deploy, smoke tests) |
 | F2 · Ingesta SRI | Completado | 12/12 + F2-13 | F2-13 · Carga manual de XML (`US-14`) |
 | F3 · Motor fiscal + IA | En curso | 7/9 | F3-06 · Riesgos fiscales y hallazgos (#97) |
-| F4 · Frontend | En curso | 5/11 + fundaciones/auth parciales | F4-07 · Revisión de clasificación con teclado (#98) |
+| F4 · Frontend | En curso | 6/11 + F4-08b/F4-13 | F4-08b · Bandeja de hallazgos fiscales |
 | F5 · Declaraciones | Pendiente | 0/8 | — |
 | F6 · Hardening y beta | Pendiente | 0/8 | — |
 
 > El recuento usa las tareas de `docs/02-implementation-plan.md`. Las slices de F1-03 y F4-03 y las tareas nuevas (F1-03e/f/g, F2-13/14/15, F4-03a/b/c, F4-08b, F4-12, F4-13) se detallan abajo y no alteran el denominador de la fase.
 >
-> **Siguiente etapa (Etapa G, revisión 2026-11-21).** Ambos documentos maestros deben coincidir: `docs/02` §6 (tareas) y §9/§17 (orden y prioridad) y esta tabla. Orden acordado: **docs sync → F4-03a → F4-03b → F4-03c → F5-01 → F4-08 → F4-08b → F3-09**. F3-08 queda bloqueada por el dataset dorado y la firma del contador; F5-02 espera la firma de la convención del 104. Justificación, diseño y pruebas obligatorias viven en `docs/02` §6, §9 y §17, no en un documento aparte.
+> **Siguiente etapa (Etapa G2, revisión 2026-11-23).** Ambos documentos maestros deben coincidir: `docs/02` §6 (tareas) y §9/§17 (orden y prioridad) y esta tabla. **G1 está cerrada:** F4-03a/b/c, F4-13 y F5-01 están en `main` (#100–#106). Orden acordado para G2: **F4-08b → F4-08 → F3-09**, con la firma del contador solicitada en paralelo. F3-08 queda bloqueada por el dataset dorado; F5-02 espera la firma de la convención del 104. Justificación, diseño y pruebas obligatorias viven en `docs/02` §6, §9 y §17, no en un documento aparte.
 >
-> **Estado de cierre de fase:** F1 y F2 están cerradas. F3 está funcionalmente completa pero **no puede declararse cerrada** sin `F3-08` ni la firma del contador (`docs/fiscal-signoff.md` sigue sin firmas). F4 no puede alcanzar M4 mientras no exista UI para empresas, credenciales SRI e invitaciones.
+> **Estado de cierre de fase:** F1 y F2 están cerradas. F3 está funcionalmente completa pero **no puede declararse cerrada** sin `F3-08` ni la firma del contador (`docs/fiscal-signoff.md` sigue sin firmas). F4 ya tiene UI para empresas, credenciales SRI, invitaciones y hallazgos; le faltan dashboards reales (F4-08), vista 104 y calidad/pruebas para M4.
 
 ## Fase 1 · Núcleo tenant-ready, identidad y empresas
 
@@ -81,29 +81,29 @@
 |---|---|---|---|---|
 | F4-01 | Fundaciones | Parcial | P1 | Vite, Vue 3.5 + TypeScript estricto, Tailwind 4, router, Pinia y cliente HTTP con CSRF/errores. El entorno de Vitest con stubs de layout existe. **Pendiente:** TanStack Query, i18n y endurecer `lib/api.ts` (hoy descarta los `errors` de `problem+json` y no soporta respuestas `204`) |
 | F4-02 | Design system | Completado | **P0** | Tokens semánticos dark-first en `resources/css/app.css`, tipografía, `prefers-reduced-motion` y foco visible; componentes base `AppField`, `AppButton`, `AppInput`, `AppSelect`, `AppCombobox`, `AppDateRange`, `AppTable`, `AppBadge`, `AppModal`, `AppToastHost` y `AppDrawer` · 50 tests · `docs/14-design-system.md`. **Superado por F4-04:** los wrappers propios se sustituyeron por Nuxt UI (ADR-0009). (#70) |
-| F4-03 | Auth y primer acceso | En curso (slices a–c) | **P0** | Hecho: login, 2FA (setup y challenge), recuperación y restablecimiento de contraseña, cierre de sesión. **F4-03a slice 1** (PR #100): cliente HTTP sobre `problem+json` y store `company`. **Slice 2** (PR #101): `CompaniesPage` con tabla, modales de alta/edición/archivo, estado vacío, ruta y navegación; combobox CIIU y `useCompanyForm`. **Slice 3** (esta PR): guard central en el router (`requiresCompany` en sync, comprobantes y clasificación; redirección a `/companies?onboarding=1` sin contribuyentes y a `/two-factor/setup` con 2FA pendiente), auto-apertura del modal de alta y banner de onboarding, estado vacío reutilizable `CompanyRequiredEmptyState` en panel, sync, comprobantes y clasificación. **En curso:** F4-03c (invitaciones en la UI, esta rama). F4-03b (credencial SRI) completado en PR #104 |
+| F4-03 | Auth y primer acceso | Completado (slices a–c) | **P0** | Login, 2FA (setup y challenge), recuperación y restablecimiento de contraseña, cierre de sesión. **F4-03a:** cliente HTTP sobre `problem+json` y store `company` (#100), `CompaniesPage` con tabla, modales de alta/edición/archivo, combobox CIIU y `useCompanyForm` (#101), guard central del router, onboarding y estado vacío reutilizable (#103). **F4-03b = F4-13:** credencial SRI en la UI (#104). **F4-03c:** invitaciones y aceptación en la UI (#105). |
 | F4-04 | Layout | Completado | **P0** | Template Dashboard de Nuxt UI 4.13 (`UDashboardGroup`, `UDashboardSidebar` colapsable/redimensionable, `UDashboardPanel/Navbar/Toolbar/Search`) y tema Mint: `primary: teal`, `neutral: olive`, radio `0.75rem`, botones/inputs píldora, Nunito Variable (500/600/700/800) y JetBrains Mono. `AppShell`, `AppPage`, `AppSidebar`, `AppWorkspaceMenu`, `AppUserMenu`, `AuthLayout` y `lib/navigation.ts` (nav + ⌘K); selector de tema en el menú de usuario. Páginas migradas a `bg-default`/`bg-elevated`/`border-default`/`text-highlighted`/`text-muted`/`text-dimmed`. `useTheme` conserva `colorMode: false`. ADR-0009 enmendado y `docs/14-design-system.md` reescrito · 43 tests, `vue-tsc` y ESLint en verde · verificado en navegador (login, panel, bandeja, monitor y paleta ⌘K; claro y oscuro). (#90) |
 | F4-05 | Bandeja de comprobantes | Completado | **P0** | `GET /api/v1/fiscal_documents` (cursor + filtros por empresa, estado, tipo, emisor, fechas), `GET /api/v1/fiscal_documents/{fiscal_document}` con líneas/impuestos/retenciones; `FiscalDocumentInboxPage` con filtros, paginación «Cargar más», drawer de detalle y selección múltiple. Migrado a `FiscalDocument` en PR #91. (#72) |
 | F4-06 | Monitor de sincronización | Completado | **P0** | `SyncMonitorPage` con formulario en una fila (empresa, tipos de documento como multiselección, desde/hasta), ayuda contextual para forzar re-descarga, progreso en vivo con polling (`poll_after_ms`) + archivos con errores, totales, historial y detalle de run. Store `sync` con `startSync` (Idempotency-Key), `loadRun`, `startPollingIfNeeded`. Refinamientos UI (#74, #75), progreso de `downloading` sin contar XML `missing`/`invalid`, historial estable durante refresco. (#73–#75) |
 | F4-07 | Revisión de clasificación | Completado | **P1** | `ClassificationReviewPage` con cola que prioriza `needs_review`, filtros, confianza y método visuales, atajos `j`/`k`/`Enter`/`a`/`r`/`espacio`, aceptación y rechazo en bloque con resultado parcial y creación de regla desde un ítem; store `classifications` y componentes en `components/classifications/`. Ruta `/classifications` y entrada en la navegación. (#98) |
 | F4-08 | Dashboards | Pendiente | **P1** | **Depende de F5-01:** hoy `DashboardPage` solo muestra ceros o datos de `?preview=1` (`dashboardPreview.ts`). Entregables: IVA ventas vs. compras por mes, top proveedores, topes de gastos personales y alertas reales desde `fiscal_findings` |
-| F4-08b | Bandeja de hallazgos | Pendiente | **P1** | Nueva tarea derivada de F3-06: el contrato `GET/PATCH /api/v1/fiscal-findings` ya existe, pero no hay UI para reconocer, resolver o descartar hallazgos ni para lanzar la detección manual |
+| F4-08b | Bandeja de hallazgos | Completado | **P1** | `FiscalFindingsPage` (`/fiscal-findings`) con tarjetas de resumen, filtros (empresa, estado, severidad, código y texto), tabla, drawer de detalle con enlace al comprobante en la bandeja y modal para reconocer/resolver/descartar (motivo obligatorio al descartar) y lanzar la detección manual. Store `fiscalFindings` y etiquetas en `lib/fiscalFindings.ts`. Backend: `company`/`source` con `public_id`, `meta.counts` por estado y severidad, `filter[search]` y `filter[company_id]` por `public_id`. 11 tests de feature y 9 tests frontend. Sin PR asignado todavía (rama `feat/F4-08b-fiscal-findings-ui`) |
 | F4-09 | Vista 104 (estructura) | Pendiente | P2 | Casilleros, totales, drill-down y estados de borrador; los datos reales llegan en F5-02/F5-06 |
 | F4-10 | Calidad de UI | Pendiente | P2 | Estados vacíos/carga/error, responsive, foco visible, contraste AA y `prefers-reduced-motion` en todas las pantallas |
 | F4-11 | Pruebas frontend | Pendiente | P2 | MSW, `axe` y Playwright para los 5 flujos críticos; hoy solo hay Vitest parcial y Playwright configurado |
 | F4-12 | Indicador de Reverb | Pendiente | P2 | Nueva tarea derivada de F1-08/F2-09b: estado de conexión y reconexión del WebSocket en el monitor (hoy el polling cubre el caso) |
-| F4-13 | Credenciales SRI en la UI | En curso | **P0** | (Esta PR) Store `sriCredential` (fetch/store/rotate/delete, 404 → sin credencial), componentes `SriCredentialFormModal`, `SriCredentialRotateModal` y `SriCredentialManageModal`, botón por fila en `CompanyTable` y gestión desde `CompaniesPage`. Tests: 6 (store) + 1 (api putJson). **Pendiente validación local** |
+| F4-13 | Credenciales SRI en la UI | Completado | **P0** | Store `sriCredential` (fetch/store/rotate/delete, 404 → sin credencial), componentes `SriCredentialFormModal`, `SriCredentialRotateModal` y `SriCredentialManageModal`, botón por fila en `CompanyTable` y gestión desde `CompaniesPage`. Tests: 6 (store) + 1 (api putJson). (#104) |
 
 ## Fases 3–6 · Estado resumido
 
 | Fase | Tareas | Estado | Prioridad actual |
 |---|---|---|---|
 | F3 · Motor fiscal + IA | F3-01…F3-09 | En curso (7/9) | P1 (F3-08 evaluación, bloqueada por dataset) / P2 (F3-09 catálogos) |
-| F4 · Frontend | F4-01…F4-11 (+ F4-08b, F4-12, F4-13) | En curso (5/11 + fundaciones/auth parciales) | **P0** (F4-03a/b/c) / **P1** (F4-08, F4-08b) / P2 (F4-09/10/11/12) |
-| F5 · Declaraciones | F5-01…F5-08 | En curso | **P1** (F5-01 agregados en esta rama) / P2 (resto, tras firma del 104) |
+| F4 · Frontend | F4-01…F4-11 (+ F4-08b, F4-12, F4-13) | En curso (6/11 + F4-08b/F4-13) | **P1** (F4-08) / P2 (F4-09/10/11/12) |
+| F5 · Declaraciones | F5-01…F5-08 | En curso (1/8) | **P1** (F4-08 depende de F5-01, ya completada) / P2 (resto, tras firma del 104) |
 | F6 · Hardening y beta | F6-01…F6-08 | Pendiente | P3 (lanzamiento) |
 
-## Registro de PRs recientes (2026-11-06 → 2026-11-21)
+## Registro de PRs recientes (2026-11-06 → 2026-11-23)
 
 | PR | Contenido | Tarea |
 |---|---|---|
@@ -155,19 +155,28 @@
 | #96 | Mejorar UI de dashboard y fallo rápido SSH en destroy | Staging |
 | #97 | Detectar riesgos fiscales y exponer hallazgos | F3-06 |
 | #98 | Página de revisión de clasificación con navegación por teclado | F4-07 |
+| #100 | Cliente HTTP `problem+json` y store de empresas | F4-03a |
+| #101 | Página de contribuyentes con formulario y archivo | F4-03a |
+| #102 | Catálogo CIIU de actividades económicas (tabla, seeder, endpoint) | Catálogo CIIU |
+| #103 | Guard de onboarding y estado vacío reutilizable | F4-03a |
+| #104 | Gestión de credenciales SRI desde la UI | F4-13 / F4-03b |
+| #105 | Invitaciones y aceptación en la UI | F4-03c |
+| #106 | Agregados por período (`fiscal_periods`, `period_aggregates`) | F5-01 |
+| #114 | Carga diferida de rutas, Vite y OPcache en desarrollo | Rendimiento |
 
-## Pendientes transversales (2026-11-21)
+## Pendientes transversales (2026-11-23)
 
 | Pendiente | Impacto | Siguiente paso |
 |---|---|---|
 | Firma del contador (`docs/fiscal-signoff.md` vacío) | Bloquea el cierre formal de F3 y el arranque de F5-02 | Enviar catálogos, categorías, proporcionalidad, códigos de riesgo y escenarios del 104 |
 | Dataset dorado de F3-08 | M3 no es demostrable (accuracy/coste) | Extraer ~300 descripciones reales anonimizadas y congelar la categoría correcta |
 | Informe de F0-05 en `docs/reports/` | F0 figura 9/9 sin su entregable | Versionar el informe base de evaluación IA |
-| F1-03g validaciones de invitación | 409 por email activo y revocación de sesiones al retirar acceso | PR pequeño tras F4-03c |
+| F1-03g validaciones de invitación | 409 por email activo y revocación de sesiones al retirar acceso | PR pequeño, P2 |
 | F2-14 cancelación de run | Archivar empresa no detiene un run en curso (`ArchiveCompany` lo delega) | PR pequeño, P2 |
 | F2-15 runbook de runs huérfanos | Procedimiento operativo de `sri:recover-run` | Documento + prueba de restauración |
-| F4-01 TanStack Query / i18n / cliente HTTP | `lib/api.ts` no expone `errors` de `problem+json` ni soporta `204` | Se corrige en F4-03a (slice 1); TanStack/i18n quedan para después |
-| Catálogo CIIU (actividades económicas) | Tabla `economic_activity_codes` con el catálogo completo (6378 códigos, columna `is_selectable` para los 3125 nodos hoja) + seeder (CSV `database/seeders/data/ciiu.csv`) + endpoint `GET /api/v1/economic-activity-codes` (por defecto solo seleccionables; `?all=1` devuelve todo; búsqueda case-insensitive) en rama `feat/ciiu-activity-codes`. El combobox en `CompanyFormModal` queda para una rama dependiente de `feat/F4-03-companies-page` (#101) | Backend listo; frontend pendiente de la fusión de #101 |
+| F4-01 TanStack Query / i18n | `lib/api.ts` ya expone `errors` y soporta `204` (F4-03a); faltan TanStack Query e i18n | Decidir si entran antes de F4-08 |
+| F5-01 solo agrega compras | `ComputePeriodAggregates` fija `direction = purchases` y `PersistSriFiscalDocument` fija `received`: no hay IVA de ventas | F5-01b (derivar dirección por RUC, recalcular al cerrar el run y programar el comando) antes de F4-08 |
+| Filtro por empresa en la revisión de clasificación | `ClassificationFilters` envía el `public_id` y el backend castea a `(int)`, por lo que el filtro no devuelve resultados | Aceptar `public_id` o numérico como en `fiscal-findings`/`fiscal_documents` |
 
 ## Cómo actualizar
 
