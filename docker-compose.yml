@@ -32,6 +32,7 @@ x-app: &app
   volumes:
     - ./:/var/www/html:cached
     # php.ini montado para poder ajustar OPcache en dev sin reconstruir imagen.
+    - ./docker/php/php.ini:/usr/local/etc/php/conf.d/99-app.ini:ro
   depends_on:
     db:
       condition: service_healthy
