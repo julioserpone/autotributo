@@ -394,3 +394,14 @@ F6-01…F6-08 (hardening, beta, Go/No-Go).
 | 7 | `feat/F4-08-dashboard` | F4-08 · dashboards reales + alertas |
 
 El estado vivo de cada fila vive en `docs/09-progress.md`; no se mantienen documentos de etapa separados (`docs/11` y `docs/15` quedan archivados como referencia histórica).
+
+## Nota de rendimiento y memoria (2026-11-23, PR #114)
+
+Se aplicaron mejoras de rendimiento en el entorno de desarrollo y en la SPA para reducir el consumo de memoria en Mac de 8 GB (Safari lento al cargar la app):
+
+- **Frontend:** carga diferida de todas las rutas y de modales/drawers pesados (`defineAsyncComponent`) para reducir el bundle inicial.
+- **Vite:** pre-bundling de dependencias pesadas (`optimizeDeps`), exclusión de `vendor/storage/node_modules` en el watcher, polling con intervalo de 2 s y límite de 1.5 GB para el servicio Vite.
+- **PHP:** OPcache habilitado en desarrollo con validación de timestamps (`php.ini` montado en los contenedores).
+- **Docker:** limpieza de ~125 GB (stack viejo `docker`, imágenes grandes, volúmenes huérfanos y build cache).
+
+No cambia el alcance funcional de las fases; es una mejora de DX y rendimiento local.

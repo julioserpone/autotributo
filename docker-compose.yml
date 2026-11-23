@@ -31,6 +31,8 @@ x-app: &app
     REVERB_HOST: ${REVERB_HOST_INTERNAL:-reverb}
   volumes:
     - ./:/var/www/html:cached
+    # php.ini montado para poder ajustar OPcache en dev sin reconstruir imagen.
+    - ./docker/php/php.ini:/usr/local/etc/php/conf.d/99-app.ini:ro
   depends_on:
     db:
       condition: service_healthy
@@ -101,10 +103,12 @@ services:
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
       - ./:/var/www/html:cached
-    command: sh -c "npm install --no-audit --no-fund --package-lock=false && rm -rf node_modules/.vite && npm run dev -- --host 0.0.0.0"
+    command: sh -c "npm install --no-audit --no-fund --package-lock=false && npm run dev -- --host 0.0.0.0"
     environment:
       HOME: /tmp
+      # Polling activo con intervalo mayor para reducir CPU del watcher.
       CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "2000"
       VITE_PORT: ${VITE_PORT:-5173}
       # URL pública del túnel; si está vacía, los assets apuntan a localhost.
       VITE_TUNNEL_URL: ${VITE_TUNNEL_URL:-}
@@ -112,6 +116,10 @@ services:
       - "${VITE_PORT:-5173}:${VITE_PORT:-5173}"
     networks:
       - autotributo
+    deploy:
+      resources:
+        limits:
+          memory: 1.5g
     restart: unless-stopped
 
   db:
