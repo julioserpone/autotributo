@@ -9,11 +9,15 @@ import AppPage from '@/components/layout/AppPage.vue';
 import CompanyRequiredEmptyState from '@/components/companies/CompanyRequiredEmptyState.vue';
 import ClassificationBulkBar from '@/components/classifications/ClassificationBulkBar.vue';
 const ClassificationDetailModal = defineAsyncComponent(() => import('@/components/classifications/ClassificationDetailModal.vue'));
+ClassificationDetailModal.name = 'ClassificationDetailModal';
 const ClassificationRejectModal = defineAsyncComponent(() => import('@/components/classifications/ClassificationRejectModal.vue'));
+ClassificationRejectModal.name = 'ClassificationRejectModal';
 import ClassificationFilters from '@/components/classifications/ClassificationFilters.vue';
 const ClassificationHelpModal = defineAsyncComponent(() => import('@/components/classifications/ClassificationHelpModal.vue'));
+ClassificationHelpModal.name = 'ClassificationHelpModal';
 import ClassificationTable from '@/components/classifications/ClassificationTable.vue';
 const CreateRuleModal = defineAsyncComponent(() => import('@/components/classifications/CreateRuleModal.vue'));
+CreateRuleModal.name = 'CreateRuleModal';
 import { useCompanyStore } from '@/stores/company';
 import { useClassificationStore } from '@/stores/classifications';
 

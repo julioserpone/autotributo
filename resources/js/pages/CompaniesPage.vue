@@ -7,8 +7,11 @@ import AppShell from '@/layouts/AppShell.vue';
 import AppPage from '@/components/layout/AppPage.vue';
 import CompanyTable from '@/components/companies/CompanyTable.vue';
 const CompanyFormModal = defineAsyncComponent(() => import('@/components/companies/CompanyFormModal.vue'));
+CompanyFormModal.name = 'CompanyFormModal';
 const CompanyArchiveModal = defineAsyncComponent(() => import('@/components/companies/CompanyArchiveModal.vue'));
+CompanyArchiveModal.name = 'CompanyArchiveModal';
 const SriCredentialManageModal = defineAsyncComponent(() => import('@/components/companies/SriCredentialManageModal.vue'));
+SriCredentialManageModal.name = 'SriCredentialManageModal';
 import { useAuthStore } from '@/stores/auth';
 import { useCompanyStore, type Company } from '@/stores/company';
 
