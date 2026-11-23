@@ -2,7 +2,7 @@
 
 > Tabla viva del proyecto. Se actualiza al cerrar cada tarea (una tarea = un commit/PR). La fuente de verdad del alcance sigue siendo `docs/02-implementation-plan.md`.
 
-**Última actualización:** 2026-11-21
+**Última actualización:** 2026-11-23
 
 ## Resumen por fase
 
@@ -174,3 +174,11 @@
 1. Cambiar el estado de la tarea a `Completado` y añadir commit + evidencia verificable.
 2. Actualizar el avance de la fase en el resumen.
 3. No marcar una tarea como completada si sus pruebas no están en verde o falta el criterio de salida de `docs/02-implementation-plan.md`.
+
+
+### Mejora de rendimiento y memoria (PR #114)
+
+- Lazy loading de rutas y de modales/drawers en la SPA para reducir el bundle inicial y la memoria del navegador.
+- Vite: pre-bundling de dependencias pesadas, watcher con exclusiones, polling con intervalo de 2 s y límite de 1.5 GB.
+- OPcache habilitado en desarrollo (php.ini montado) con validación de timestamps.
+- Limpieza de Docker: ~125 GB recuperados (stack viejo, imágenes grandes, volúmenes huérfanos y build cache).
