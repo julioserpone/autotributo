@@ -100,7 +100,7 @@
 |---|---|---|---|
 | F3 · Motor fiscal + IA | F3-01…F3-09 | En curso (7/9) | P1 (F3-08 evaluación, bloqueada por dataset) / P2 (F3-09 catálogos) |
 | F4 · Frontend | F4-01…F4-11 (+ F4-08b, F4-12, F4-13) | En curso (5/11 + fundaciones/auth parciales) | **P0** (F4-03a/b/c) / **P1** (F4-08, F4-08b) / P2 (F4-09/10/11/12) |
-| F5 · Declaraciones | F5-01…F5-08 | Pendiente | **P1** (F5-01 agregados) / P2 (resto, tras firma del 104) |
+| F5 · Declaraciones | F5-01…F5-08 | En curso | **P1** (F5-01 agregados en esta rama) / P2 (resto, tras firma del 104) |
 | F6 · Hardening y beta | F6-01…F6-08 | Pendiente | P3 (lanzamiento) |
 
 ## Registro de PRs recientes (2026-11-06 → 2026-11-21)

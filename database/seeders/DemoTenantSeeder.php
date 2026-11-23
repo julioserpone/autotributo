@@ -7,6 +7,8 @@ namespace Database\Seeders;
 use App\Domain\Companies\Actions\CreateCompany;
 use App\Domain\Companies\Actions\Credentials\StoreSriCredential;
 use App\Domain\Companies\Models\Company;
+use App\Domain\FiscalDocuments\Models\FiscalDocument;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentTax;
 use App\Domain\Shared\Values\Ruc;
 use App\Domain\Tenancy\Actions\EnsureTenantRoles;
 use App\Domain\Tenancy\Models\Membership;
@@ -127,6 +129,55 @@ final class DemoTenantSeeder extends Seeder
             $ruc,
             $sriPassword,
             $owner->getKey(),
+        );
+
+        // Comprobante de ejemplo para poder probar agregados por período (F5-01)
+        // y dashboards sin depender de una sincronización real del SRI.
+        $document = FiscalDocument::query()->firstOrCreate(
+            ['tenant_id' => $tenant->id, 'company_id' => $company->id, 'access_key' => str_repeat('9', 49)],
+            [
+                'document_type' => '01',
+                'establishment' => '001',
+                'emission_point' => '001',
+                'sequential' => '000000001',
+                'issue_date' => now()->toDateString(),
+                'status' => FiscalDocument::STATUS_AUTHORIZED,
+                'environment' => '2',
+                'direction' => FiscalDocument::DIRECTION_RECEIVED,
+                'issuer_ruc' => '1758871873001',
+                'issuer_name' => 'PROVEEDOR DE PRUEBA S.A.',
+                'receiver_ruc' => $company->ruc,
+                'receiver_name' => $company->legal_name,
+                'subtotal_cents' => 100_000,
+                'discount_cents' => 0,
+                'tax_cents' => 15_000,
+                'ice_cents' => 0,
+                'irbpnr_cents' => 0,
+                'tip_cents' => 0,
+                'total_cents' => 115_000,
+                'currency' => 'USD',
+                'xml_path' => 'dev/seed.xml',
+                'xml_sha256' => str_repeat('a', 64),
+                'xml_size' => 100,
+                'source' => FiscalDocument::SOURCE_MANUAL_UPLOAD,
+                'totals_mismatch' => false,
+                'first_seen_at' => now(),
+                'updated_or_created_at' => now(),
+            ],
+        );
+
+        FiscalDocumentTax::query()->firstOrCreate(
+            [
+                'tenant_id' => $tenant->id,
+                'fiscal_document_id' => $document->id,
+                'tax_code' => '2',
+                'sri_percentage_code' => '4',
+            ],
+            [
+                'rate' => 0.15,
+                'base_cents' => 100_000,
+                'amount_cents' => 15_000,
+            ],
         );
 
         if ($this->command !== null) {
