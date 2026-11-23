@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
 
 import { useRoute, useRouter } from 'vue-router';
 
 import AppShell from '@/layouts/AppShell.vue';
 import AppPage from '@/components/layout/AppPage.vue';
 import CompanyTable from '@/components/companies/CompanyTable.vue';
-import CompanyFormModal from '@/components/companies/CompanyFormModal.vue';
-import CompanyArchiveModal from '@/components/companies/CompanyArchiveModal.vue';
-import SriCredentialManageModal from '@/components/companies/SriCredentialManageModal.vue';
+const CompanyFormModal = defineAsyncComponent(() => import('@/components/companies/CompanyFormModal.vue'));
+CompanyFormModal.name = 'CompanyFormModal';
+const CompanyArchiveModal = defineAsyncComponent(() => import('@/components/companies/CompanyArchiveModal.vue'));
+CompanyArchiveModal.name = 'CompanyArchiveModal';
+const SriCredentialManageModal = defineAsyncComponent(() => import('@/components/companies/SriCredentialManageModal.vue'));
+SriCredentialManageModal.name = 'SriCredentialManageModal';
 import { useAuthStore } from '@/stores/auth';
 import { useCompanyStore, type Company } from '@/stores/company';
 

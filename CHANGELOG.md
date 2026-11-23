@@ -6,6 +6,11 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ## [Unreleased]
 
+### Changed
+
+- Performance: lazy-load all route components and heavy modals/drawers in the SPA to reduce initial bundle and browser memory (Safari/Chrome). Vite dev server now pre-bundles heavy dependencies, ignores `vendor/storage/node_modules` in the watcher, uses polling with a 2 s interval and a 1.5 GB memory limit. OPcache enabled in development (mounted `php.ini`) with timestamp validation. Docker cleanup removed ~125 GB of unused images/volumes/build cache.
+
+
 ### Added
 
 - F4-03a (slice 1): cliente HTTP de la SPA sobre `problem+json` (RFC 9457): `ApiError` expone `errors` y `fieldError`, `deleteJson` para respuestas `204` y cuerpos vacíos tolerados; `postJson`/`patchJson` mantienen `Idempotency-Key`. Store `company` con `createCompany`, `updateCompany`, `archiveCompany` y `fetchCompany` (orden por razón social, selección activa y propagación de errores de validación). 17 tests nuevos (`lib/api.spec.ts`, `company.spec.ts`). Base del CRUD de contribuyentes desde la UI.
