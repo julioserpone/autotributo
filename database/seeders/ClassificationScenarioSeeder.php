@@ -12,6 +12,7 @@ use App\Domain\Classification\Models\ExpenseCategory;
 use App\Domain\Companies\Models\Company;
 use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\FiscalDocuments\Models\FiscalDocumentItem;
+use App\Domain\FiscalDocuments\Models\FiscalDocumentTax;
 use App\Domain\Tenancy\Actions\EnsureTenantRoles;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
@@ -112,6 +113,22 @@ final class ClassificationScenarioSeeder extends Seeder
                 'totals_mismatch' => false,
                 'first_seen_at' => now(),
                 'updated_or_created_at' => now(),
+            ],
+        );
+
+        // Impuesto de cabecera para que los agregados por período (F5-01) tengan
+        // datos de prueba sin depender de una sincronización real del SRI.
+        FiscalDocumentTax::query()->firstOrCreate(
+            [
+                'tenant_id' => $tenant->id,
+                'fiscal_document_id' => $document->id,
+                'tax_code' => '2',
+                'sri_percentage_code' => '4',
+            ],
+            [
+                'rate' => 0.15,
+                'base_cents' => 100_000,
+                'amount_cents' => 15_000,
             ],
         );
 
