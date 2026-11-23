@@ -5,6 +5,8 @@ import { useCompanyStore } from '@/stores/company';
 import DashboardPage from '@/pages/DashboardPage.vue';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage.vue';
 import CompaniesPage from '@/pages/CompaniesPage.vue';
+import InvitationsPage from '@/pages/InvitationsPage.vue';
+import AcceptInvitationPage from '@/pages/AcceptInvitationPage.vue';
 import ClassificationReviewPage from '@/pages/ClassificationReviewPage.vue';
 import FiscalDocumentInboxPage from '@/pages/FiscalDocumentInboxPage.vue';
 import LoginPage from '@/pages/LoginPage.vue';
@@ -58,6 +60,18 @@ const router = createRouter({
             name: 'companies',
             component: CompaniesPage,
             meta: { title: 'Contribuyentes' },
+        },
+        {
+            path: '/invitations',
+            name: 'invitations',
+            component: InvitationsPage,
+            meta: { title: 'Equipo e invitaciones' },
+        },
+        {
+            path: '/accept-invitation',
+            name: 'accept-invitation',
+            component: AcceptInvitationPage,
+            meta: { public: true, title: 'Aceptar invitación' },
         },
         {
             path: '/fiscal_documents',

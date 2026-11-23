@@ -13,7 +13,12 @@ final class InvitationNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(private readonly string $token, private readonly string $tenantName) {}
+    public function __construct(
+        private readonly string $token,
+        private readonly string $tenantName,
+        private readonly string $inviterName,
+        private readonly string $inviterEmail,
+    ) {}
 
     /**
      * @return list<string>
@@ -28,9 +33,12 @@ final class InvitationNotification extends Notification implements ShouldQueue
         $url = url('/accept-invitation?token='.$this->token);
 
         return (new MailMessage)
-            ->subject('Invitación a '.$this->tenantName)
-            ->line('Has sido invitado a unirte al estudio.')
-            ->action('Aceptar invitación', $url)
-            ->line('Este enlace expira en 7 días.');
+            ->subject('Invitación')
+            ->view('emails.invitation', [
+                'tenantName' => $this->tenantName,
+                'inviterName' => $this->inviterName,
+                'inviterEmail' => $this->inviterEmail,
+                'url' => $url,
+            ]);
     }
 }

@@ -23,7 +23,7 @@ final readonly class AcceptInvitation
         if (! $invitation instanceof Invitation
             || $invitation->accepted_at !== null
             || $invitation->expires_at->isPast()) {
-            abort(422, 'La invitación no es válida o ha expirado.');
+            abort(422, 'La invitación no es válida, fue anulada o ha expirado.');
         }
 
         app(TenantContext::class)->initialize(

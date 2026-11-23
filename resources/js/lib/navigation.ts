@@ -25,6 +25,7 @@ export const primaryNav: AppNavItem[] = [
 
 export const systemNav: AppNavItem[] = [
     { label: 'Seguridad (2FA)', icon: 'i-lucide-shield-check', route: 'two-factor-setup' },
+    { label: 'Equipo e invitaciones', icon: 'i-lucide-users', route: 'invitations' },
     { label: 'Firma electrónica (.p12)', icon: 'i-lucide-key-round', soon: true },
     { label: 'Configuración', icon: 'i-lucide-settings', soon: true },
 ];

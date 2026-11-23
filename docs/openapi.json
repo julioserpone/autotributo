@@ -2530,13 +2530,17 @@
                                                 "expires_at": {
                                                     "type": "string",
                                                     "format": "date-time"
+                                                },
+                                                "resent": {
+                                                    "type": "boolean"
                                                 }
                                             },
                                             "required": [
                                                 "id",
                                                 "email",
                                                 "role",
-                                                "expires_at"
+                                                "expires_at",
+                                                "resent"
                                             ]
                                         }
                                     },
@@ -2558,6 +2562,77 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/auth/invitations/validate": {
+            "get": {
+                "operationId": "v1.invitations.validate",
+                "tags": [
+                    "Invitation"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "valid": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "valid"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "La invitaci\u00f3n no es v\u00e1lida, fue anulada o ha expirado."
+                                                }
+                                            },
+                                            "required": [
+                                                "message"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "La invitaci\u00f3n no es v\u00e1lida o ha expirado."
+                                                }
+                                            },
+                                            "required": [
+                                                "message"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
                     }
                 }
             }
