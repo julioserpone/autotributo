@@ -70,7 +70,7 @@ jobs:
       # (extensión nueva, versión de Node) no se queda huérfano y la imagen de
       # staging nunca construye el toolchain por segunda vez en el runner.
       - name: Build and push PHP base image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/php/Dockerfile
@@ -85,7 +85,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=php-base
 
       - name: Build and push staging image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/php/Dockerfile
