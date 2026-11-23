@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationController;
 use App\Http\Controllers\Api\V1\ManualFiscalDocumentController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
+use App\Http\Controllers\Api\V1\PeriodAggregateController;
 use App\Http\Controllers\Api\V1\RealtimeStatusController;
 use App\Http\Controllers\Api\V1\SriCredentialController;
 use App\Http\Controllers\Api\V1\SyncRunController;
@@ -114,6 +115,9 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
             ->name('api.v1.fiscal_documents.index');
         Route::get('fiscal_documents/{fiscal_document:public_id}', [FiscalDocumentController::class, 'show'])
             ->name('api.v1.fiscal_documents.show');
+
+        Route::get('companies/{company}/period-aggregates', [PeriodAggregateController::class, 'index'])
+            ->name('api.v1.companies.period_aggregates.index');
 
         // Credenciales del portal SRI (F1-06). El secreto nunca se devuelve y
         // cada lectura o cambio queda auditado en `sri_credential_accesses`.
