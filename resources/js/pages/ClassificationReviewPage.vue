@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue';
 
 import type { ClassificationApi } from '@/stores/classifications';
 
@@ -8,12 +8,16 @@ import AppShell from '@/layouts/AppShell.vue';
 import AppPage from '@/components/layout/AppPage.vue';
 import CompanyRequiredEmptyState from '@/components/companies/CompanyRequiredEmptyState.vue';
 import ClassificationBulkBar from '@/components/classifications/ClassificationBulkBar.vue';
-import ClassificationDetailModal from '@/components/classifications/ClassificationDetailModal.vue';
-import ClassificationRejectModal from '@/components/classifications/ClassificationRejectModal.vue';
+const ClassificationDetailModal = defineAsyncComponent(() => import('@/components/classifications/ClassificationDetailModal.vue'));
+ClassificationDetailModal.name = 'ClassificationDetailModal';
+const ClassificationRejectModal = defineAsyncComponent(() => import('@/components/classifications/ClassificationRejectModal.vue'));
+ClassificationRejectModal.name = 'ClassificationRejectModal';
 import ClassificationFilters from '@/components/classifications/ClassificationFilters.vue';
-import ClassificationHelpModal from '@/components/classifications/ClassificationHelpModal.vue';
+const ClassificationHelpModal = defineAsyncComponent(() => import('@/components/classifications/ClassificationHelpModal.vue'));
+ClassificationHelpModal.name = 'ClassificationHelpModal';
 import ClassificationTable from '@/components/classifications/ClassificationTable.vue';
-import CreateRuleModal from '@/components/classifications/CreateRuleModal.vue';
+const CreateRuleModal = defineAsyncComponent(() => import('@/components/classifications/CreateRuleModal.vue'));
+CreateRuleModal.name = 'CreateRuleModal';
 import { useCompanyStore } from '@/stores/company';
 import { useClassificationStore } from '@/stores/classifications';
 
