@@ -176,7 +176,7 @@ CMD ["php-fpm"]
 # Assets: compila los assets de Vite (CSS/JS) en una imagen Node. Solo lo usa la
 # imagen completa de GHCR.
 # -----------------------------------------------------------------------------
-FROM node:24-alpine AS assets
+FROM node:26-alpine AS assets
 
 WORKDIR /app
 
