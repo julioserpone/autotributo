@@ -2,19 +2,22 @@ import { createRouter, createWebHistory } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 import { useCompanyStore } from '@/stores/company';
-import DashboardPage from '@/pages/DashboardPage.vue';
-import ForgotPasswordPage from '@/pages/ForgotPasswordPage.vue';
-import CompaniesPage from '@/pages/CompaniesPage.vue';
-import InvitationsPage from '@/pages/InvitationsPage.vue';
-import AcceptInvitationPage from '@/pages/AcceptInvitationPage.vue';
-import ClassificationReviewPage from '@/pages/ClassificationReviewPage.vue';
-import FiscalDocumentInboxPage from '@/pages/FiscalDocumentInboxPage.vue';
-import LoginPage from '@/pages/LoginPage.vue';
-import NotFoundPage from '@/pages/NotFoundPage.vue';
-import ResetPasswordPage from '@/pages/ResetPasswordPage.vue';
-import SyncMonitorPage from '@/pages/SyncMonitorPage.vue';
-import TwoFactorChallengePage from '@/pages/TwoFactorChallengePage.vue';
-import TwoFactorSetupPage from '@/pages/TwoFactorSetupPage.vue';
+
+// Carga diferida de las vistas: cada página se descarga solo cuando se navega a
+// ella. Reduce el bundle inicial y la memoria del navegador en la primera carga.
+const DashboardPage = () => import('@/pages/DashboardPage.vue');
+const ForgotPasswordPage = () => import('@/pages/ForgotPasswordPage.vue');
+const CompaniesPage = () => import('@/pages/CompaniesPage.vue');
+const InvitationsPage = () => import('@/pages/InvitationsPage.vue');
+const AcceptInvitationPage = () => import('@/pages/AcceptInvitationPage.vue');
+const ClassificationReviewPage = () => import('@/pages/ClassificationReviewPage.vue');
+const FiscalDocumentInboxPage = () => import('@/pages/FiscalDocumentInboxPage.vue');
+const LoginPage = () => import('@/pages/LoginPage.vue');
+const NotFoundPage = () => import('@/pages/NotFoundPage.vue');
+const ResetPasswordPage = () => import('@/pages/ResetPasswordPage.vue');
+const SyncMonitorPage = () => import('@/pages/SyncMonitorPage.vue');
+const TwoFactorChallengePage = () => import('@/pages/TwoFactorChallengePage.vue');
+const TwoFactorSetupPage = () => import('@/pages/TwoFactorSetupPage.vue');
 
 const router = createRouter({
     history: createWebHistory('/'),
