@@ -89,6 +89,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 - F4-03c (invitaciones en la UI): página `InvitationsPage` para invitar usuarios con rol (owner/accountant/assistant/viewer) y página pública `AcceptInvitationPage` para aceptar la invitación con token (nombre + contraseña). Entrada "Equipo e invitaciones" en la navegación. Reutiliza `PasswordRevealButton`.
 
+- F5-01 (agregados por período): migraciones `fiscal_periods` y `period_aggregates`, modelos, acción idempotente `ComputePeriodAggregates`, comando `fiscal:compute-aggregates` y endpoint `GET /companies/{company}/period-aggregates`. Base para dashboards y declaraciones.
+
 ### Changed
 
 - Docs: sincronización completa de `docs/02`, `docs/09`, `docs/03`, `docs/04`, `docs/fiscal-signoff` y `docs/reports` con el estado real de `main` (2026-11-21). Se marcan F3-06 (#97) y F4-07 (#98) como completadas, se añaden F3-08/F3-09 y las tareas F4-03a/b/c, F4-08b, F4-12 y F4-13, se corrige `DUPLICATE_INVOICE` → `DUPLICATE_SEQUENTIAL` y se documenta que la fase F3 no puede cerrarse sin la firma del contador ni el dataset de evaluación. El calendario pasa a las etapas G–J y `docs/11`/`docs/15` quedan archivados como referencia histórica.

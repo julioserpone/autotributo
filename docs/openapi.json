@@ -2845,6 +2845,119 @@
                 }
             }
         },
+        "/v1/companies/{company}/period-aggregates": {
+            "get": {
+                "operationId": "v1.companies.period_aggregates.index",
+                "tags": [
+                    "PeriodAggregate"
+                ],
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "description": "The company public id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/PeriodAggregate"
+                                                    }
+                                                },
+                                                "meta": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "period": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "year": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "month": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "status": {
+                                                                    "type": "string"
+                                                                },
+                                                                "computed_at": {}
+                                                            },
+                                                            "required": [
+                                                                "year",
+                                                                "month",
+                                                                "status",
+                                                                "computed_at"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "period"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "data",
+                                                "meta"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "minItems": 0,
+                                                    "maxItems": 0
+                                                },
+                                                "meta": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "period": {
+                                                            "type": "null"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "period"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "data",
+                                                "meta"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/realtime/status": {
             "get": {
                 "operationId": "v1.realtime.status",
@@ -4744,6 +4857,91 @@
                     "viewer"
                 ],
                 "title": "MembershipRole"
+            },
+            "PeriodAggregate": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "tenant_id": {
+                        "type": "integer"
+                    },
+                    "company_id": {
+                        "type": "integer"
+                    },
+                    "fiscal_period_id": {
+                        "type": "integer"
+                    },
+                    "direction": {
+                        "type": "string"
+                    },
+                    "document_type": {
+                        "type": "string"
+                    },
+                    "tax_code": {
+                        "type": "string"
+                    },
+                    "sri_percentage_code": {
+                        "type": "string"
+                    },
+                    "rate": {
+                        "type": "string"
+                    },
+                    "base_cents": {
+                        "type": "integer"
+                    },
+                    "tax_cents": {
+                        "type": "integer"
+                    },
+                    "retention_cents": {
+                        "type": "integer"
+                    },
+                    "documents_count": {
+                        "type": "integer"
+                    },
+                    "computed_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "version": {
+                        "type": "integer"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "id",
+                    "tenant_id",
+                    "company_id",
+                    "fiscal_period_id",
+                    "direction",
+                    "document_type",
+                    "tax_code",
+                    "sri_percentage_code",
+                    "rate",
+                    "base_cents",
+                    "tax_cents",
+                    "retention_cents",
+                    "documents_count",
+                    "computed_at",
+                    "version",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "PeriodAggregate"
             },
             "PreviewClassificationRuleRequest": {
                 "type": "object",
