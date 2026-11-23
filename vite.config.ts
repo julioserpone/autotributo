@@ -102,10 +102,28 @@ export default defineConfig({
             '@': fileURLToPath(new URL('./resources/js', import.meta.url)),
         },
     },
+    optimizeDeps: {
+        // Pre-bundlear las dependencias pesadas para reducir el número de módulos
+        // que Vite sirve al navegador (especialmente en Safari) en desarrollo.
+        include: [
+            'vue',
+            'vue-router',
+            'pinia',
+            '@nuxt/ui',
+            'reka-ui',
+            '@vueuse/core',
+            '@vueuse/shared',
+        ],
+    },
     server: {
         host: '0.0.0.0',
         port: vitePort,
         strictPort: true,
+        watch: {
+            // Evita observar directorios pesados/irrelevantes y reduce CPU del
+            // servidor de desarrollo sobre el bind mount de Docker.
+            ignored: ['**/node_modules/**', '**/vendor/**', '**/storage/**', '**/.git/**'],
+        },
         // Sin esto, el túnel sirve el HTML pero los assets no cargan.
         allowedHosts: dominiosTunel.map((dominio) => `.${dominio}`),
         cors: {

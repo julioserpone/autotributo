@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue';
 
-import SriSyncRunDetailDrawer from '@/components/sri/SriSyncRunDetailDrawer.vue';
+const SriSyncRunDetailDrawer = defineAsyncComponent(() => import('@/components/sri/SriSyncRunDetailDrawer.vue'));
+SriSyncRunDetailDrawer.name = 'SriSyncRunDetailDrawer';
 import SriSyncRunHistory from '@/components/sri/SriSyncRunHistory.vue';
 import AppPage from '@/components/layout/AppPage.vue';
 import AppShell from '@/layouts/AppShell.vue';
