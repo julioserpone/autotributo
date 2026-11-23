@@ -97,7 +97,7 @@ export const useFiscalFindingStore = defineStore('fiscal_findings', () => {
 
     function buildQuery(page: number): string {
         const params = new URLSearchParams();
-        params.set('per_page', '25');
+        params.set('per_page', '10');
         params.set('page', String(page));
 
         if (filters.value.companyId && filters.value.companyId !== 'all') {

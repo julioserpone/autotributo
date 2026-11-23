@@ -150,7 +150,7 @@ it('filtra por public_id de empresa y por texto', function (): void {
         ->assertJsonCount(0, 'data');
 });
 
-it('devuelve contadores por estado y severidad ignorando el filtro de estado', function (): void {
+it('devuelve contadores respetando el filtro de estado', function (): void {
     FiscalFinding::factory()->create([
         'tenant_id' => $this->tenant->id,
         'company_id' => $this->company->id,
@@ -164,11 +164,11 @@ it('devuelve contadores por estado y severidad ignorando el filtro de estado', f
 
     $response->assertOk()
         ->assertJsonCount(1, 'data')
-        ->assertJsonPath('meta.counts.total', 2)
+        ->assertJsonPath('meta.counts.total', 1)
         ->assertJsonPath('meta.counts.by_status.open', 1)
-        ->assertJsonPath('meta.counts.by_status.resolved', 1)
+        ->assertJsonPath('meta.counts.by_status.resolved', 0)
         ->assertJsonPath('meta.counts.by_severity.critical', 1)
-        ->assertJsonPath('meta.counts.by_severity.warning', 1)
+        ->assertJsonPath('meta.counts.by_severity.warning', 0)
         ->assertJsonPath('meta.total', 1);
 });
 

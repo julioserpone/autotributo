@@ -39,7 +39,7 @@ const emit = defineEmits<{
           <th class="px-3 py-2">
             Estado
           </th>
-          <th class="px-3 py-2 text-right">
+          <th class="px-3 py-2 text-center">
             Acciones
           </th>
         </tr>

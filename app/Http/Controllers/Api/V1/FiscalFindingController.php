@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Companies\Models\Company;
 use App\Domain\Fiscal\Actions\DetectFiscalRisks;
+use App\Domain\Fiscal\Enums\FiscalRiskSeverity;
 use App\Domain\Fiscal\Enums\FiscalRiskStatus;
 use App\Domain\Fiscal\Models\FiscalFinding;
 use App\Domain\FiscalDocuments\Models\FiscalDocument;
@@ -35,15 +36,16 @@ final class FiscalFindingController extends Controller
 
         $this->applyFilters($query, $filters, $request);
 
-        // Los contadores ignoran el filtro de estado: alimentan las pestañas de
-        // la bandeja, que necesitan ver el total de cada estado.
-        $counts = $this->counts($query);
-
+        // El filtro de estado se aplica antes de los contadores para que las
+        // tarjetas resuman el conjunto filtrado (lo que se muestra en la tabla).
         $status = trim((string) ($filters['status'] ?? $request->query('status', '')));
 
         if ($status !== '' && FiscalRiskStatus::tryFrom($status) !== null) {
             $query->where('status', $status);
         }
+
+        // Los contadores reflejan el conjunto filtrado, incluido el estado.
+        $counts = $this->counts($query);
 
         $perPage = max(1, min((int) $request->integer('per_page', 25), 100));
 
@@ -148,22 +150,40 @@ final class FiscalFindingController extends Controller
     {
         $base = (clone $query)->toBase();
 
-        /** @var Collection<string, int|string> $byStatus */
-        $byStatus = (clone $base)
+        $byStatus = array_fill_keys(
+            array_map(static fn (FiscalRiskStatus $status): string => $status->value, FiscalRiskStatus::cases()),
+            0,
+        );
+
+        $bySeverity = array_fill_keys(
+            array_map(static fn (FiscalRiskSeverity $severity): string => $severity->value, FiscalRiskSeverity::cases()),
+            0,
+        );
+
+        /** @var Collection<string, int|string> $statusRows */
+        $statusRows = (clone $base)
             ->selectRaw('status, count(*) as aggregate')
             ->groupBy('status')
             ->pluck('aggregate', 'status');
 
-        /** @var Collection<string, int|string> $bySeverity */
-        $bySeverity = (clone $base)
+        /** @var Collection<string, int|string> $severityRows */
+        $severityRows = (clone $base)
             ->selectRaw('severity, count(*) as aggregate')
             ->groupBy('severity')
             ->pluck('aggregate', 'severity');
 
+        foreach ($statusRows as $status => $value) {
+            $byStatus[(string) $status] = (int) $value;
+        }
+
+        foreach ($severityRows as $severity => $value) {
+            $bySeverity[(string) $severity] = (int) $value;
+        }
+
         return [
-            'total' => (int) $byStatus->sum(),
-            'by_status' => $byStatus->map(static fn (int|string $value): int => (int) $value)->all(),
-            'by_severity' => $bySeverity->map(static fn (int|string $value): int => (int) $value)->all(),
+            'total' => array_sum($byStatus),
+            'by_status' => $byStatus,
+            'by_severity' => $bySeverity,
         ];
     }
 

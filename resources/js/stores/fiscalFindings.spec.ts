@@ -61,7 +61,7 @@ describe('useFiscalFindingStore', () => {
         const store = useFiscalFindingStore();
         await store.fetchFindings();
 
-        expect(getJson).toHaveBeenCalledWith('/api/v1/fiscal-findings?per_page=25&page=1&filter%5Bstatus%5D=open');
+        expect(getJson).toHaveBeenCalledWith('/api/v1/fiscal-findings?per_page=10&page=1&filter%5Bstatus%5D=open');
         expect(store.items).toHaveLength(1);
         expect(store.counts.by_status.open).toBe(20);
         expect(store.openCount).toBe(20);
