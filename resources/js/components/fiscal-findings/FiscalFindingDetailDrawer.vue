@@ -57,13 +57,13 @@ const metadataEntries = computed(() => {
           <UBadge
             :color="severityColor(finding.severity)"
             variant="soft"
-            size="sm"
+            size="md"
             :label="severityLabel(finding.severity)"
           />
           <UBadge
             :color="statusColor(finding.status)"
             variant="soft"
-            size="sm"
+            size="md"
             :label="statusLabel(finding.status)"
           />
           <span class="font-mono text-2xs text-muted">{{ finding.code }}</span>

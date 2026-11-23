@@ -54,7 +54,7 @@ const emit = defineEmits<{
             <UBadge
               :color="severityColor(item.severity)"
               variant="soft"
-              size="sm"
+              size="md"
               :label="severityLabel(item.severity)"
             />
           </td>
@@ -91,7 +91,7 @@ const emit = defineEmits<{
             <UBadge
               :color="statusColor(item.status)"
               variant="soft"
-              size="sm"
+              size="md"
               :label="statusLabel(item.status)"
             />
           </td>
