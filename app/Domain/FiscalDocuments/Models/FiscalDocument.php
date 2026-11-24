@@ -27,6 +27,7 @@ use Illuminate\Support\Str;
  * @property int $company_id
  * @property SriDocumentType $document_type
  * @property string $access_key
+ * @property string $direction
  * @property Carbon $issue_date
  * @property int $subtotal_cents
  * @property int $tax_cents
@@ -48,6 +49,8 @@ final class FiscalDocument extends Model
     public const STATUS_AUTHORIZED = 'authorized';
 
     public const DIRECTION_RECEIVED = 'received';
+
+    public const DIRECTION_ISSUED = 'issued';
 
     protected $table = 'fiscal_documents';
 

@@ -68,7 +68,7 @@ it('persiste un comprobante y sus hijos', function (): void {
         ->and($result->fiscal_document->exists)->toBeTrue()
         ->and($result->fiscal_document->tenant_id)->toBe($this->tenant->id)
         ->and($result->fiscal_document->document_type)->toBe(SriDocumentType::FiscalDocument)
-        ->and($result->fiscal_document->direction)->toBe(FiscalDocument::DIRECTION_RECEIVED)
+        ->and($result->fiscal_document->direction)->toBe(FiscalDocument::DIRECTION_ISSUED)
         ->and($result->fiscal_document->source)->toBe(FiscalDocument::SOURCE_SRI_ROBOT)
         ->and($result->fiscal_document->subtotal_cents)->toBe(10_000)
         ->and($result->fiscal_document->tax_cents)->toBe(1_350)

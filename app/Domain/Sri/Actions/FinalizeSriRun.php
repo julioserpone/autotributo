@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Sri\Actions;
 
 use App\Domain\Companies\Models\Company;
+use App\Domain\Fiscal\Actions\ComputePeriodAggregates;
 use App\Domain\Fiscal\Actions\DetectFiscalRisks;
 use App\Domain\Sri\Data\SriChunkImportResult;
 use App\Domain\Sri\Enums\SriDocumentType;
@@ -98,18 +99,42 @@ final readonly class FinalizeSriRun
         $run->transitionTo($status);
 
         if ($status === SriSyncRunStatus::Completed || $status === SriSyncRunStatus::Partial) {
-            try {
-                $company = Company::query()->find($run->company_id);
+            $company = Company::query()->find($run->company_id);
 
-                if ($company instanceof Company) {
+            if ($company instanceof Company) {
+                try {
                     app(DetectFiscalRisks::class)->handle($company);
+                } catch (Throwable $exception) {
+                    report($exception);
                 }
-            } catch (Throwable $exception) {
-                report($exception);
+
+                try {
+                    $this->recomputeAggregates($run, $company);
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
             }
         }
 
         return $run->refresh();
+    }
+
+    /**
+     * Recalcula los agregados de todos los meses cubiertos por el run.
+     *
+     * Es best-effort: un fallo de agregación no cambia el veredicto del run.
+     */
+    private function recomputeAggregates(SriSyncRun $run, Company $company): void
+    {
+        $compute = app(ComputePeriodAggregates::class);
+
+        $cursor = $run->date_from->copy()->startOfMonth();
+        $end = $run->date_to->copy()->endOfMonth();
+
+        while ($cursor->lessThanOrEqualTo($end)) {
+            $compute->handle($company, $cursor->year, $cursor->month);
+            $cursor->addMonthNoOverflow();
+        }
     }
 
     /**

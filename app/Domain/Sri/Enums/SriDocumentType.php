@@ -44,6 +44,24 @@ enum SriDocumentType: string
     }
 
     /**
+     * Dirección tributaria (`purchases`/`sales`) del comprobante.
+     *
+     * El comprobante guarda `direction` desde la perspectiva del emisor
+     * (`received`/`issued`). La liquidación de compra siempre es una compra,
+     * aunque la emita el comprador; el comprobante de retención invierte la
+     * lectura: emitido por la empresa es una retención practicada y recibido
+     * es una retención que le practicaron.
+     */
+    public function tradeDirection(string $documentDirection): string
+    {
+        return match ($this) {
+            self::PurchaseSettlement => 'purchases',
+            self::Withholding => $documentDirection === 'issued' ? 'purchases' : 'sales',
+            default => $documentDirection === 'issued' ? 'sales' : 'purchases',
+        };
+    }
+
+    /**
      * @return list<string>
      */
     public static function codes(): array

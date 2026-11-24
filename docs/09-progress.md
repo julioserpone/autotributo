@@ -2,7 +2,7 @@
 
 > Tabla viva del proyecto. Se actualiza al cerrar cada tarea (una tarea = un commit/PR). La fuente de verdad del alcance sigue siendo `docs/02-implementation-plan.md`.
 
-**Última actualización:** 2026-11-23
+**Última actualización:** 2026-11-24
 
 ## Resumen por fase
 
@@ -13,12 +13,12 @@
 | F2 · Ingesta SRI | Completado | 12/12 + F2-13 | F2-13 · Carga manual de XML (`US-14`) |
 | F3 · Motor fiscal + IA | En curso | 7/9 | F3-06 · Riesgos fiscales y hallazgos (#97) |
 | F4 · Frontend | En curso | 6/11 + F4-08b/F4-13 | F4-08b · Bandeja de hallazgos fiscales |
-| F5 · Declaraciones | Pendiente | 0/8 | — |
+| F5 · Declaraciones | En curso | 1/8 + F5-01b | F5-01b · dirección por RUC, ventas, retenciones y dashboard |
 | F6 · Hardening y beta | Pendiente | 0/8 | — |
 
 > El recuento usa las tareas de `docs/02-implementation-plan.md`. Las slices de F1-03 y F4-03 y las tareas nuevas (F1-03e/f/g, F2-13/14/15, F4-03a/b/c, F4-08b, F4-12, F4-13) se detallan abajo y no alteran el denominador de la fase.
 >
-> **Siguiente etapa (Etapa G2, revisión 2026-11-23).** Ambos documentos maestros deben coincidir: `docs/02` §6 (tareas) y §9/§17 (orden y prioridad) y esta tabla. **G1 está cerrada:** F4-03a/b/c, F4-13 y F5-01 están en `main` (#100–#106). Orden acordado para G2: **F4-08b → F4-08 → F3-09**, con la firma del contador solicitada en paralelo. F3-08 queda bloqueada por el dataset dorado; F5-02 espera la firma de la convención del 104. Justificación, diseño y pruebas obligatorias viven en `docs/02` §6, §9 y §17, no en un documento aparte.
+> **Siguiente etapa (Etapa G2, revisión 2026-11-24).** Ambos documentos maestros deben coincidir: `docs/02` §6 (tareas) y §9/§17 (orden y prioridad) y esta tabla. **G1 está cerrada:** F4-03a/b/c, F4-13 y F5-01 están en `main` (#100–#106). **F4-08b y F5-01b también están completadas**, con lo que el orden pendiente de G2 es **F4-08 → F3-09**, con la firma del contador solicitada en paralelo. F3-08 queda bloqueada por el dataset dorado; F5-02 espera la firma de la convención del 104. Justificación, diseño y pruebas obligatorias viven en `docs/02` §6, §9 y §17, no en un documento aparte.
 >
 > **Estado de cierre de fase:** F1 y F2 están cerradas. F3 está funcionalmente completa pero **no puede declararse cerrada** sin `F3-08` ni la firma del contador (`docs/fiscal-signoff.md` sigue sin firmas). F4 ya tiene UI para empresas, credenciales SRI, invitaciones y hallazgos; le faltan dashboards reales (F4-08), vista 104 y calidad/pruebas para M4.
 
@@ -100,7 +100,7 @@
 |---|---|---|---|
 | F3 · Motor fiscal + IA | F3-01…F3-09 | En curso (7/9) | P1 (F3-08 evaluación, bloqueada por dataset) / P2 (F3-09 catálogos) |
 | F4 · Frontend | F4-01…F4-11 (+ F4-08b, F4-12, F4-13) | En curso (6/11 + F4-08b/F4-13) | **P1** (F4-08) / P2 (F4-09/10/11/12) |
-| F5 · Declaraciones | F5-01…F5-08 | En curso (1/8) | **P1** (F4-08 depende de F5-01, ya completada) / P2 (resto, tras firma del 104) |
+| F5 · Declaraciones | F5-01…F5-08 | En curso (1/8 + F5-01b) | **P1** (F4-08 consume el panel de F5-01b) / P2 (resto, tras firma del 104) |
 | F6 · Hardening y beta | F6-01…F6-08 | Pendiente | P3 (lanzamiento) |
 
 ## Registro de PRs recientes (2026-11-06 → 2026-11-23)
@@ -175,7 +175,7 @@
 | F2-14 cancelación de run | Archivar empresa no detiene un run en curso (`ArchiveCompany` lo delega) | PR pequeño, P2 |
 | F2-15 runbook de runs huérfanos | Procedimiento operativo de `sri:recover-run` | Documento + prueba de restauración |
 | F4-01 TanStack Query / i18n | `lib/api.ts` ya expone `errors` y soporta `204` (F4-03a); faltan TanStack Query e i18n | Decidir si entran antes de F4-08 |
-| F5-01 solo agrega compras | `ComputePeriodAggregates` fija `direction = purchases` y `PersistSriFiscalDocument` fija `received`: no hay IVA de ventas | F5-01b (derivar dirección por RUC, recalcular al cerrar el run y programar el comando) antes de F4-08 |
+| ~~F5-01 solo agrega compras~~ | Resuelto por **F5-01b**: `fiscal_documents.direction` se deriva por RUC, `ComputePeriodAggregates` agrega ventas/compras y retenciones, el recálculo corre al cerrar el run y el barrido nocturno; `GET /api/v1/dashboard` queda listo para F4-08 | F4-08 consume el endpoint; F5-02 puede usar los agregados tras la firma del contador |
 | Filtro por empresa en la revisión de clasificación | `ClassificationFilters` envía el `public_id` y el backend castea a `(int)`, por lo que el filtro no devuelve resultados | Aceptar `public_id` o numérico como en `fiscal-findings`/`fiscal_documents` |
 
 ## Cómo actualizar

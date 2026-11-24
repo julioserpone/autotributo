@@ -169,7 +169,7 @@ Definición de casilleros por formulario y vigencia: `form_code`, `line_code`, `
 | authorization_date | timestamptz null | |
 | status | varchar(20) | `authorized`, `cancelled`, `rejected`, `pending` |
 | environment | char(1) | `1` pruebas, `2` producción |
-| direction | varchar(16) | `received` (compra) / `issued` (venta) |
+| direction | varchar(16) | `received`/`issued` derivado del RUC del emisor vs. la empresa (F5-01b). En agregados, `SriDocumentType::tradeDirection()` lo traduce a `purchases`/`sales`; la retención 07 invierte la lectura y la liquidación 03 siempre es compra |
 | issuer_ruc / issuer_name | char(13) / varchar(300) | |
 | receiver_ruc / receiver_name | | |
 | subtotal_cents | bigint | Sin impuestos |

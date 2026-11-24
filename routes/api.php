@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\BroadcastingAuthController;
 use App\Http\Controllers\Api\V1\ClassificationController;
 use App\Http\Controllers\Api\V1\ClassificationRuleController;
 use App\Http\Controllers\Api\V1\CompanyController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\EconomicActivityCodeController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\ExpenseCategoryController;
@@ -118,6 +119,13 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
 
         Route::get('companies/{company}/period-aggregates', [PeriodAggregateController::class, 'index'])
             ->name('api.v1.companies.period_aggregates.index');
+
+        // Panel tributario (F5-01b): IVA ventas/compras, retenciones, top
+        // proveedores y hallazgos del período. F4-08 lo consume.
+        Route::get('dashboard', [DashboardController::class, 'index'])
+            ->name('api.v1.dashboard.index');
+        Route::get('companies/{company}/dashboard', [DashboardController::class, 'show'])
+            ->name('api.v1.companies.dashboard.show');
 
         // Credenciales del portal SRI (F1-06). El secreto nunca se devuelve y
         // cada lectura o cambio queda auditado en `sri_credential_accesses`.

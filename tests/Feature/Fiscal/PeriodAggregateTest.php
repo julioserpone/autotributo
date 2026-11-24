@@ -7,6 +7,8 @@ use App\Domain\Fiscal\Actions\ComputePeriodAggregates;
 use App\Domain\Fiscal\Models\PeriodAggregate;
 use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\FiscalDocuments\Models\FiscalDocumentTax;
+use App\Domain\FiscalDocuments\Models\RetentionLine;
+use App\Domain\Sri\Enums\SriDocumentType;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -67,4 +69,101 @@ it('no crea agregados si no hay comprobantes', function (): void {
     $period = app(ComputePeriodAggregates::class)->handle($this->company, 2026, 4);
 
     expect(PeriodAggregate::query()->where('fiscal_period_id', $period->id)->count())->toBe(0);
+});
+
+it('agrega ventas cuando el emisor es la empresa', function (): void {
+    $document = FiscalDocument::factory()->create([
+        'tenant_id' => $this->tenant->id,
+        'company_id' => $this->company->id,
+        'direction' => FiscalDocument::DIRECTION_ISSUED,
+        'issuer_ruc' => $this->company->ruc,
+        'issue_date' => '2026-05-10',
+    ]);
+
+    FiscalDocumentTax::create([
+        'tenant_id' => $this->tenant->id,
+        'fiscal_document_id' => $document->id,
+        'tax_code' => '2',
+        'sri_percentage_code' => '4',
+        'rate' => 0.15,
+        'base_cents' => 20000,
+        'amount_cents' => 3000,
+    ]);
+
+    $period = app(ComputePeriodAggregates::class)->handle($this->company, 2026, 5);
+
+    $sale = PeriodAggregate::query()
+        ->where('fiscal_period_id', $period->id)
+        ->where('direction', 'sales')
+        ->first();
+
+    expect($sale)->not->toBeNull()
+        ->and($sale->base_cents)->toBe(20000)
+        ->and($sale->tax_cents)->toBe(3000)
+        ->and($sale->documents_count)->toBe(1);
+});
+
+it('agrega retenciones practicadas en compras y recibidas en ventas', function (): void {
+    $practiced = FiscalDocument::factory()->create([
+        'tenant_id' => $this->tenant->id,
+        'company_id' => $this->company->id,
+        'document_type' => SriDocumentType::Withholding,
+        'direction' => FiscalDocument::DIRECTION_ISSUED,
+        'issuer_ruc' => $this->company->ruc,
+        'issue_date' => '2026-06-05',
+    ]);
+
+    RetentionLine::create([
+        'tenant_id' => $this->tenant->id,
+        'fiscal_document_id' => $practiced->id,
+        'tax_type' => 'IR',
+        'retention_code' => '303',
+        'base_cents' => 10000,
+        'rate' => 0.02,
+        'amount_cents' => 200,
+        'document_number' => '001-001-000000123',
+    ]);
+
+    $received = FiscalDocument::factory()->create([
+        'tenant_id' => $this->tenant->id,
+        'company_id' => $this->company->id,
+        'document_type' => SriDocumentType::Withholding,
+        'direction' => FiscalDocument::DIRECTION_RECEIVED,
+        'issuer_ruc' => '1790012345001',
+        'issue_date' => '2026-06-06',
+    ]);
+
+    RetentionLine::create([
+        'tenant_id' => $this->tenant->id,
+        'fiscal_document_id' => $received->id,
+        'tax_type' => 'IVA',
+        'retention_code' => '721',
+        'base_cents' => 5000,
+        'rate' => 0.3,
+        'amount_cents' => 1500,
+        'document_number' => '001-001-000000456',
+    ]);
+
+    $period = app(ComputePeriodAggregates::class)->handle($this->company, 2026, 6);
+
+    $practicedBucket = PeriodAggregate::query()
+        ->where('fiscal_period_id', $period->id)
+        ->where('direction', 'purchases')
+        ->where('document_type', '07')
+        ->where('tax_code', '303')
+        ->first();
+
+    $receivedBucket = PeriodAggregate::query()
+        ->where('fiscal_period_id', $period->id)
+        ->where('direction', 'sales')
+        ->where('document_type', '07')
+        ->where('tax_code', '721')
+        ->first();
+
+    expect($practicedBucket)->not->toBeNull()
+        ->and($practicedBucket->retention_cents)->toBe(200)
+        ->and($practicedBucket->base_cents)->toBe(10000)
+        ->and($receivedBucket)->not->toBeNull()
+        ->and($receivedBucket->retention_cents)->toBe(1500)
+        ->and($receivedBucket->base_cents)->toBe(5000);
 });

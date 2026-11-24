@@ -74,7 +74,9 @@ final readonly class PersistSriFiscalDocument
                 'authorization_date' => $data->authorizationDate,
                 'status' => FiscalDocument::STATUS_AUTHORIZED,
                 'environment' => $data->environment,
-                'direction' => FiscalDocument::DIRECTION_RECEIVED,
+                'direction' => $data->issuerRuc === $company->ruc
+                    ? FiscalDocument::DIRECTION_ISSUED
+                    : FiscalDocument::DIRECTION_RECEIVED,
                 'issuer_ruc' => $data->issuerRuc,
                 'issuer_name' => $data->issuerName,
                 'receiver_ruc' => $data->receiverRuc === '' ? null : $data->receiverRuc,

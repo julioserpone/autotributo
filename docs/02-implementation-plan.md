@@ -195,6 +195,7 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | ID | Tarea | Est. | Detalle |
 |---|---|---|---|
 | F5-01 | Agregados por período | 2 d | **Completado 2026-11-23 (#106):** `fiscal_periods` y `period_aggregates`, `ComputePeriodAggregates` idempotente, comando `fiscal:compute-aggregates` y `GET /companies/{company}/period-aggregates`. **Límite conocido:** solo agrega compras (`direction = purchases`) y el recálculo es manual; **F5-01b** añade dirección derivada por RUC, ventas, retenciones, recálculo al cerrar el run y comando programado antes de F4-08 |
+| F5-01b | Datos de panel y dirección por RUC | 2 d | **Completado 2026-11-24:** `fiscal_documents.direction` se deriva por RUC (`issued` si el emisor es la empresa, `received` si no) con backfill; `SriDocumentType::tradeDirection()` mapea a `sales`/`purchases` (liquidación 03 siempre compra, retención 07 invertida); `ComputePeriodAggregates` agrega IVA de ventas y compras y retenciones practicadas/recibidas; recálculo best-effort al cerrar un run y al cargar XML manual; barrido nocturno del comando; `GET /api/v1/dashboard` (y `GET /companies/{company}/dashboard`) con IVA, retenciones, top proveedores, hallazgos abiertos y topes de gastos personales. Habilita F4-08 |
 | F5-02 | Formulario 104 | 3 d | Casilleros, arrastre de crédito tributario, proporcionalidad, retenciones, ajustes por NC/ND, validaciones |
 | F5-03 | Formulario 103 | 2 d | Retenciones de IR/IVA por código, consolidado mensual, cruce con comprobantes |
 | F5-04 | Formulario 102/101 | 2,5 d | Gastos personales por categoría, topes anuales, proyección, advertencias de exceso |
@@ -246,7 +247,7 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | Etapa | Prioridad | Foco | Demo / criterio |
 |---|---|---|---|
 | **G1** (2026-11-21 →) | **P0** | Docs sync · **F4-03a** empresas en UI · **F4-03b (F4-13)** credencial SRI en UI · **F4-03c** invitaciones en UI | Un usuario provisionado registra una empresa, carga su credencial e invita a un contador **sin salir de la app** |
-| **G2** (2026-11-23 →) | **P1** | **F5-01b** (dirección por RUC, ventas, recálculo automático) · **F4-08** dashboards reales · **F3-09** catálogos de solo lectura | Panel con IVA ventas/compras y alertas reales; F3 cerrada salvo evaluación. **F5-01 y F4-08b ya completadas** |
+| **G2** (2026-11-24 →) | **P1** | **F4-08** dashboards reales · **F3-09** catálogos de solo lectura | Panel con IVA ventas/compras y alertas reales; F3 cerrada salvo evaluación. **F5-01, F5-01b y F4-08b ya completadas** |
 | **H** | **P1/P2** | **F5-02** 104 · **F4-09** vista 104 · **F5-03** 103 · **F5-04** 102/101 | **M5:** borradores validados por el contador (requiere firma previa de la convención) |
 | **I** | **P2/P3** | **F5-05…F5-08** · **F4-10/F4-11** · **F3-08** (con dataset) | **M4/M5:** flujo completo con calidad y evaluación IA |
 | **J** | **P3** | **F6-01…F6-08** · F1-03g · F2-14 · F2-15 | **M6:** beta con 3–5 estudios y Go/No-Go |
@@ -367,7 +368,7 @@ F0 · F1 (11/11, F1-03g pendiente) · F2 (12/12 + F2-13) · F3-01…F3-07 · F4-
 Empresas, credencial SRI e invitaciones ya se gestionan desde la app (#100–#105).
 
 ### P1 — Alto: cerrar F3 y abrir F5 (Etapa G2)
-**F4-08** dashboards reales (requiere **F5-01b**: dirección por RUC, recálculo automático y endpoint de panel) · **F3-09** catálogos de solo lectura · firma del contador (camino crítico de F5). **F4-08b** completada.
+**F4-08** dashboards reales (consume el endpoint de panel de **F5-01b**, ya completado) · **F3-09** catálogos de solo lectura · firma del contador (camino crítico de F5). **F4-08b y F5-01b completadas.**
 
 ### P2 — Medio: declaraciones y calidad (Etapas H–I)
 F5-02…F5-08 · F4-09 vista 104 · F4-10/F4-11 calidad y pruebas · F3-08 evaluación (con dataset) · F4-12 indicador Reverb · F1-03g invitaciones · F2-14 cancelación · F2-15 runbook.
@@ -375,12 +376,12 @@ F5-02…F5-08 · F4-09 vista 104 · F4-10/F4-11 calidad y pruebas · F3-08 evalu
 ### P3 — Cierre del MVP
 F6-01…F6-08 (hardening, beta, Go/No-Go).
 
-**Siguiente acción inmediata (2026-11-23).** Orden de la etapa (igual en `docs/09`):
+**Siguiente acción inmediata (2026-11-24).** Orden de la etapa (igual en `docs/09`):
 
 | # | Rama | Tarea |
 |---|---|---|
-| 1 | `feat/F4-08b-fiscal-findings-ui` | F4-08b · bandeja de hallazgos fiscales (en revisión) |
-| 2 | `feat/F5-01b-dashboard-data` | F5-01b · dirección por RUC, recálculo al cerrar el run, comando programado y `GET /api/v1/dashboard` |
+| 1 | `feat/F4-08b-fiscal-findings-ui` | F4-08b · bandeja de hallazgos fiscales · **completada** |
+| 2 | `feat/F5-01b-dashboard-data` | F5-01b · dirección por RUC, recálculo al cerrar el run, comando programado y `GET /api/v1/dashboard` · **completada** |
 | 3 | `feat/F4-08-dashboard` | F4-08 · panel con IVA ventas/compras, top proveedores, topes y alertas |
 | 4 | `feat/F3-09-catalogs-api` | F3-09 · catálogos de solo lectura |
 

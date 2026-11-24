@@ -1750,6 +1750,482 @@
                 }
             }
         },
+        "/v1/dashboard": {
+            "get": {
+                "operationId": "v1.dashboard.index",
+                "tags": [
+                    "Dashboard"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "company": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "public_id": {
+                                                            "type": "string"
+                                                        },
+                                                        "legal_name": {
+                                                            "type": "string"
+                                                        },
+                                                        "ruc": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "public_id",
+                                                        "legal_name",
+                                                        "ruc"
+                                                    ]
+                                                },
+                                                "period": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "year": {
+                                                            "type": "integer"
+                                                        },
+                                                        "month": {},
+                                                        "status": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "computed_at": {}
+                                                    },
+                                                    "required": [
+                                                        "year",
+                                                        "month",
+                                                        "status",
+                                                        "computed_at"
+                                                    ]
+                                                },
+                                                "iva": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "sales": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "base_cents": {
+                                                                    "type": "integer",
+                                                                    "const": 0
+                                                                },
+                                                                "tax_cents": {
+                                                                    "type": "integer",
+                                                                    "const": 0
+                                                                },
+                                                                "documents_count": {
+                                                                    "type": "integer",
+                                                                    "minimum": 0
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "base_cents",
+                                                                "tax_cents",
+                                                                "documents_count"
+                                                            ]
+                                                        },
+                                                        "purchases": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "base_cents": {
+                                                                    "type": "integer",
+                                                                    "const": 0
+                                                                },
+                                                                "tax_cents": {
+                                                                    "type": "integer",
+                                                                    "const": 0
+                                                                },
+                                                                "documents_count": {
+                                                                    "type": "integer",
+                                                                    "minimum": 0
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "base_cents",
+                                                                "tax_cents",
+                                                                "documents_count"
+                                                            ]
+                                                        },
+                                                        "net_cents": {
+                                                            "type": "integer",
+                                                            "const": 0
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "sales",
+                                                        "purchases",
+                                                        "net_cents"
+                                                    ]
+                                                },
+                                                "withholdings": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "received_cents": {
+                                                            "type": "integer",
+                                                            "const": 0
+                                                        },
+                                                        "received_documents": {
+                                                            "type": "integer",
+                                                            "minimum": 0
+                                                        },
+                                                        "practiced_cents": {
+                                                            "type": "integer",
+                                                            "const": 0
+                                                        },
+                                                        "practiced_documents": {
+                                                            "type": "integer",
+                                                            "minimum": 0
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "received_cents",
+                                                        "received_documents",
+                                                        "practiced_cents",
+                                                        "practiced_documents"
+                                                    ]
+                                                },
+                                                "top_providers": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "issuer_ruc": {
+                                                                "type": "string"
+                                                            },
+                                                            "issuer_name": {
+                                                                "type": "string"
+                                                            },
+                                                            "total_cents": {
+                                                                "type": "integer"
+                                                            },
+                                                            "documents_count": {
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "issuer_ruc",
+                                                            "issuer_name",
+                                                            "total_cents",
+                                                            "documents_count"
+                                                        ]
+                                                    }
+                                                },
+                                                "findings": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "open_total": {
+                                                            "type": "number"
+                                                        },
+                                                        "by_severity": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "open_total",
+                                                        "by_severity"
+                                                    ]
+                                                },
+                                                "personal_expense_caps": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "category_code": {
+                                                                "type": "string"
+                                                            },
+                                                            "dependents": {
+                                                                "type": "integer"
+                                                            },
+                                                            "cap_cents": {
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "category_code",
+                                                            "dependents",
+                                                            "cap_cents"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "company",
+                                                "period",
+                                                "iva",
+                                                "withholdings",
+                                                "top_providers",
+                                                "findings",
+                                                "personal_expense_caps"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/companies/{company}/dashboard": {
+            "get": {
+                "operationId": "v1.companies.dashboard.show",
+                "tags": [
+                    "Dashboard"
+                ],
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "description": "The company public id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "company": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "public_id": {
+                                                            "type": "string"
+                                                        },
+                                                        "legal_name": {
+                                                            "type": "string"
+                                                        },
+                                                        "ruc": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "public_id",
+                                                        "legal_name",
+                                                        "ruc"
+                                                    ]
+                                                },
+                                                "period": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "year": {
+                                                            "type": "integer"
+                                                        },
+                                                        "month": {},
+                                                        "status": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "computed_at": {}
+                                                    },
+                                                    "required": [
+                                                        "year",
+                                                        "month",
+                                                        "status",
+                                                        "computed_at"
+                                                    ]
+                                                },
+                                                "iva": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "sales": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "base_cents": {
+                                                                    "type": "integer",
+                                                                    "const": 0
+                                                                },
+                                                                "tax_cents": {
+                                                                    "type": "integer",
+                                                                    "const": 0
+                                                                },
+                                                                "documents_count": {
+                                                                    "type": "integer",
+                                                                    "minimum": 0
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "base_cents",
+                                                                "tax_cents",
+                                                                "documents_count"
+                                                            ]
+                                                        },
+                                                        "purchases": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "base_cents": {
+                                                                    "type": "integer",
+                                                                    "const": 0
+                                                                },
+                                                                "tax_cents": {
+                                                                    "type": "integer",
+                                                                    "const": 0
+                                                                },
+                                                                "documents_count": {
+                                                                    "type": "integer",
+                                                                    "minimum": 0
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "base_cents",
+                                                                "tax_cents",
+                                                                "documents_count"
+                                                            ]
+                                                        },
+                                                        "net_cents": {
+                                                            "type": "integer",
+                                                            "const": 0
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "sales",
+                                                        "purchases",
+                                                        "net_cents"
+                                                    ]
+                                                },
+                                                "withholdings": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "received_cents": {
+                                                            "type": "integer",
+                                                            "const": 0
+                                                        },
+                                                        "received_documents": {
+                                                            "type": "integer",
+                                                            "minimum": 0
+                                                        },
+                                                        "practiced_cents": {
+                                                            "type": "integer",
+                                                            "const": 0
+                                                        },
+                                                        "practiced_documents": {
+                                                            "type": "integer",
+                                                            "minimum": 0
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "received_cents",
+                                                        "received_documents",
+                                                        "practiced_cents",
+                                                        "practiced_documents"
+                                                    ]
+                                                },
+                                                "top_providers": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "issuer_ruc": {
+                                                                "type": "string"
+                                                            },
+                                                            "issuer_name": {
+                                                                "type": "string"
+                                                            },
+                                                            "total_cents": {
+                                                                "type": "integer"
+                                                            },
+                                                            "documents_count": {
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "issuer_ruc",
+                                                            "issuer_name",
+                                                            "total_cents",
+                                                            "documents_count"
+                                                        ]
+                                                    }
+                                                },
+                                                "findings": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "open_total": {
+                                                            "type": "number"
+                                                        },
+                                                        "by_severity": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "open_total",
+                                                        "by_severity"
+                                                    ]
+                                                },
+                                                "personal_expense_caps": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "category_code": {
+                                                                "type": "string"
+                                                            },
+                                                            "dependents": {
+                                                                "type": "integer"
+                                                            },
+                                                            "cap_cents": {
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "category_code",
+                                                            "dependents",
+                                                            "cap_cents"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "company",
+                                                "period",
+                                                "iva",
+                                                "withholdings",
+                                                "top_providers",
+                                                "findings",
+                                                "personal_expense_caps"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/economic-activity-codes": {
             "get": {
                 "operationId": "v1.economic-activity-codes.index",
