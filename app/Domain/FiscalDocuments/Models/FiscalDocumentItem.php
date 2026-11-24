@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\FiscalDocuments\Models;
 
+use App\Domain\Classification\Models\Classification;
+use App\Domain\Classification\Models\ExpenseCategory;
 use App\Domain\Tenancy\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Línea de detalle de un comprobante.
@@ -44,5 +47,21 @@ final class FiscalDocumentItem extends Model
     public function fiscal_document(): BelongsTo
     {
         return $this->belongsTo(FiscalDocument::class);
+    }
+
+    /**
+     * @return BelongsTo<ExpenseCategory, $this>
+     */
+    public function expenseCategory(): BelongsTo
+    {
+        return $this->belongsTo(ExpenseCategory::class);
+    }
+
+    /**
+     * @return HasOne<Classification, $this>
+     */
+    public function classification(): HasOne
+    {
+        return $this->hasOne(Classification::class, 'fiscal_document_item_id');
     }
 }
