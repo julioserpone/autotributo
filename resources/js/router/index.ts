@@ -12,6 +12,7 @@ const InvitationsPage = () => import('@/pages/InvitationsPage.vue');
 const AcceptInvitationPage = () => import('@/pages/AcceptInvitationPage.vue');
 const ClassificationReviewPage = () => import('@/pages/ClassificationReviewPage.vue');
 const FiscalDocumentInboxPage = () => import('@/pages/FiscalDocumentInboxPage.vue');
+const FiscalFindingsPage = () => import('@/pages/FiscalFindingsPage.vue');
 const LoginPage = () => import('@/pages/LoginPage.vue');
 const NotFoundPage = () => import('@/pages/NotFoundPage.vue');
 const ResetPasswordPage = () => import('@/pages/ResetPasswordPage.vue');
@@ -81,6 +82,12 @@ const router = createRouter({
             name: 'fiscal_documents',
             component: FiscalDocumentInboxPage,
             meta: { title: 'Comprobantes', requiresCompany: true },
+        },
+        {
+            path: '/fiscal-findings',
+            name: 'fiscal-findings',
+            component: FiscalFindingsPage,
+            meta: { title: 'Hallazgos fiscales', requiresCompany: true },
         },
         {
             path: '/classifications',

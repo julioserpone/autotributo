@@ -164,18 +164,18 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 |---|---|---|---|
 | F4-01 | Fundaciones | 1 d | Vue 3 + TS strict, Vite, Tailwind 4, router, Pinia, TanStack Query, cliente HTTP con CSRF/errores, i18n. **Parcial:** Vite, Vue, Tailwind, router, Pinia y Vitest están hechos; el cliente HTTP aún descarta los `errors` de `problem+json` y no soporta `204` (se corrige en F4-03a). **Pendiente:** TanStack Query e i18n |
 | F4-02 | Design system | 2 d | **Completado 2026-11-16:** tokens semánticos dark-first, tipografía, `prefers-reduced-motion` y foco visible en `resources/css/app.css`; `AppField`, `AppButton`, `AppInput`, `AppSelect`, `AppCombobox`, `AppDateRange`, `AppTable`, `AppBadge`, `AppModal`, `AppToastHost` y `AppDrawer` con Vitest; `AppLayout`/`AppStatusBadge` migrados a tokens · 50 tests · ver `docs/14-design-system.md`. **Superado por F4-04:** los wrappers propios se sustituyeron por Nuxt UI (ADR-0009) |
-| F4-03 | Auth y primer acceso | 1,5 d | Login, 2FA, invitación, recuperación, primer contribuyente (el estudio ya está provisionado). **En curso 2026-11-21:** login, 2FA, recuperación y restablecimiento están hechos. **Slices:** **F4-03a** gestión de contribuyentes en la UI (alta, edición, archivo y estado vacío) — slice 1 (cliente HTTP `problem+json` + store `company`) y slice 2 (página `CompaniesPage`, tabla, modal de alta/edición, modal de archivo con confirmación de RUC, ruta `/companies`, navegación y estado vacío del panel) en curso; el modal incorpora el combobox CIIU contra el catálogo del SRI (búsqueda con retardo, selección del nodo hoja y descripción en solo lectura) y el formulario se separó en `useCompanyForm` + `EconomicActivityField`; **F4-03b** = F4-13 credencial SRI en la UI; **F4-03c** invitaciones en la UI (invitar y aceptar). Hoy las tres solo existen por API |
+| F4-03 | Auth y primer acceso | 1,5 d | Login, 2FA, invitación, recuperación, primer contribuyente (el estudio ya está provisionado). **Completado 2026-11-23:** login, 2FA, recuperación y restablecimiento; **F4-03a** empresas en la UI (cliente HTTP, store, página, formulario, combobox CIIU, guard de onboarding y estado vacío; #100, #101, #103); **F4-03b = F4-13** credencial SRI (#104); **F4-03c** invitaciones y aceptación (#105) |
 | F4-04 | Layout | 1 d | **Completado 2026-11-19 (PR #90):** layout del template Dashboard de Nuxt UI 4.13 (`UDashboardGroup`, `UDashboardSidebar` colapsable/redimensionable, `UDashboardPanel`, `UDashboardNavbar`, `UDashboardToolbar`, `UDashboardSearch`) y tema **Mint** (`primary: teal`, `neutral: olive`, radio `0.75rem`, controles píldora, Nunito Variable con pesos 500/600/700/800). Nuevos `AppShell`, `AppPage`, `AppSidebar`, `AppWorkspaceMenu`, `AppUserMenu`, `AuthLayout` y `lib/navigation.ts` (nav + paleta ⌘K compartidas); el selector de tema pasa al menú de usuario y se eliminan `AppThemeToggle`, `AppSidebar` y `AppWorkspaceSwitcher` antiguos. Páginas de panel, bandeja, sincronización, 2FA y auth migradas a utilidades semánticas de Nuxt UI. `useTheme` sigue gestionando claro/oscuro con `colorMode: false`. ADR-0009 enmendado y `docs/14-design-system.md` reescrito. 43 tests frontend, `vue-tsc` y ESLint en verde |
 | F4-05 | Bandeja de comprobantes | 3 d | **Completado 2026-11-16 (PR #72):** `GET /api/v1/fiscal_documents` (cursor + filtros por empresa, estado, tipo, emisor, fechas), `GET /api/v1/fiscal_documents/{fiscal_document}` con líneas/impuestos/retenciones; `FiscalDocumentInboxPage` con filtros, paginación «Cargar más», drawer de detalle y selección múltiple. Migrado a `FiscalDocument` en PR #91 |
 | F4-06 | Monitor de sincronización | 2 d | **Completado (PRs #73–#75):** `SyncMonitorPage` con formulario en una fila (empresa, tipos de documento como multiselección, desde/hasta), ayuda contextual para forzar re-descarga, progreso en vivo con polling (`poll_after_ms`) + archivos con errores, totales, historial y detalle de run. Store `sync` con `startSync` (Idempotency-Key), `loadRun`, `startPollingIfNeeded`. Los tipos enviados al robot usan `SriDocumentType::syncableCodes()` (sin guía de remisión `06`, que el portal no ofrece); el error del robot se muestra en el run. Si el robot publica solo XML, la recuperación importa con esos archivos en vez de esperar `robot_timeout`. **Refinamiento UI 2026-11-17:** la vista se dividió en `components/sri/SriSyncRunHistory.vue` y `components/sri/SriSyncRunDetailDrawer.vue` (la página solo orquesta formulario, polling y selección); textos de dominio en `lib/sri.ts`, incluido `syncErrorLabel` para que el detalle nunca muestre `error_code` crudo; el drawer limpia el run al cerrarse (`clearSelection`) y muestra loader al reabrir. **Fix 2026-11-18:** el progreso de `downloading` no cuenta los XML `missing`/`invalid` como avance y el activo se queda en 99 %; el aviso transitorio de `incomplete_package` del parser ya no se muestra mientras el run sigue activo; el parser solo considera incompleto un tipo declarado en el manifiesto, no un tipo solicitado sin comprobantes. **Refinamiento 2026-11-18:** el historial mantiene la lista en pantalla durante el refresco automático (solo muestra «Cargando…» en la primera carga) y cada item muestra el ID completo con el período en la misma línea en escritorio y en tres líneas en móvil; los comprobantes `updated` cuentan en el avance del item |
 | F4-07 | Revisión de clasificación | 2 d | **Completado 2026-11-20 (PR #98):** `ClassificationReviewPage` con cola que prioriza `needs_review`, filtros por empresa/método/texto, confianza y método visuales, atajos `j`/`k`/`Enter`/`a`/`r`/`espacio`, aceptación y rechazo en bloque con resultado parcial (`failed`) y creación de regla desde un ítem. Store `classifications` y componentes en `components/classifications/`; ruta `/classifications` y entrada en la navegación |
 | F4-08 | Dashboards | 1,5 d | IVA ventas vs. compras por mes, top proveedores, topes de gastos personales, alertas. **Depende de F5-01:** hoy `DashboardPage` solo muestra ceros o datos de `?preview=1` (`dashboardPreview.ts`); los KPIs deben salir de `period_aggregates` y las alertas de `fiscal_findings` |
-| F4-08b | Bandeja de hallazgos | 1 d | **Nueva tarea derivada de F3-06:** UI para `GET/PATCH /api/v1/fiscal-findings` (reconocer, resolver, descartar con motivo) y para disparar la detección manual. El contrato ya existe y no tiene interfaz |
+| F4-08b | Bandeja de hallazgos | 1 d | **Completado 2026-11-23:** `FiscalFindingsPage` (`/fiscal-findings`) con tarjetas de resumen, filtros por empresa/estado/severidad/código/texto, tabla, drawer con enlace al comprobante y modal para reconocer, resolver o descartar (motivo obligatorio) y lanzar la detección manual. El recurso expone `company` y `source` con `public_id` y `meta.counts` por estado y severidad. 11 tests de feature y 9 frontend |
 | F4-09 | Vista 104 (estructura) | 1,5 d | Casilleros, totales, drill-down a facturas, estados de borrador (datos reales llegan en F5-02/F5-06) |
 | F4-10 | Calidad de UI | 1 d | Estados vacíos/carga/error, responsive, foco visible, contraste AA, `prefers-reduced-motion` |
 | F4-11 | Pruebas frontend | 1,5 d | Vitest + MSW para componentes/composables, Playwright para 5 flujos críticos y `axe` en las pantallas principales |
 | F4-12 | Indicador de Reverb | 0,5 d | **Nueva tarea derivada de F1-08/F2-09b:** estado de conexión y reconexión del WebSocket en el monitor. Hoy el polling cubre el caso, por eso es P2 |
-| F4-13 | Credenciales SRI en la UI | 1 d | **Nueva tarea derivada de F1-06 (= F4-03b):** formulario de alta, rotación, borrado y estado de la credencial (`GET/PUT/DELETE /companies/{company}/credential`). Sin ella no se puede iniciar una sincronización real desde la app |
+| F4-13 | Credenciales SRI en la UI | 1 d | **Nueva tarea derivada de F1-06 (= F4-03b):** formulario de alta, rotación, borrado y estado de la credencial. **Completado (#104):** store `sriCredential` y modales de alta/rotación/gestión desde `CompaniesPage`; permite iniciar una sincronización real desde la app |
 
 **Pruebas obligatorias**
 - Componentes con estados (loading/empty/error/success) y accesibilidad (roles, labels, foco).
@@ -194,7 +194,7 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 
 | ID | Tarea | Est. | Detalle |
 |---|---|---|---|
-| F5-01 | Agregados por período | 2 d | `tax_periods`, agregados materializados por empresa/período, recálculo idempotente |
+| F5-01 | Agregados por período | 2 d | **Completado 2026-11-23 (#106):** `fiscal_periods` y `period_aggregates`, `ComputePeriodAggregates` idempotente, comando `fiscal:compute-aggregates` y `GET /companies/{company}/period-aggregates`. **Límite conocido:** solo agrega compras (`direction = purchases`) y el recálculo es manual; **F5-01b** añade dirección derivada por RUC, ventas, retenciones, recálculo al cerrar el run y comando programado antes de F4-08 |
 | F5-02 | Formulario 104 | 3 d | Casilleros, arrastre de crédito tributario, proporcionalidad, retenciones, ajustes por NC/ND, validaciones |
 | F5-03 | Formulario 103 | 2 d | Retenciones de IR/IVA por código, consolidado mensual, cruce con comprobantes |
 | F5-04 | Formulario 102/101 | 2,5 d | Gastos personales por categoría, topes anuales, proyección, advertencias de exceso |
@@ -241,12 +241,12 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 
 ## 9. Calendario de sprints
 
-> **Revisión 2026-11-21.** El calendario original (S0–S10) y las etapas A–F quedan como referencia histórica: F0, F1 y F2 están cerradas, F3 está funcionalmente completa (7/9) y F4 va por 5/11. Rige el calendario siguiente. El criterio es entregar un producto operable de punta a punta (M4) y abrir F5 con agregados, sin esperar la firma del contador para lo que no la necesita.
+> **Revisión 2026-11-23.** El calendario original (S0–S10) y las etapas A–F quedan como referencia histórica: F0, F1 y F2 están cerradas, F3 está funcionalmente completa (7/9) y F4 va por 6/11. **G1 está cerrada** (F4-03a/b/c, F4-13 y F5-01 en `main`) y **F4-08b** también. Rige el calendario siguiente. El criterio es entregar un producto operable de punta a punta (M4) y abrir F5 con agregados, sin esperar la firma del contador para lo que no la necesita.
 
 | Etapa | Prioridad | Foco | Demo / criterio |
 |---|---|---|---|
 | **G1** (2026-11-21 →) | **P0** | Docs sync · **F4-03a** empresas en UI · **F4-03b (F4-13)** credencial SRI en UI · **F4-03c** invitaciones en UI | Un usuario provisionado registra una empresa, carga su credencial e invita a un contador **sin salir de la app** |
-| **G2** | **P1** | **F5-01** agregados por período · **F4-08** dashboards reales · **F4-08b** bandeja de hallazgos · **F3-09** catálogos de solo lectura | Panel con IVA ventas/compras y alertas reales; F3 cerrada salvo evaluación |
+| **G2** (2026-11-23 →) | **P1** | **F5-01b** (dirección por RUC, ventas, recálculo automático) · **F4-08** dashboards reales · **F3-09** catálogos de solo lectura | Panel con IVA ventas/compras y alertas reales; F3 cerrada salvo evaluación. **F5-01 y F4-08b ya completadas** |
 | **H** | **P1/P2** | **F5-02** 104 · **F4-09** vista 104 · **F5-03** 103 · **F5-04** 102/101 | **M5:** borradores validados por el contador (requiere firma previa de la convención) |
 | **I** | **P2/P3** | **F5-05…F5-08** · **F4-10/F4-11** · **F3-08** (con dataset) | **M4/M5:** flujo completo con calidad y evaluación IA |
 | **J** | **P3** | **F6-01…F6-08** · F1-03g · F2-14 · F2-15 | **M6:** beta con 3–5 estudios y Go/No-Go |
@@ -358,21 +358,16 @@ Conciliación bancaria · emisión de comprobantes · integración con Contífic
 | F3-08 "1 día" | F3-08 bloqueada hasta tener dataset dorado | El alcance real incluye 300 descripciones reales anonimizadas y criterio de categoría correcta; sin eso no se puede medir accuracy |
 | Documentos de etapa (`docs/11`, `docs/15`) | Archivados como referencia histórica | Contradicen la regla de mantener el plan en `docs/02` y el avance en `docs/09` |
 
-## 17. Prioridades actuales (revisión 2026-11-21)
+## 17. Prioridades actuales (revisión 2026-11-23)
 
 ### Hecho (histórico)
-F0 · F1 (11/11, F1-03g pendiente) · F2 (12/12 + F2-13) · F3-01…F3-07 · F4-02, F4-04, F4-05, F4-06 y F4-07 · F1-11 staging · F2-09a/b · F1-03e/f.
+F0 · F1 (11/11, F1-03g pendiente) · F2 (12/12 + F2-13) · F3-01…F3-07 · F4-02…F4-07 · F4-03a/b/c · F4-08b · F4-13 · F5-01 · F1-11 staging · F2-09a/b · F1-03e/f.
 
-### P0 — Crítico: producto operable (Etapa G1)
-| Orden | Tarea | Motivo |
-|---|---|---|
-| 1 | Sincronizar `docs/02` y `docs/09` con el estado real | Se estaba planificando sobre datos falsos: la "siguiente etapa" documentada ya estaba hecha |
-| 2 | **F4-03a** Empresas en la UI (alta/edición/archivo + estado vacío) | US-06 es **Must**; hoy la única vía es la API. Sin empresas no hay M4 |
-| 3 | **F4-03b = F4-13** Credencial SRI en la UI | Sin credencial el monitor de sync no se puede usar desde cero |
-| 4 | **F4-03c** Invitaciones en la UI (invitar y aceptar) | US-02 **Must**; hoy solo API |
+### P0 — Crítico: producto operable (Etapa G1) — **cerrada**
+Empresas, credencial SRI e invitaciones ya se gestionan desde la app (#100–#105).
 
 ### P1 — Alto: cerrar F3 y abrir F5 (Etapa G2)
-**F5-01** agregados por período · **F4-08** dashboards reales · **F4-08b** bandeja de hallazgos · **F3-09** catálogos de solo lectura · firma del contador (camino crítico de F5).
+**F4-08** dashboards reales (requiere **F5-01b**: dirección por RUC, recálculo automático y endpoint de panel) · **F3-09** catálogos de solo lectura · firma del contador (camino crítico de F5). **F4-08b** completada.
 
 ### P2 — Medio: declaraciones y calidad (Etapas H–I)
 F5-02…F5-08 · F4-09 vista 104 · F4-10/F4-11 calidad y pruebas · F3-08 evaluación (con dataset) · F4-12 indicador Reverb · F1-03g invitaciones · F2-14 cancelación · F2-15 runbook.
@@ -380,18 +375,14 @@ F5-02…F5-08 · F4-09 vista 104 · F4-10/F4-11 calidad y pruebas · F3-08 evalu
 ### P3 — Cierre del MVP
 F6-01…F6-08 (hardening, beta, Go/No-Go).
 
-**Siguiente acción inmediata (2026-11-21).** Orden de la etapa (igual en `docs/09`):
+**Siguiente acción inmediata (2026-11-23).** Orden de la etapa (igual en `docs/09`):
 
 | # | Rama | Tarea |
 |---|---|---|
-| 0 | `docs/sync-progress-2026-11-21` | Sincronizar `docs/02`, `docs/09`, `docs/03`, `docs/fiscal-signoff` y archivar `docs/11`/`docs/15` |
-| 1 | `feat/F4-03-companies-ui` | F4-03a · slice 1: cliente HTTP (`problem+json`, `204`) y store de empresas |
-| 2 | `feat/F4-03-companies-page` | F4-03a · slice 2: página, formulario y archivo con confirmación de RUC |
-| 3 | `feat/F4-03-companies-onboarding` | F4-03a · slice 3: ruta, navegación y estado vacío del panel |
-| 4 | `feat/F4-13-credential-ui` | F4-03b/F4-13 · credencial SRI |
-| 5 | `feat/F4-03-invitations-ui` | F4-03c · invitaciones |
-| 6 | `feat/F5-01-period-aggregates` | F5-01 · agregados por período |
-| 7 | `feat/F4-08-dashboard` | F4-08 · dashboards reales + alertas |
+| 1 | `feat/F4-08b-fiscal-findings-ui` | F4-08b · bandeja de hallazgos fiscales (en revisión) |
+| 2 | `feat/F5-01b-dashboard-data` | F5-01b · dirección por RUC, recálculo al cerrar el run, comando programado y `GET /api/v1/dashboard` |
+| 3 | `feat/F4-08-dashboard` | F4-08 · panel con IVA ventas/compras, top proveedores, topes y alertas |
+| 4 | `feat/F3-09-catalogs-api` | F3-09 · catálogos de solo lectura |
 
 El estado vivo de cada fila vive en `docs/09-progress.md`; no se mantienen documentos de etapa separados (`docs/11` y `docs/15` quedan archivados como referencia histórica).
 

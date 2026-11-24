@@ -2304,6 +2304,25 @@
                                                     "type": "integer",
                                                     "description": "Total number of items being paginated.",
                                                     "minimum": 0
+                                                },
+                                                "counts": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "total": {
+                                                            "type": "number"
+                                                        },
+                                                        "by_status": {
+                                                            "type": "string"
+                                                        },
+                                                        "by_severity": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "total",
+                                                        "by_status",
+                                                        "by_severity"
+                                                    ]
                                                 }
                                             },
                                             "required": [
@@ -2314,7 +2333,8 @@
                                                 "path",
                                                 "per_page",
                                                 "to",
-                                                "total"
+                                                "total",
+                                                "counts"
                                             ]
                                         }
                                     },
@@ -2382,6 +2402,9 @@
                             }
                         }
                     },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
                     },
@@ -2390,9 +2413,6 @@
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
                     }
                 }
             }
@@ -4687,14 +4707,93 @@
                     "description": {
                         "type": "string"
                     },
-                    "company_id": {
-                        "type": "integer"
+                    "company": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "ruc": {
+                                "type": "string"
+                            },
+                            "legal_name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "ruc",
+                            "legal_name"
+                        ]
                     },
                     "source_type": {
                         "type": "string"
                     },
-                    "source_id": {
-                        "type": "integer"
+                    "source": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "fiscal_document"
+                            },
+                            "id": {
+                                "type": "string"
+                            },
+                            "document_type": {
+                                "type": "string",
+                                "enum": [
+                                    "01",
+                                    "03",
+                                    "04",
+                                    "05",
+                                    "06",
+                                    "07"
+                                ]
+                            },
+                            "number": {
+                                "type": "string"
+                            },
+                            "access_key": {
+                                "type": "string"
+                            },
+                            "issue_date": {
+                                "type": "string"
+                            },
+                            "issuer_name": {
+                                "type": "string"
+                            },
+                            "issuer_ruc": {
+                                "type": "string"
+                            },
+                            "subtotal_cents": {
+                                "type": "integer"
+                            },
+                            "tax_cents": {
+                                "type": "integer"
+                            },
+                            "total_cents": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "type",
+                            "id",
+                            "document_type",
+                            "number",
+                            "access_key",
+                            "issue_date",
+                            "issuer_name",
+                            "issuer_ruc",
+                            "subtotal_cents",
+                            "tax_cents",
+                            "total_cents"
+                        ]
                     },
                     "metadata": {
                         "type": [
@@ -4703,6 +4802,7 @@
                         ],
                         "items": {}
                     },
+                    "note": {},
                     "resolved_by": {
                         "type": [
                             "object",
@@ -4747,10 +4847,11 @@
                     "status",
                     "title",
                     "description",
-                    "company_id",
+                    "company",
                     "source_type",
-                    "source_id",
+                    "source",
                     "metadata",
+                    "note",
                     "resolved_by",
                     "resolved_at",
                     "created_at",
@@ -5725,6 +5826,7 @@
                             "string",
                             "null"
                         ],
+                        "description": "Descartar exige justificaci\u00f3n: el hallazgo deja de mostrarse y el\nmotivo queda en la auditor\u00eda del comprobante.",
                         "maxLength": 500
                     }
                 },

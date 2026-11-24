@@ -103,7 +103,7 @@ services:
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
       - ./:/var/www/html:cached
-    command: sh -c "npm install --no-audit --no-fund --package-lock=false && npm run dev -- --host 0.0.0.0"
+    command: sh -c "if [ ! -f node_modules/@tailwindcss/oxide-linux-arm64-musl/tailwindcss-oxide.linux-arm64-musl.node ]; then npm install --no-audit --no-fund; fi && npm run dev -- --host 0.0.0.0"
     environment:
       HOME: /tmp
       # Polling activo con intervalo mayor para reducir CPU del watcher.

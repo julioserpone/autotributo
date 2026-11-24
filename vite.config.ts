@@ -103,17 +103,12 @@ export default defineConfig({
         },
     },
     optimizeDeps: {
-        // Pre-bundlear las dependencias pesadas para reducir el número de módulos
-        // que Vite sirve al navegador (especialmente en Safari) en desarrollo.
-        include: [
-            'vue',
-            'vue-router',
-            'pinia',
-            '@nuxt/ui',
-            'reka-ui',
-            '@vueuse/core',
-            '@vueuse/shared',
-        ],
+        // Vite 8 (rolldown) no puede pre-bundlear el binario nativo de
+        // Tailwind (@tailwindcss/oxide) en este entorno: lo lee como texto y
+        // falla con "stream did not contain valid UTF-8". Se desactiva la
+        // optimización en desarrollo para evitar el fallo; la build de
+        // producción no se ve afectada.
+        disabled: 'dev',
     },
     server: {
         host: '0.0.0.0',

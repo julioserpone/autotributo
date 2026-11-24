@@ -66,15 +66,17 @@ final class FiscalFinding extends Model
     }
 
     /**
-     * Resuelve el comprobante de origen cuando `source_type = fiscal_document`.
+     * Comprobante de origen cuando `source_type = fiscal_document`.
+     *
+     * Se modela como relación para poder cargarlo en lote desde el listado y
+     * evitar una consulta por hallazgo. Los códigos reservados que usarán otra
+     * procedencia se resolverán en su propia tarea.
+     *
+     * @return BelongsTo<FiscalDocument, $this>
      */
-    public function sourceDocument(): ?FiscalDocument
+    public function sourceDocument(): BelongsTo
     {
-        if ($this->source_type !== 'fiscal_document') {
-            return null;
-        }
-
-        return FiscalDocument::query()->find($this->source_id);
+        return $this->belongsTo(FiscalDocument::class, 'source_id');
     }
 
     /**

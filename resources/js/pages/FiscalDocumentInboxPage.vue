@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { getLocalTimeZone, parseDate, today } from '@internationalized/date';
 
@@ -12,6 +13,7 @@ import { useFiscalDocumentStore, documentTypeLabels } from '@/stores/fiscalDocum
 
 const companyStore = useCompanyStore();
 const fiscal_documentStore = useFiscalDocumentStore();
+const route = useRoute();
 
 // Filtros de fecha como selector de calendario (UInputDate) sincronizados con
 // los strings `YYYY-MM-DD` que espera el store y el endpoint.
@@ -133,6 +135,13 @@ function applyFilters(): void {
 onMounted(() => {
     if (!companyStore.loaded) {
         void companyStore.fetchCompanies();
+    }
+
+    // Enlaces profundos desde otras pantallas (p. ej. hallazgos fiscales).
+    const issuer = typeof route.query.issuer === 'string' ? route.query.issuer : '';
+
+    if (issuer !== '') {
+        fiscal_documentStore.filters.issuer = issuer;
     }
 
     if (companyStore.hasCompany) {

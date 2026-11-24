@@ -195,8 +195,17 @@ final readonly class DetectFiscalRisks
     {
         return [
             'access_key' => $document->access_key,
+            'document_number' => sprintf(
+                '%s-%s-%s',
+                $document->establishment,
+                $document->emission_point,
+                $document->sequential,
+            ),
             'issue_date' => $document->issue_date?->toDateString(),
+            'subtotal_cents' => $document->subtotal_cents,
+            'tax_cents' => $document->tax_cents,
             'total_cents' => $document->total_cents,
+            'totals_mismatch' => (bool) $document->totals_mismatch,
         ];
     }
 }
