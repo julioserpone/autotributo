@@ -22,22 +22,12 @@ const props = defineProps<{
 const emit = defineEmits<{
     'update:open': [value: boolean];
     manage: [item: FiscalFinding];
+    'after:leave': [];
 }>();
 
 const openModel = computed({
     get: () => props.open,
     set: (value: boolean) => emit('update:open', value),
-});
-
-const metadataEntries = computed(() => {
-    const metadata = props.finding?.metadata ?? {};
-
-    return Object.entries(metadata)
-        .filter(([key]) => key !== 'note')
-        .map(([key, value]) => ({
-            key,
-            value: typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value),
-        }));
 });
 </script>
 
@@ -45,8 +35,9 @@ const metadataEntries = computed(() => {
   <USlideover
     v-model:open="openModel"
     side="right"
-    :ui="{ content: 'max-w-xl z-30', header: 'border-b-0' }"
+    :ui="{ overlay: 'z-40', content: 'max-w-xl z-50', header: 'border-b-0' }"
     title="Detalle del hallazgo"
+    @after:leave="emit('after:leave')"
   >
     <template #body>
       <div
@@ -123,6 +114,14 @@ const metadataEntries = computed(() => {
           </div>
           <div class="space-y-1 text-xs">
             <div class="flex justify-between gap-3">
+              <span class="text-muted">Número</span>
+              <span class="font-mono text-highlighted">{{ finding.source.number }}</span>
+            </div>
+            <div class="flex justify-between gap-3">
+              <span class="text-muted">Clave de acceso</span>
+              <span class="break-all font-mono text-2xs text-highlighted">{{ finding.source.access_key }}</span>
+            </div>
+            <div class="flex justify-between gap-3">
               <span class="text-muted">Emisor</span>
               <span class="text-right text-highlighted">{{ finding.source.issuer_name }}</span>
             </div>
@@ -135,6 +134,14 @@ const metadataEntries = computed(() => {
               <span class="text-highlighted">{{ formatDate(finding.source.issue_date) }}</span>
             </div>
             <div class="flex justify-between gap-3">
+              <span class="text-muted">Subtotal</span>
+              <span class="font-mono tabular-nums text-highlighted">{{ formatMoney(finding.source.subtotal_cents) }}</span>
+            </div>
+            <div class="flex justify-between gap-3">
+              <span class="text-muted">IVA</span>
+              <span class="font-mono tabular-nums text-highlighted">{{ formatMoney(finding.source.tax_cents) }}</span>
+            </div>
+            <div class="flex justify-between gap-3 font-semibold">
               <span class="text-muted">Total</span>
               <span class="font-mono tabular-nums text-highlighted">{{ formatMoney(finding.source.total_cents) }}</span>
             </div>
@@ -159,26 +166,6 @@ const metadataEntries = computed(() => {
         >
           <span v-if="finding.resolved_by">Gestionado por {{ finding.resolved_by.name }}</span>
           <span v-if="finding.resolved_at"> · {{ formatDate(finding.resolved_at) }}</span>
-        </div>
-
-        <div v-if="metadataEntries.length > 0">
-          <div class="text-2xs uppercase tracking-wider text-dimmed">
-            Datos de la detección
-          </div>
-          <dl class="mt-1 space-y-1 text-xs">
-            <div
-              v-for="entry in metadataEntries"
-              :key="entry.key"
-              class="flex justify-between gap-3"
-            >
-              <dt class="text-muted">
-                {{ entry.key }}
-              </dt>
-              <dd class="break-all text-right font-mono text-highlighted">
-                {{ entry.value }}
-              </dd>
-            </div>
-          </dl>
         </div>
       </div>
     </template>

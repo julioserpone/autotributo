@@ -2,7 +2,7 @@
 import type { FiscalFinding } from '@/stores/fiscalFindings';
 import type { FindingAction } from '@/lib/fiscalFindings';
 
-import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
 
 import { useToast } from '@nuxt/ui/composables/useToast';
 import AppShell from '@/layouts/AppShell.vue';
@@ -32,6 +32,7 @@ const toast = useToast();
 
 const detailOpen = ref(false);
 const detailFinding = ref<FiscalFinding | null>(null);
+const pendingManage = ref<FiscalFinding | null>(null);
 const actionOpen = ref(false);
 const actionFinding = ref<FiscalFinding | null>(null);
 const actionType = ref<FindingAction>('acknowledged');
@@ -64,9 +65,14 @@ function openDetail(item: FiscalFinding): void {
 }
 
 function openManage(item: FiscalFinding): void {
-    actionFinding.value = item;
-    actionType.value = 'acknowledged';
-    actionOpen.value = true;
+    if (detailOpen.value) {
+        pendingManage.value = item;
+        detailOpen.value = false;
+    } else {
+        actionFinding.value = item;
+        actionType.value = 'acknowledged';
+        actionOpen.value = true;
+    }
 }
 
 async function confirmAction(action: FindingAction, note: string): Promise<void> {
@@ -123,6 +129,22 @@ onMounted(() => {
 
     if (companyStore.hasCompany) {
         void store.fetchFindings();
+    }
+});
+
+watch(detailOpen, (isOpen) => {
+    if (!isOpen && pendingManage.value) {
+        // Esperar a que termine la animación de salida del drawer antes de
+        // abrir el modal, para que no quede una sombra encima.
+        window.setTimeout(() => {
+            const item = pendingManage.value;
+            pendingManage.value = null;
+            if (item) {
+                actionFinding.value = item;
+                actionType.value = 'acknowledged';
+                actionOpen.value = true;
+            }
+        }, 250);
     }
 });
 </script>
@@ -246,6 +268,7 @@ onMounted(() => {
         </div>
 
         <FiscalFindingDetailDrawer
+          v-if="detailOpen"
           v-model:open="detailOpen"
           :finding="detailFinding"
           :actions-enabled="canReview"

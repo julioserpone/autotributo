@@ -106,7 +106,7 @@ const emit = defineEmits<{
                 @click="emit('view', item)"
               />
               <UButton
-                v-if="actionsEnabled"
+                v-if="actionsEnabled && item.status !== 'resolved' && item.status !== 'dismissed'"
                 color="primary"
                 variant="ghost"
                 size="xs"

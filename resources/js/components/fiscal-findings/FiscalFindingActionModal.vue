@@ -60,6 +60,7 @@ function confirm(): void {
   <UModal
     v-model:open="openModel"
     title="Gestionar hallazgo"
+    :ui="{ overlay: 'z-[60]', content: 'z-[70]' }"
     :description="finding?.title ?? 'Define el estado del hallazgo y deja constancia del motivo.'"
   >
     <template #body>

@@ -14,9 +14,13 @@ export interface FiscalFindingSource {
     type: string;
     id: string;
     document_type: string;
+    number: string;
+    access_key: string;
     issue_date: string | null;
     issuer_name: string;
     issuer_ruc: string;
+    subtotal_cents: number;
+    tax_cents: number;
     total_cents: number;
 }
 
