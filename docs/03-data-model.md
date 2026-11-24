@@ -359,7 +359,7 @@ Tablas estándar de Laravel.
 
 ## 10. Invariantes (verificadas en tests y en runtime)
 
-1. `fiscal_documents.total_cents = subtotal_cents − discount_cents + tax_cents + ice_cents + irbpnr_cents + tip_cents`.
+1. `fiscal_documents.total_cents = subtotal_cents + tax_cents + ice_cents + irbpnr_cents + tip_cents` (ficha técnica del SRI: `importeTotal = totalSinImpuestos + impuestos + propina`; `totalDescuento` ya está restado en `subtotal_cents`, por eso **no** se vuelve a restar). Excepción: comprobantes de retención (07), donde `total_cents` es la suma de lo retenido.
 2. `fiscal_documents.tax_cents = sum(fiscal_document_taxes.amount_cents)`.
 3. `fiscal_document_items.subtotal_cents` suma el subtotal de la factura (±0,01 por redondeo del emisor; se registra la diferencia).
 4. Ningún `fiscal_document_items` de un tenant referencia una `fiscal_document` de otro (FK compuesta o validación en Action + test).
