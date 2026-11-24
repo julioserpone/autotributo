@@ -50,6 +50,7 @@ final readonly class ComputePeriodAggregates
             $end = $start->copy()->endOfMonth();
 
             $documents = FiscalDocument::query()
+                ->with(['taxes', 'retentions'])
                 ->where('company_id', $company->id)
                 ->whereBetween('issue_date', [$start->toDateString(), $end->toDateString()])
                 ->get();
@@ -58,7 +59,7 @@ final readonly class ComputePeriodAggregates
             $buckets = [];
 
             foreach ($documents as $document) {
-                $direction = 'purchases'; // MVP: solo comprobantes recibidos.
+                $direction = $document->document_type->tradeDirection($document->direction);
 
                 foreach ($document->taxes as $tax) {
                     $key = implode('|', [
@@ -85,6 +86,34 @@ final readonly class ComputePeriodAggregates
 
                     $buckets[$key]['base_cents'] += $tax->base_cents;
                     $buckets[$key]['tax_cents'] += $tax->amount_cents;
+                    $buckets[$key]['documents'][$document->id] = true;
+                }
+
+                foreach ($document->retentions as $retention) {
+                    $key = implode('|', [
+                        $direction,
+                        $document->document_type->value,
+                        $retention->retention_code,
+                        '',
+                        (string) $retention->rate,
+                    ]);
+
+                    if (! isset($buckets[$key])) {
+                        $buckets[$key] = [
+                            'direction' => $direction,
+                            'document_type' => $document->document_type->value,
+                            'tax_code' => $retention->retention_code,
+                            'sri_percentage_code' => '',
+                            'rate' => $retention->rate,
+                            'base_cents' => 0,
+                            'tax_cents' => 0,
+                            'retention_cents' => 0,
+                            'documents' => [],
+                        ];
+                    }
+
+                    $buckets[$key]['base_cents'] += $retention->base_cents;
+                    $buckets[$key]['retention_cents'] += $retention->amount_cents;
                     $buckets[$key]['documents'][$document->id] = true;
                 }
             }

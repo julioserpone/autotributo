@@ -41,6 +41,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('sri:reconcile-runs')
             ->everyFiveMinutes()
             ->withoutOverlapping();
+
+        // Red de seguridad: los agregados se recalculan al cerrar cada run,
+        // pero el barrido nocturno corrige desfases por cargas manuales,
+        // reintentos o datos corregidos fuera de un run.
+        $schedule->command('fiscal:compute-aggregates')
+            ->dailyAt('02:00')
+            ->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([

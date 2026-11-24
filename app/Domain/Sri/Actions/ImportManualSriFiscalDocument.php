@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Domain\Sri\Actions;
 
 use App\Domain\Companies\Models\Company;
+use App\Domain\Fiscal\Actions\ComputePeriodAggregates;
 use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\Sri\Contracts\SriFiscalDocumentParser;
 use App\Domain\Sri\Data\SriImportResult;
 use App\Domain\Sri\Exceptions\SriXmlException;
+use Throwable;
 
 /**
  * Importa un XML autorizado subido manualmente por un usuario.
@@ -24,6 +26,7 @@ final readonly class ImportManualSriFiscalDocument
     public function __construct(
         private SriFiscalDocumentParser $parser,
         private PersistSriFiscalDocument $persist,
+        private ComputePeriodAggregates $compute,
     ) {}
 
     /**
@@ -47,12 +50,26 @@ final readonly class ImportManualSriFiscalDocument
 
         $data = $this->parser->parse($xml);
 
-        return $this->persist->handle(
+        $result = $this->persist->handle(
             $company,
             $data,
             $xml,
             null,
             FiscalDocument::SOURCE_MANUAL_UPLOAD,
         );
+
+        try {
+            $document = $result->fiscal_document;
+
+            $this->compute->handle(
+                $company,
+                $document->issue_date->year,
+                $document->issue_date->month,
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        return $result;
     }
 }
