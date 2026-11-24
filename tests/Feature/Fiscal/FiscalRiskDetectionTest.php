@@ -9,6 +9,7 @@ use App\Domain\Fiscal\Enums\FiscalRiskStatus;
 use App\Domain\Fiscal\Models\FiscalFinding;
 use App\Domain\Fiscal\Models\GhostCompany;
 use App\Domain\FiscalDocuments\Models\FiscalDocument;
+use App\Domain\Shared\Values\Ruc;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -234,6 +235,47 @@ it('actualiza un hallazgo existente sin duplicarlo cuando se re-detecta', functi
 
     expect($result->created)->toBe(0)
         ->and(FiscalFinding::query()->where('code', FiscalRiskCode::TotalsMismatch->value)->count())->toBe(1);
+});
+
+it('explica el desvío de totales con importes y diferencia en la descripción y metadatos', function (): void {
+    makeDocument([
+        'issuer_ruc' => '1758871873001',
+        'totals_mismatch' => true,
+        'subtotal_cents' => 10_000,
+        'discount_cents' => 1_000,
+        'tax_cents' => 1_350,
+        'total_cents' => 10_350,
+    ]);
+
+    app(DetectFiscalRisks::class)->handle($this->company);
+
+    $finding = FiscalFinding::query()->where('code', FiscalRiskCode::TotalsMismatch->value)->firstOrFail();
+
+    expect($finding->description)->toContain('es $103.50')
+        ->and($finding->description)->toContain('da $113.50')
+        ->and($finding->description)->toContain('diferencia $-10.00')
+        ->and($finding->metadata['expected_total_cents'])->toBe(11_350)
+        ->and($finding->metadata['difference_cents'])->toBe(-1_000)
+        ->and($finding->metadata['discount_cents'])->toBe(1_000);
+});
+
+it('explica que el RUC no supera la validación del SRI', function (): void {
+    makeDocument(['issuer_ruc' => '123', 'totals_mismatch' => false]);
+
+    app(DetectFiscalRisks::class)->handle($this->company);
+
+    $finding = FiscalFinding::query()->where('code', FiscalRiskCode::InvalidRuc->value)->firstOrFail();
+
+    expect($finding->description)->toContain('no supera la validación del SRI')
+        ->and($finding->description)->toContain('13 dígitos numéricos')
+        ->and($finding->metadata['issuer_ruc_digits'])->toBe('123');
+});
+
+it('valida el RUC del emisor ignorando separadores', function (): void {
+    expect(Ruc::fromImported('1758871873 001')?->value)->toBe('1758871873001')
+        ->and(Ruc::fromImported('1758871873-001')?->value)->toBe('1758871873001')
+        ->and(Ruc::fromImported('123'))->toBeNull()
+        ->and(Ruc::tryFrom('1758871873001')?->value)->toBe('1758871873001');
 });
 
 it('aisla la detección entre tenants', function (): void {

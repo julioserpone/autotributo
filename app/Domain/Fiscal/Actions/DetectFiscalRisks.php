@@ -166,17 +166,21 @@ final readonly class DetectFiscalRisks
     {
         return match ($code) {
             FiscalRiskCode::TotalsMismatch => sprintf(
-                'El comprobante %s del emisor %s presenta totales inconsistentes.',
+                'El total declarado del comprobante %s del emisor %s (%s) es %s, pero la suma de sus componentes da %s (diferencia %s).',
                 $document->access_key,
                 $document->issuer_name,
+                $document->issuer_ruc,
+                $this->money((int) $document->total_cents),
+                $this->money($this->expectedTotalCents($document)),
+                $this->money((int) $document->total_cents - $this->expectedTotalCents($document)),
             ),
             FiscalRiskCode::InvalidRuc => sprintf(
-                'El RUC del emisor %s (%s) no es válido.',
+                'El RUC del emisor %s (%s) no supera la validación del SRI: debe tener 13 dígitos numéricos y un dígito verificador válido.',
                 $document->issuer_name,
                 $document->issuer_ruc,
             ),
             FiscalRiskCode::GhostCompany => sprintf(
-                'El emisor %s (%s) figura en la lista de empresas fantasma del SRI.',
+                'El emisor %s (%s) figura en la lista de empresas fantasma publicada por el SRI.',
                 $document->issuer_name,
                 $document->issuer_ruc,
             ),
@@ -189,11 +193,30 @@ final readonly class DetectFiscalRisks
     }
 
     /**
+     * Total que la cabecera del comprobante implica: subtotal + impuestos + ICE
+     * + IRBPNR + propina. Es el mismo invariante que aplica el parser; se
+     * recalcula aquí para poder mostrar la diferencia al usuario.
+     */
+    private function expectedTotalCents(FiscalDocument $document): int
+    {
+        return (int) $document->subtotal_cents
+            + (int) $document->tax_cents
+            + (int) $document->ice_cents
+            + (int) $document->irbpnr_cents
+            + (int) $document->tip_cents;
+    }
+
+    private function money(int $cents): string
+    {
+        return '$'.number_format($cents / 100, 2, '.', ',');
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function metadataFor(FiscalRiskCode $code, FiscalDocument $document): array
     {
-        return [
+        $metadata = [
             'access_key' => $document->access_key,
             'document_number' => sprintf(
                 '%s-%s-%s',
@@ -203,9 +226,25 @@ final readonly class DetectFiscalRisks
             ),
             'issue_date' => $document->issue_date?->toDateString(),
             'subtotal_cents' => $document->subtotal_cents,
+            'discount_cents' => $document->discount_cents,
             'tax_cents' => $document->tax_cents,
+            'ice_cents' => $document->ice_cents,
+            'irbpnr_cents' => $document->irbpnr_cents,
+            'tip_cents' => $document->tip_cents,
             'total_cents' => $document->total_cents,
             'totals_mismatch' => (bool) $document->totals_mismatch,
         ];
+
+        if ($code === FiscalRiskCode::TotalsMismatch) {
+            $expected = $this->expectedTotalCents($document);
+            $metadata['expected_total_cents'] = $expected;
+            $metadata['difference_cents'] = (int) $document->total_cents - $expected;
+        }
+
+        if ($code === FiscalRiskCode::InvalidRuc) {
+            $metadata['issuer_ruc_digits'] = (string) preg_replace('/\D+/', '', (string) $document->issuer_ruc);
+        }
+
+        return $metadata;
     }
 }
