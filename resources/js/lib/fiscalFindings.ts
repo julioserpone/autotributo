@@ -31,6 +31,54 @@ export function findingCodeHint(code: string): string | null {
     return findingCodeHints[code] ?? null;
 }
 
+/**
+ * Desglose del cuadre de totales de un hallazgo `TOTALS_MISMATCH`.
+ *
+ * El backend guarda el total esperado y la diferencia en `metadata`; si el
+ * hallazgo es de una detección anterior a ese cambio, se devuelve `null` y la
+ * vista no muestra el bloque.
+ */
+export interface TotalsBreakdown {
+    subtotal_cents: number;
+    discount_cents: number;
+    tax_cents: number;
+    ice_cents: number;
+    irbpnr_cents: number;
+    tip_cents: number;
+    total_cents: number;
+    expected_total_cents: number;
+    difference_cents: number;
+}
+
+function cents(metadata: Record<string, unknown>, key: string): number {
+    const value = metadata[key];
+
+    return typeof value === 'number' ? value : 0;
+}
+
+export function totalsBreakdown(metadata: Record<string, unknown> | null): TotalsBreakdown | null {
+    if (metadata === null || typeof metadata.expected_total_cents !== 'number') return null;
+
+    return {
+        subtotal_cents: cents(metadata, 'subtotal_cents'),
+        discount_cents: cents(metadata, 'discount_cents'),
+        tax_cents: cents(metadata, 'tax_cents'),
+        ice_cents: cents(metadata, 'ice_cents'),
+        irbpnr_cents: cents(metadata, 'irbpnr_cents'),
+        tip_cents: cents(metadata, 'tip_cents'),
+        total_cents: cents(metadata, 'total_cents'),
+        expected_total_cents: cents(metadata, 'expected_total_cents'),
+        difference_cents: cents(metadata, 'difference_cents'),
+    };
+}
+
+/** RUC del emisor sin separadores, para comparar con el formato oficial. */
+export function normalizedRuc(metadata: Record<string, unknown> | null): string | null {
+    const value = metadata?.issuer_ruc_digits;
+
+    return typeof value === 'string' && value !== '' ? value : null;
+}
+
 export type FindingSeverity = 'info' | 'warning' | 'critical';
 export type FindingStatus = 'open' | 'acknowledged' | 'resolved' | 'dismissed';
 

@@ -2,18 +2,21 @@
 import { computed } from 'vue';
 
 import type { DashboardIvaBucket } from '@/stores/dashboard';
-import { formatCents, monthLabel, periodLabel } from '@/lib/dashboard';
+import { formatCents, monthLabel } from '@/lib/dashboard';
 
+/**
+ * IVA de ventas frente a compras del período seleccionado.
+ *
+ * El período se elige en la cabecera del panel (`DashboardPeriodPicker`); este
+ * bloque solo compara, para que la navegación del período no dependa de una
+ * tarjeta concreta.
+ */
 const props = defineProps<{
-    year: number;
-    month: number;
     sales: DashboardIvaBucket;
     purchases: DashboardIvaBucket;
     netCents: number;
-}>();
-
-const emit = defineEmits<{
-    (e: 'change-period', payload: { year: number; month: number }): void;
+    year?: number;
+    month?: number;
 }>();
 
 const maxTax = computed(() => Math.max(props.sales.tax_cents, props.purchases.tax_cents, 1));
@@ -22,77 +25,22 @@ function barWidth(cents: number): string {
     return `${Math.round((cents / maxTax.value) * 100)}%`;
 }
 
-function shift(delta: number): void {
-    const date = new Date(props.year, props.month - 1 + delta, 1);
-    emit('change-period', { year: date.getFullYear(), month: date.getMonth() + 1 });
-}
-
-const periodOptions = computed(() => {
-    const options: { value: string; label: string }[] = [];
-
-    for (let index = 0; index < 12; index += 1) {
-        const date = new Date(props.year, props.month - 1 - index, 1);
-        options.push({
-            value: `${date.getFullYear()}-${date.getMonth() + 1}`,
-            label: periodLabel(date.getFullYear(), date.getMonth() + 1),
-        });
-    }
-
-    return options;
-});
-
-function selectPeriod(value: string): void {
-    const [rawYear, rawMonth] = value.split('-').map(Number);
-
-    if (rawYear === undefined || rawMonth === undefined) return;
-
-    emit('change-period', { year: rawYear, month: rawMonth });
-}
+const caption = computed(() => (
+    props.year && props.month
+        ? `${monthLabel(props.month)} ${props.year} · comparación del impuesto liquidado`
+        : 'Comparación del impuesto liquidado del período'
+));
 </script>
 
 <template>
   <section class="rounded-lg border border-default bg-elevated/50 p-5">
-    <header class="flex flex-wrap items-start justify-between gap-3 border-b border-default pb-4">
-      <div>
-        <h2 class="text-sm font-medium text-highlighted">
-          IVA ventas vs. compras
-        </h2>
-        <p class="mt-0.5 text-xs text-muted">
-          {{ monthLabel(month) }} {{ year }} · comparación del impuesto liquidado
-        </p>
-      </div>
-      <div class="flex items-center gap-2">
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="xs"
-          icon="i-lucide-chevron-left"
-          label="Mes anterior"
-          @click="shift(-1)"
-        />
-        <select
-          class="rounded-md border border-default bg-elevated px-2.5 py-1.5 text-xs text-highlighted focus:border-accented focus:outline-none"
-          :value="`${year}-${month}`"
-          aria-label="Período fiscal"
-          @change="selectPeriod(($event.target as HTMLSelectElement).value)"
-        >
-          <option
-            v-for="option in periodOptions"
-            :key="option.value"
-            :value="option.value"
-          >
-            {{ option.label }}
-          </option>
-        </select>
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="xs"
-          icon="i-lucide-chevron-right"
-          label="Mes siguiente"
-          @click="shift(1)"
-        />
-      </div>
+    <header class="border-b border-default pb-4">
+      <h2 class="text-sm font-medium text-highlighted">
+        IVA ventas vs. compras
+      </h2>
+      <p class="mt-0.5 text-xs text-muted">
+        {{ caption }}
+      </p>
     </header>
 
     <div class="space-y-5 pt-5">
