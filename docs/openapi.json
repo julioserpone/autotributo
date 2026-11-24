@@ -1923,7 +1923,8 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "open_total": {
-                                                            "type": "number"
+                                                            "type": "integer",
+                                                            "const": 0
                                                         },
                                                         "by_severity": {
                                                             "type": "string"
@@ -2165,7 +2166,8 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "open_total": {
-                                                            "type": "number"
+                                                            "type": "integer",
+                                                            "const": 0
                                                         },
                                                         "by_severity": {
                                                             "type": "string"

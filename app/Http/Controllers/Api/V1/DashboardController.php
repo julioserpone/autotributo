@@ -80,7 +80,7 @@ final class DashboardController extends Controller
                 'iva' => $this->ivaSummary($period, $directionCounts),
                 'withholdings' => $this->withholdingSummary($period, $company, $start, $end),
                 'top_providers' => $this->topProviders($company, $start, $end),
-                'findings' => $this->findingsSummary($company),
+                'findings' => $this->findingsSummary($company, $start, $end),
                 'personal_expense_caps' => $this->personalExpenseCaps($year),
             ],
         ]);
@@ -199,28 +199,45 @@ final class DashboardController extends Controller
     }
 
     /**
+     * Hallazgos abiertos cuyo comprobante de origen se emitió dentro del período
+     * seleccionado.
+     *
+     * Un hallazgo no guarda fecha propia: la fecha relevante es la del
+     * comprobante que lo provocó. Los hallazgos de una sincronización de otro mes
+     * no deben aparecer en el panel del mes abierto.
+     *
      * @return array{open_total: int, by_severity: array<string, int>}
      */
-    private function findingsSummary(Company $company): array
+    private function findingsSummary(Company $company, Carbon $start, Carbon $end): array
     {
         $bySeverity = array_fill_keys(
             array_map(static fn (FiscalRiskSeverity $severity): string => $severity->value, FiscalRiskSeverity::cases()),
             0,
         );
 
+        $documentIds = FiscalDocument::query()
+            ->where('company_id', $company->id)
+            ->whereBetween('issue_date', [$start->toDateString(), $end->toDateString()])
+            ->select('id');
+
         $rows = FiscalFinding::query()
             ->where('company_id', $company->id)
             ->where('status', FiscalRiskStatus::Open->value)
+            ->where('source_type', 'fiscal_document')
+            ->whereIn('source_id', $documentIds)
             ->selectRaw('severity, COUNT(*) AS aggregate')
             ->groupBy('severity')
             ->pluck('aggregate', 'severity');
 
+        $total = 0;
+
         foreach ($rows as $severity => $value) {
             $bySeverity[(string) $severity] = (int) $value;
+            $total += (int) $value;
         }
 
         return [
-            'open_total' => array_sum($bySeverity),
+            'open_total' => $total,
             'by_severity' => $bySeverity,
         ];
     }
