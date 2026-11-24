@@ -60,3 +60,6 @@ tests/Fixtures/response.xml
 # Nuxt UI (declaraciones generadas por el plugin de Vite)
 /auto-imports.d.ts
 /components.d.ts
+
+# Respaldos locales de limpieza (no versionar)
+/storage/backups/
