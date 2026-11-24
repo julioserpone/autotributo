@@ -141,7 +141,7 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | F3-06 | Riesgos fiscales | 2,5 d | Empresas fantasma (lista SRI), duplicados, totales inconsistentes, comprobantes fuera de período, retenciones faltantes, topes de gastos, proveedor recurrente sin RUC válido. **Completado 2026-11-20 (PR #97):** `fiscal_findings` y `ghost_companies`; `DetectFiscalRisks` con `TOTALS_MISMATCH`, `INVALID_RUC`, `GHOST_COMPANY` y `DUPLICATE_SEQUENTIAL`; auto-resolución de riesgos técnicos objetivos; `GET/PATCH /api/v1/fiscal-findings` y detección manual; integración best-effort en `FinalizeSriRun`; comando `fiscal:detect-risks`. `OUT_OF_PERIOD`, `MISSING_RETENTION` y `EXPENSE_CAP_EXCEEDED` quedan reservados (dependen de la convención del contador y de F5). **Severidades pendientes de firma** |
 | F3-07 | Proporcionalidad IVA | 1 d | Factor 6 decimales, reglas de redondeo, casos 0 %/15 %, test de tabla. **Completado 2026-11-15:** value object `Money` (centavos + `brick/money`, HALF_UP en un solo lugar, enmienda del ADR-0002) y `Proportionality` (`factor()` 6 decimales HALF_UP, `complement()` que garantiza `1.000000` exacto y `apply()` a un importe); tabla de 11 casos con 0 %, 15 %, mixtos, período sin ventas y límites de redondeo. Uso en el casillero del 104 pendiente de la convención que firme el contador |
 | F3-08 | Evaluación offline | 1 d | Dataset dorado, script `php artisan ai:evaluate`, reporte de accuracy/precisión/coste, ejecución semanal programada. **Bloqueada por datos (2026-11-21):** no existe dataset dorado en el repositorio, `docs/reports/` solo contiene el README y falta el informe de F0-05. Sin esta tarea el criterio de salida M3 no es demostrable |
-| F3-09 | Administración de catálogos | 0,5 d | Endpoints de solo lectura + comando de importación desde CSV oficial. **Pendiente:** hoy solo existen `catalogs:validate` y el seeder; no hay API para consultar vigencias desde la UI |
+| F3-09 | Administración de catálogos | 0,5 d | **Completado 2026-11-24:** `GET /api/v1/catalogs/{tax-rates,retention-rates,form-lines,personal-expense-caps}` con `valid_on` (versión vigente en una fecha), `historical=1`, `code`, `q` y filtros propios (`tax_type`, `form_code`, `fiscal_year`); `FiscalCatalogEntryResource` normaliza la forma de los cuatro catálogos e incluye `is_current`. Autorización por `FiscalCatalogPolicy` (solo lectura, `Ability::FiscalDocumentsView`). `php artisan catalogs:import {catálogo} {csv}` con `--dry-run`/`--validate`, lectura tolerante de separador `,`/`;`, BOM y cabeceras con acentos, y validación previa (columnas obligatorias, `valid_to >= valid_from`, tarifas y topes no negativos) dentro de `SyncFiscalCatalogs::import()`, que mantiene el upsert idempotente |
 
 **Pruebas obligatorias**
 - **Calculadoras:** tablas de casos (entrada → salida esperada) para proporcionalidad, retenciones y topes; cubrir 0, 5, 12 y 15 % y cambios de vigencia a mitad de período.
@@ -247,7 +247,7 @@ Dependencias: F3 puede solaparse con F2 (una vez existen comprobantes de fixture
 | Etapa | Prioridad | Foco | Demo / criterio |
 |---|---|---|---|
 | **G1** (2026-11-21 →) | **P0** | Docs sync · **F4-03a** empresas en UI · **F4-03b (F4-13)** credencial SRI en UI · **F4-03c** invitaciones en UI | Un usuario provisionado registra una empresa, carga su credencial e invita a un contador **sin salir de la app** |
-| **G2** (2026-11-24 →) | **P1** | **F3-09** catálogos de solo lectura | Panel con IVA ventas/compras y alertas reales; F3 cerrada salvo evaluación. **F5-01, F5-01b, F4-08b y F4-08 ya completadas** |
+| **G2** (2026-11-24 →) | **P1** | Firma del contador + UI de clasificación | Panel con IVA ventas/compras y alertas reales; F3 cerrada salvo evaluación. **F5-01, F5-01b, F4-08b y F4-08 ya completadas** |
 | **H** | **P1/P2** | **F5-02** 104 · **F4-09** vista 104 · **F5-03** 103 · **F5-04** 102/101 | **M5:** borradores validados por el contador (requiere firma previa de la convención) |
 | **I** | **P2/P3** | **F5-05…F5-08** · **F4-10/F4-11** · **F3-08** (con dataset) | **M4/M5:** flujo completo con calidad y evaluación IA |
 | **J** | **P3** | **F6-01…F6-08** · F1-03g · F2-14 · F2-15 | **M6:** beta con 3–5 estudios y Go/No-Go |
@@ -368,7 +368,7 @@ F0 · F1 (11/11, F1-03g pendiente) · F2 (12/12 + F2-13) · F3-01…F3-07 · F4-
 Empresas, credencial SRI e invitaciones ya se gestionan desde la app (#100–#105).
 
 ### P1 — Alto: cerrar F3 y abrir F5 (Etapa G2)
-**F3-09** catálogos de solo lectura · firma del contador (camino crítico de F5). **F4-08, F4-08b y F5-01b completadas.**
+Firma del contador (camino crítico de F5). **F3-09, F4-08, F4-08b y F5-01b completadas.**
 
 ### P2 — Medio: declaraciones y calidad (Etapas H–I)
 F5-02…F5-08 · F4-09 vista 104 · F4-10/F4-11 calidad y pruebas · F3-08 evaluación (con dataset) · F4-12 indicador Reverb · F1-03g invitaciones · F2-14 cancelación · F2-15 runbook.
