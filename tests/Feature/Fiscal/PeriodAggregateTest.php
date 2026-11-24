@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domain\Companies\Models\Company;
 use App\Domain\Fiscal\Actions\ComputePeriodAggregates;
 use App\Domain\Fiscal\Models\PeriodAggregate;
+use App\Domain\Fiscal\Models\TaxRate;
 use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\FiscalDocuments\Models\FiscalDocumentTax;
 use App\Domain\FiscalDocuments\Models\RetentionLine;
@@ -166,4 +167,72 @@ it('agrega retenciones practicadas en compras y recibidas en ventas', function (
         ->and($receivedBucket)->not->toBeNull()
         ->and($receivedBucket->retention_cents)->toBe(1500)
         ->and($receivedBucket->base_cents)->toBe(5000);
+});
+
+it('usa la tarifa del catálogo cuando el impuesto de cabecera no la publica', function (): void {
+    TaxRate::query()->create([
+        'code' => 'IVA',
+        'label' => 'IVA 15%',
+        'sri_percentage_code' => '4',
+        'rate' => 15,
+        'valid_from' => '2024-04-01',
+        'valid_to' => null,
+        'legal_basis' => 'Ley Orgánica para el Fortalecimiento de la Economía',
+        'source' => 'test',
+    ]);
+
+    $document = FiscalDocument::factory()->create([
+        'tenant_id' => $this->tenant->id,
+        'company_id' => $this->company->id,
+        'issue_date' => '2026-06-15',
+        'subtotal_cents' => 2_620,
+        'tax_cents' => 0,
+        'total_cents' => 2_620,
+    ]);
+
+    // La factura del SRI no trae `<tarifa>` en `totalImpuesto`: llega en 0.
+    FiscalDocumentTax::create([
+        'tenant_id' => $this->tenant->id,
+        'fiscal_document_id' => $document->id,
+        'tax_code' => '2',
+        'sri_percentage_code' => '0',
+        'rate' => 0,
+        'base_cents' => 2_620,
+        'amount_cents' => 0,
+    ]);
+
+    $period = app(ComputePeriodAggregates::class)->handle($this->company, 2026, 6);
+
+    $aggregate = PeriodAggregate::query()->where('fiscal_period_id', $period->id)->firstOrFail();
+
+    expect((float) $aggregate->rate)->toBe(0.0)
+        ->and($aggregate->base_cents)->toBe(2_620);
+
+    $vatDocument = FiscalDocument::factory()->create([
+        'tenant_id' => $this->tenant->id,
+        'company_id' => $this->company->id,
+        'issue_date' => '2026-06-20',
+        'subtotal_cents' => 10_000,
+        'tax_cents' => 1_500,
+        'total_cents' => 11_500,
+    ]);
+
+    FiscalDocumentTax::create([
+        'tenant_id' => $this->tenant->id,
+        'fiscal_document_id' => $vatDocument->id,
+        'tax_code' => '2',
+        'sri_percentage_code' => '4',
+        'rate' => 0,
+        'base_cents' => 10_000,
+        'amount_cents' => 1_500,
+    ]);
+
+    $period = app(ComputePeriodAggregates::class)->handle($this->company, 2026, 6);
+
+    $vatAggregate = PeriodAggregate::query()
+        ->where('fiscal_period_id', $period->id)
+        ->where('sri_percentage_code', '4')
+        ->firstOrFail();
+
+    expect((float) $vatAggregate->rate)->toBe(15.0);
 });
