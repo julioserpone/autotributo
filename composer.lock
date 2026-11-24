@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "72bc3fdac5d86d00fff7c6e70670c848",
+    "content-hash": "45047e9f9f93ce4986a788caa0b8eb4c",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -1583,16 +1583,16 @@
         },
         {
             "name": "julioserpone/sri-comprobantes-php",
-            "version": "v0.2.1",
+            "version": "v0.2.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/julioserpone/sri-comprobantes-php.git",
-                "reference": "3f1fb07356f584cd506843aef6aaa4272a0d2e53"
+                "reference": "762eb8ea5d80c1a59551b49269959e89e8effa6e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/julioserpone/sri-comprobantes-php/zipball/3f1fb07356f584cd506843aef6aaa4272a0d2e53",
-                "reference": "3f1fb07356f584cd506843aef6aaa4272a0d2e53",
+                "url": "https://api.github.com/repos/julioserpone/sri-comprobantes-php/zipball/762eb8ea5d80c1a59551b49269959e89e8effa6e",
+                "reference": "762eb8ea5d80c1a59551b49269959e89e8effa6e",
                 "shasum": ""
             },
             "require": {
@@ -1643,7 +1643,7 @@
                 "issues": "https://github.com/julioserpone/sri-comprobantes-php/issues",
                 "source": "https://github.com/julioserpone/sri-comprobantes-php"
             },
-            "time": "2026-11-05T17:37:18+00:00"
+            "time": "2026-11-24T18:10:30+00:00"
         },
         {
             "name": "laravel/framework",

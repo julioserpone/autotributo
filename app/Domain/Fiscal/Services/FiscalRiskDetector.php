@@ -40,7 +40,7 @@ final class FiscalRiskDetector
         return FiscalDocument::query()
             ->where('company_id', $company->id)
             ->get()
-            ->filter(static fn (FiscalDocument $document): bool => Ruc::tryFrom((string) $document->issuer_ruc) === null);
+            ->filter(static fn (FiscalDocument $document): bool => Ruc::fromImported((string) $document->issuer_ruc) === null);
     }
 
     /**

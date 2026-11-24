@@ -13,6 +13,10 @@ use App\Domain\Sri\Enums\SriDocumentType;
  * modelo de datos. `totalsMismatch` indica que el emisor publicó totales
  * inconsistentes: el comprobante se importa igual (no se corrige en silencio)
  * y se marca para un hallazgo fiscal.
+ *
+ * Regla de cuadre (ficha técnica del SRI): `importeTotal` es
+ * `totalSinImpuestos` + impuestos de cabecera + propina. El `totalDescuento`
+ * ya está restado en `totalSinImpuestos`, así que **no se vuelve a restar**.
  */
 final readonly class SriFiscalDocumentData
 {
@@ -61,8 +65,8 @@ final readonly class SriFiscalDocumentData
     }
 
     /**
-     * `total_cents` debe igualar subtotal − descuento + impuestos + ICE +
-     * IRBPNR + propina (invariante #1 de `docs/03-data-model.md`).
+     * `total_cents` debe igualar subtotal + impuestos + ICE + IRBPNR + propina
+     * (invariante #1 de `docs/03-data-model.md`).
      */
     public function totalsMismatch(): bool
     {
@@ -88,7 +92,6 @@ final readonly class SriFiscalDocumentData
         }
 
         return $this->subtotalCents
-            - $this->discountCents
             + $this->taxCents
             + $this->iceCents
             + $this->irbpnrCents

@@ -77,7 +77,7 @@ final readonly class PersistSriFiscalDocument
                 'direction' => $data->issuerRuc === $company->ruc
                     ? FiscalDocument::DIRECTION_ISSUED
                     : FiscalDocument::DIRECTION_RECEIVED,
-                'issuer_ruc' => $data->issuerRuc,
+                'issuer_ruc' => $this->issuerRuc($data),
                 'issuer_name' => $data->issuerName,
                 'receiver_ruc' => $data->receiverRuc === '' ? null : $data->receiverRuc,
                 'receiver_name' => $data->receiverName === '' ? null : $data->receiverName,
@@ -127,6 +127,18 @@ final readonly class PersistSriFiscalDocument
         }
 
         return $result;
+    }
+
+    /**
+     * RUC del emisor sin espacios ni guiones.
+     *
+     * Algunos emisores publican el RUC formateado (`0990858322 001`), y ese
+     * texto llegaba tal cual al comprobante y a la detección de riesgos, que lo
+     * reportaba como inválido aunque el número fuese correcto.
+     */
+    private function issuerRuc(SriFiscalDocumentData $data): string
+    {
+        return (string) preg_replace('/\D+/', '', $data->issuerRuc);
     }
 
     /**

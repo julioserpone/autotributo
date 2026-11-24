@@ -22,7 +22,7 @@ use Tests\Support\Sri\AccessKeyFactory;
  */
 function fiscal_documentXml(string $path, string $key): string
 {
-    $xml = file_get_contents(__DIR__.'/../../Fixtures/xml/'.$path.'/'.basename($path).'.xml');
+    $xml = file_get_contents(__DIR__.'/../../Fixtures/xml/'.$path);
 
     if ($xml === false) {
         throw new RuntimeException("No se pudo leer el fixture {$path}.");
@@ -70,7 +70,7 @@ it('persiste un comprobante y sus hijos', function (): void {
         ->and($result->fiscal_document->document_type)->toBe(SriDocumentType::FiscalDocument)
         ->and($result->fiscal_document->direction)->toBe(FiscalDocument::DIRECTION_ISSUED)
         ->and($result->fiscal_document->source)->toBe(FiscalDocument::SOURCE_SRI_ROBOT)
-        ->and($result->fiscal_document->subtotal_cents)->toBe(10_000)
+        ->and($result->fiscal_document->subtotal_cents)->toBe(9_000)
         ->and($result->fiscal_document->tax_cents)->toBe(1_350)
         ->and($result->fiscal_document->total_cents)->toBe(10_350)
         ->and($result->fiscal_document->totals_mismatch)->toBeFalse()
@@ -204,6 +204,19 @@ it('no colisiona la misma clave entre empresas del mismo tenant', function (): v
     expect($second->outcome)->toBe(SriImportOutcome::Created)
         ->and($second->fiscal_document->id)->not->toBe($first->fiscal_document->id)
         ->and(FiscalDocument::query()->count())->toBe(2);
+});
+
+it('normaliza el RUC del emisor quitando espacios y guiones', function (): void {
+    $xml = str_replace(
+        '<ruc>1758871873001</ruc>',
+        '<ruc>1758871873 001</ruc>',
+        fiscal_documentXml('fiscal_document/factura.xml', AccessKeyFactory::make()),
+    );
+
+    $result = persistFixture($this, 'fiscal_document/factura.xml', $xml);
+
+    expect($result->fiscal_document->issuer_ruc)->toBe('1758871873001')
+        ->and($result->fiscal_document->direction)->toBe(FiscalDocument::DIRECTION_RECEIVED);
 });
 
 it('guarda la ruta del XML por ambiente, ruc y período', function (): void {
