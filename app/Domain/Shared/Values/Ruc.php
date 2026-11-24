@@ -21,7 +21,8 @@ use InvalidArgumentException;
  *
  * El primer par de dígitos es la provincia (01–24 o 30 para residentes en el
  * exterior). No se normalizan separadores: el valor debe llegar con los 13
- * dígitos, porque un RUC con guiones o espacios indica un error de captura.
+ * dígitos. Para valores que vienen de un XML se usa `Ruc::fromImported()`,
+ * que descarta espacios y guiones antes de validar.
  */
 final readonly class Ruc
 {
@@ -79,6 +80,18 @@ final readonly class Ruc
     {
         return self::tryFrom($value)
             ?? throw new InvalidArgumentException("RUC inválido: {$value}");
+    }
+
+    /**
+     * Valida un RUC publicado por un emisor, tolerando separadores.
+     *
+     * Algunos emisores escriben el RUC con espacios o guiones
+     * (`0990858322 001`). Para los comprobantes del SRI esos separadores no son
+     * un error de captura: se descartan antes de validar.
+     */
+    public static function fromImported(string $value): ?self
+    {
+        return self::tryFrom((string) preg_replace('/[^0-9]/', '', $value));
     }
 
     public function equals(self $other): bool

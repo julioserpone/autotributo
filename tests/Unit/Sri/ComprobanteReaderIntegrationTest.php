@@ -60,11 +60,67 @@ it('interpreta una factura completa', function (): void {
 it('convierte los totales a centavos sin float', function (): void {
     $fiscal_document = $this->parser->parse(xmlFixture('fiscal_document/factura.xml'));
 
-    expect($fiscal_document->subtotalCents)->toBe(10_000)
-        ->and($fiscal_document->discountCents)->toBe(1_000)
+    expect($fiscal_document->subtotalCents)->toBe(9_000)
+        ->and($fiscal_document->discountCents)->toBe(0)
         ->and($fiscal_document->taxCents)->toBe(1_350)
         ->and($fiscal_document->tipCents)->toBe(0)
         ->and($fiscal_document->totalCents)->toBe(10_350)
+        ->and($fiscal_document->totalsMismatch())->toBeFalse();
+});
+
+it('no vuelve a restar el descuento global: totalSinImpuestos ya es neto', function (): void {
+    // Base 90,00 (neta de un descuento global de 10,00) + IVA 13,50 = 103,50.
+    $fiscal_document = $this->parser->parse(xmlFixture('fiscal_document/factura.xml'));
+
+    expect($fiscal_document->subtotalCents)->toBe(9_000)
+        ->and($fiscal_document->discountCents)->toBe(0)
+        ->and($fiscal_document->expectedTotalCents())->toBe(10_350)
+        ->and($fiscal_document->totalsMismatch())->toBeFalse();
+});
+
+it('ignora el totalDescuento informado al cuadrar (no lo resta dos veces)', function (): void {
+    $xml = str_replace(
+        '<totalDescuento>0.00</totalDescuento>',
+        '<totalDescuento>10.00</totalDescuento>',
+        xmlFixture('fiscal_document/factura.xml'),
+    );
+
+    $fiscal_document = $this->parser->parse($xml);
+
+    expect($fiscal_document->discountCents)->toBe(1_000)
+        ->and($fiscal_document->expectedTotalCents())->toBe(10_350)
+        ->and($fiscal_document->totalCents)->toBe(10_350)
+        ->and($fiscal_document->totalsMismatch())->toBeFalse();
+});
+
+it('cuadra una factura real con descuento global sin marcarla inconsistente', function (): void {
+    // Caso de producción: importeTotal 2,62 = totalSinImpuestos 2,62, IVA 0
+    // y totalDescuento 0,89. Antes se calculaba un esperado de 1,73.
+    $xml = str_replace(
+        [
+            '<totalSinImpuestos>90.00</totalSinImpuestos>',
+            '<importeTotal>103.50</importeTotal>',
+            '<baseImponible>90.00</baseImponible>',
+            '<valor>13.50</valor>',
+            '<baseImponible>10.00</baseImponible>',
+        ],
+        [
+            '<totalSinImpuestos>2.62</totalSinImpuestos>',
+            '<importeTotal>2.62</importeTotal>',
+            '<baseImponible>2.62</baseImponible>',
+            '<valor>0.00</valor>',
+            '<baseImponible>0.00</baseImponible>',
+        ],
+        xmlFixture('fiscal_document/factura.xml'),
+    );
+
+    $withDiscount = str_replace('<totalDescuento>0.00</totalDescuento>', '<totalDescuento>0.89</totalDescuento>', $xml);
+
+    $fiscal_document = $this->parser->parse($withDiscount);
+
+    expect($fiscal_document->totalCents)->toBe(262)
+        ->and($fiscal_document->discountCents)->toBe(89)
+        ->and($fiscal_document->expectedTotalCents())->toBe(262)
         ->and($fiscal_document->totalsMismatch())->toBeFalse();
 });
 

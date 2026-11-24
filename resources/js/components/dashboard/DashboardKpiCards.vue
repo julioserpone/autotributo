@@ -99,7 +99,7 @@ const cards = computed(() => [
         >
           {{ card.value }}
         </span>
-        <span class="whitespace-nowrap rounded-full border border-default bg-elevated px-2.5 py-0.5 font-mono text-2xs text-muted">
+        <span class="whitespace-nowrap rounded-full border border-default bg-elevated px-2.5 py-1 font-mono text-xs text-muted">
           {{ card.badge }}
         </span>
       </div>

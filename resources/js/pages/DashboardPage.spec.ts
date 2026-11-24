@@ -149,6 +149,8 @@ describe('DashboardPage', () => {
         expect(wrapper.text()).toContain('$75.00');
         expect(wrapper.text()).toContain('Cerrado');
         expect(wrapper.text()).not.toContain('Sin comprobantes en el período');
+        // El período vive en la cabecera del contribuyente, no en el box de IVA.
+        expect(wrapper.find('select[aria-label^="Período fiscal"]').exists()).toBe(true);
     });
 
     it('avisa cuando el período no tiene comprobantes', async () => {
@@ -186,5 +188,43 @@ describe('DashboardPage', () => {
 
         expect(wrapper.text()).toContain('Sin comprobantes en el período');
         expect(wrapper.text()).toContain('Aún no hay compras registradas en este período');
+        expect(wrapper.text()).toContain('todavía no tiene comprobantes procesados');
+    });
+
+    it('muestra cuándo se calcularon los agregados si el período ya se procesó', async () => {
+        flags.hasCompany = true;
+        flags.activeCompany = { id: 'company-1', legal_name: 'ACME C.A.' };
+
+        const store = useDashboardStore();
+        store.dashboard = {
+            company: { public_id: 'company-1', legal_name: 'ACME C.A.', ruc: '1790012345001' },
+            period: { year: 2026, month: 10, status: 'closed', computed_at: '2026-10-31T12:00:00Z' },
+            iva: {
+                sales: { base_cents: 0, tax_cents: 0, documents_count: 0 },
+                purchases: { base_cents: 0, tax_cents: 0, documents_count: 0 },
+                net_cents: 0,
+            },
+            withholdings: {
+                received_cents: 0,
+                received_documents: 0,
+                practiced_cents: 0,
+                practiced_documents: 0,
+            },
+            top_providers: [],
+            findings: { open_total: 0, by_severity: {} },
+            personal_expense_caps: [],
+        };
+
+        vi.spyOn(store, 'fetchDashboard').mockResolvedValue(undefined);
+
+        const router = buildRouter();
+        await router.push('/');
+        await router.isReady();
+
+        const wrapper = mountPage(router, pinia);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(wrapper.text()).toContain('Agregados calculados el');
+        expect(wrapper.text()).not.toContain('todavía no tiene comprobantes procesados');
     });
 });

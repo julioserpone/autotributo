@@ -6,10 +6,12 @@ import {
     findingCodeLabel,
     formatDate,
     formatMoney,
+    normalizedRuc,
     severityColor,
     severityLabel,
     statusColor,
     statusLabel,
+    totalsBreakdown,
 } from '@/lib/fiscalFindings';
 
 describe('lib/fiscalFindings', () => {
@@ -46,5 +48,33 @@ describe('lib/fiscalFindings', () => {
         expect(formatMoney(11500)).toBe('$115.00');
         expect(formatDate(null)).toBe('—');
         expect(formatDate('2026-11-16T00:00:00+00:00')).toContain('2026');
+    });
+
+    it('extrae el desglose del cuadre cuando existe', () => {
+        const breakdown = totalsBreakdown({
+            subtotal_cents: 262,
+            discount_cents: 89,
+            tax_cents: 0,
+            total_cents: 262,
+            expected_total_cents: 173,
+            difference_cents: 89,
+        });
+
+        expect(breakdown).not.toBeNull();
+        expect(breakdown?.difference_cents).toBe(89);
+        expect(breakdown?.discount_cents).toBe(89);
+        expect(breakdown?.ice_cents).toBe(0);
+        expect(breakdown?.tip_cents).toBe(0);
+    });
+
+    it('no inventa desglose para hallazgos anteriores al cambio', () => {
+        expect(totalsBreakdown(null)).toBeNull();
+        expect(totalsBreakdown({ access_key: '123' })).toBeNull();
+    });
+
+    it('normaliza el RUC del emisor desde los metadatos', () => {
+        expect(normalizedRuc({ issuer_ruc_digits: '0990858322001' })).toBe('0990858322001');
+        expect(normalizedRuc({})).toBeNull();
+        expect(normalizedRuc(null)).toBeNull();
     });
 });

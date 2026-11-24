@@ -7,10 +7,12 @@ import {
     findingCodeHint,
     formatDate,
     formatMoney,
+    normalizedRuc,
     severityColor,
     severityLabel,
     statusColor,
     statusLabel,
+    totalsBreakdown,
 } from '@/lib/fiscalFindings';
 
 const props = defineProps<{
@@ -29,6 +31,10 @@ const openModel = computed({
     get: () => props.open,
     set: (value: boolean) => emit('update:open', value),
 });
+
+/** Desglose del cuadre cuando el hallazgo es de totales inconsistentes. */
+const breakdown = computed(() => totalsBreakdown(props.finding?.metadata ?? null));
+const issuerRucDigits = computed(() => normalizedRuc(props.finding?.metadata ?? null));
 </script>
 
 <template>
@@ -146,6 +152,63 @@ const openModel = computed({
               <span class="font-mono tabular-nums text-highlighted">{{ formatMoney(finding.source.total_cents) }}</span>
             </div>
           </div>
+
+          <p
+            v-if="issuerRucDigits"
+            class="mt-2 text-2xs text-muted"
+          >
+            RUC válido según el SRI: <span class="font-mono">{{ issuerRucDigits }}</span>
+            (13 dígitos; el comprobante lo publica como <span class="font-mono">{{ finding.source.issuer_ruc }}</span>).
+          </p>
+        </div>
+
+        <div
+          v-if="breakdown"
+          class="rounded-lg border border-default p-3"
+        >
+          <div class="mb-2 flex items-center justify-between">
+            <span class="text-2xs uppercase tracking-wider text-dimmed">Cuadre de totales</span>
+            <UBadge
+              :color="breakdown.difference_cents === 0 ? 'success' : 'error'"
+              variant="subtle"
+              size="xs"
+              :label="breakdown.difference_cents === 0 ? 'Cuadra' : `Diferencia ${formatMoney(breakdown.difference_cents)}`"
+            />
+          </div>
+          <div class="space-y-1 text-xs">
+            <div class="flex justify-between gap-3">
+              <span class="text-muted">Base imponible (total sin impuestos)</span>
+              <span class="font-mono tabular-nums text-highlighted">{{ formatMoney(breakdown.subtotal_cents) }}</span>
+            </div>
+            <div class="flex justify-between gap-3">
+              <span class="text-muted">Descuento global (ya incluido en la base)</span>
+              <span class="font-mono tabular-nums text-muted">{{ formatMoney(breakdown.discount_cents) }}</span>
+            </div>
+            <div class="flex justify-between gap-3">
+              <span class="text-muted">IVA</span>
+              <span class="font-mono tabular-nums text-highlighted">{{ formatMoney(breakdown.tax_cents) }}</span>
+            </div>
+            <div
+              v-if="breakdown.ice_cents || breakdown.irbpnr_cents || breakdown.tip_cents"
+              class="flex justify-between gap-3"
+            >
+              <span class="text-muted">ICE + IRBPNR + propina</span>
+              <span class="font-mono tabular-nums text-highlighted">
+                {{ formatMoney(breakdown.ice_cents + breakdown.irbpnr_cents + breakdown.tip_cents) }}
+              </span>
+            </div>
+            <div class="flex justify-between gap-3 border-t border-default pt-1">
+              <span class="text-muted">Total que debería declarar el emisor</span>
+              <span class="font-mono tabular-nums text-highlighted">{{ formatMoney(breakdown.expected_total_cents) }}</span>
+            </div>
+            <div class="flex justify-between gap-3 font-semibold">
+              <span class="text-muted">Total declarado por el emisor</span>
+              <span class="font-mono tabular-nums text-highlighted">{{ formatMoney(breakdown.total_cents) }}</span>
+            </div>
+          </div>
+          <p class="mt-2 text-2xs text-muted">
+            Regla del SRI: total = total sin impuestos + impuestos + propina. El descuento global ya viene restado en el total sin impuestos.
+          </p>
         </div>
 
         <div

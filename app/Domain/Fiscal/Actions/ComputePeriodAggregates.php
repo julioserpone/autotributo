@@ -7,6 +7,7 @@ namespace App\Domain\Fiscal\Actions;
 use App\Domain\Companies\Models\Company;
 use App\Domain\Fiscal\Models\FiscalPeriod;
 use App\Domain\Fiscal\Models\PeriodAggregate;
+use App\Domain\Fiscal\Models\TaxRate;
 use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
@@ -55,6 +56,26 @@ final readonly class ComputePeriodAggregates
                 ->whereBetween('issue_date', [$start->toDateString(), $end->toDateString()])
                 ->get();
 
+            /**
+             * Tarifa por código de porcentaje del SRI vigente a fin del período.
+             *
+             * La factura no publica `<tarifa>` en `totalImpuesto` (solo en el
+             * detalle), así que el impuesto de cabecera llegaba con tarifa 0.
+             * El catálogo versionado sí la tiene: se usa como fuente.
+             */
+            $ratesByPercentageCode = TaxRate::query()
+                ->where('code', 'IVA')
+                ->where('valid_from', '<=', $end->toDateString())
+                ->where(function ($query) use ($end): void {
+                    $query->whereNull('valid_to')
+                        ->orWhere('valid_to', '>=', $end->toDateString());
+                })
+                ->orderByDesc('valid_from')
+                ->get()
+                ->unique('sri_percentage_code')
+                ->mapWithKeys(static fn (TaxRate $rate): array => [(string) $rate->sri_percentage_code => (string) (float) $rate->rate])
+                ->all();
+
             /** @var array<string, array<string, mixed>> $buckets */
             $buckets = [];
 
@@ -62,12 +83,14 @@ final readonly class ComputePeriodAggregates
                 $direction = $document->document_type->tradeDirection($document->direction);
 
                 foreach ($document->taxes as $tax) {
+                    $rate = $this->effectiveRate((string) $tax->rate, (string) $tax->sri_percentage_code, $ratesByPercentageCode);
+
                     $key = implode('|', [
                         $direction,
                         $document->document_type->value,
                         $tax->tax_code,
                         $tax->sri_percentage_code,
-                        (string) $tax->rate,
+                        $rate,
                     ]);
 
                     if (! isset($buckets[$key])) {
@@ -76,7 +99,7 @@ final readonly class ComputePeriodAggregates
                             'document_type' => $document->document_type->value,
                             'tax_code' => $tax->tax_code,
                             'sri_percentage_code' => $tax->sri_percentage_code,
-                            'rate' => $tax->rate,
+                            'rate' => $rate,
                             'base_cents' => 0,
                             'tax_cents' => 0,
                             'retention_cents' => 0,
@@ -141,5 +164,20 @@ final readonly class ComputePeriodAggregates
 
             return $period;
         });
+    }
+
+    /**
+     * Tarifa efectiva del impuesto: la del comprobante si la publica; si no, la
+     * del catálogo para ese `codigoPorcentaje`.
+     *
+     * @param  array<string, string>  $ratesByPercentageCode
+     */
+    private function effectiveRate(string $documentRate, string $percentageCode, array $ratesByPercentageCode): string
+    {
+        if ((float) $documentRate > 0.0) {
+            return $documentRate;
+        }
+
+        return $ratesByPercentageCode[$percentageCode] ?? $documentRate;
     }
 }

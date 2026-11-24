@@ -65,13 +65,13 @@ const capsByCategory = computed(() => {
             Alertas fiscales
           </h2>
           <p class="mt-0.5 text-xs text-muted">
-            Hallazgos abiertos detectados sobre los comprobantes.
+            Hallazgos abiertos de los comprobantes emitidos en el período.
           </p>
         </div>
         <UBadge
           :color="findings.open_total > 0 ? 'error' : 'success'"
           variant="subtle"
-          size="xs"
+          size="md"
           class="shrink-0 gap-1.5 font-medium"
         >
           <span

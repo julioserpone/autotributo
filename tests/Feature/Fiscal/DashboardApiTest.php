@@ -108,7 +108,7 @@ beforeEach(function (): void {
         'computed_at' => now(),
     ]);
 
-    FiscalDocument::factory()->create([
+    $this->issuedDocument = FiscalDocument::factory()->create([
         'tenant_id' => $this->tenant->id,
         'company_id' => $this->company->id,
         'direction' => FiscalDocument::DIRECTION_ISSUED,
@@ -142,7 +142,8 @@ beforeEach(function (): void {
         'company_id' => $this->company->id,
         'severity' => 'warning',
         'status' => 'open',
-        'source_id' => 1,
+        'source_type' => 'fiscal_document',
+        'source_id' => $this->issuedDocument->id,
     ]);
 
     FiscalFinding::factory()->create([
@@ -150,7 +151,9 @@ beforeEach(function (): void {
         'company_id' => $this->company->id,
         'severity' => 'critical',
         'status' => 'open',
-        'source_id' => 2,
+        'code' => 'INVALID_RUC',
+        'source_type' => 'fiscal_document',
+        'source_id' => $this->issuedDocument->id,
     ]);
 
     FiscalFinding::factory()->create([
@@ -158,7 +161,8 @@ beforeEach(function (): void {
         'company_id' => $this->company->id,
         'severity' => 'critical',
         'status' => 'resolved',
-        'source_id' => 3,
+        'source_type' => 'fiscal_document',
+        'source_id' => $this->issuedDocument->id,
     ]);
 
     PersonalExpenseCap::query()->create([
@@ -196,6 +200,61 @@ it('devuelve el panel del período con IVA, retenciones, proveedores y hallazgos
         ->assertJsonPath('data.findings.by_severity.warning', 1)
         ->assertJsonPath('data.findings.by_severity.critical', 1)
         ->assertJsonCount(1, 'data.personal_expense_caps');
+});
+
+it('cuenta solo las alertas de los comprobantes del período seleccionado', function (): void {
+    $september = FiscalDocument::query()
+        ->where('company_id', $this->company->id)
+        ->whereBetween('issue_date', ['2026-09-01', '2026-09-30'])
+        ->value('id');
+
+    $october = FiscalDocument::factory()->create([
+        'tenant_id' => $this->tenant->id,
+        'company_id' => $this->company->id,
+        'issuer_ruc' => '1790012345001',
+        'issue_date' => '2026-10-05',
+    ]);
+
+    // Los hallazgos del seed apuntan a comprobantes que no existen en el
+    // período; se recrean apuntando a un comprobante real de septiembre para
+    // que el panel tenga algo que contar en ese mes.
+    FiscalFinding::query()->where('company_id', $this->company->id)->delete();
+
+    FiscalFinding::factory()->create([
+        'tenant_id' => $this->tenant->id,
+        'company_id' => $this->company->id,
+        'severity' => 'warning',
+        'status' => 'open',
+        'source_type' => 'fiscal_document',
+        'source_id' => $september,
+    ]);
+
+    FiscalFinding::factory()->create([
+        'tenant_id' => $this->tenant->id,
+        'company_id' => $this->company->id,
+        'severity' => 'critical',
+        'status' => 'open',
+        'source_type' => 'fiscal_document',
+        'source_id' => $october->id,
+    ]);
+
+    $response = $this->actingAs($this->owner)
+        ->getJson('/api/v1/companies/'.$this->company->public_id.'/dashboard?year=2026&month=10');
+
+    // El período de octubre solo conoce la alerta de octubre aunque la empresa
+    // tenga hallazgos abiertos de septiembre.
+    $response->assertOk()
+        ->assertJsonPath('data.findings.open_total', 1)
+        ->assertJsonPath('data.findings.by_severity.critical', 1);
+
+    $septemberResponse = $this->actingAs($this->owner)
+        ->getJson('/api/v1/companies/'.$this->company->public_id.'/dashboard?year=2026&month=9');
+
+    expect($september)->not->toBeNull();
+    $septemberResponse->assertOk()
+        ->assertJsonPath('data.findings.open_total', 1)
+        ->assertJsonPath('data.findings.by_severity.critical', 0)
+        ->assertJsonPath('data.findings.by_severity.warning', 1);
 });
 
 it('acepta el company_id por query y devuelve ceros si el período no existe', function (): void {

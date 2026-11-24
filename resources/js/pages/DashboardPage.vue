@@ -9,6 +9,7 @@ import DashboardKpiCards from '@/components/dashboard/DashboardKpiCards.vue';
 import DashboardIvaComparison from '@/components/dashboard/DashboardIvaComparison.vue';
 import DashboardTopProviders from '@/components/dashboard/DashboardTopProviders.vue';
 import DashboardAlertsPanel from '@/components/dashboard/DashboardAlertsPanel.vue';
+import DashboardPeriodPicker from '@/components/dashboard/DashboardPeriodPicker.vue';
 import DashboardSyncModal from '@/components/dashboard/DashboardSyncModal.vue';
 import { useCompanyStore } from '@/stores/company';
 import { useDashboardStore } from '@/stores/dashboard';
@@ -180,14 +181,17 @@ onMounted(async () => {
               </p>
             </div>
           </div>
-          <div class="flex items-center gap-3 text-xs text-muted">
-            <span>
-              {{ dashboard.period.computed_at ? `Agregados calculados: ${new Date(dashboard.period.computed_at).toLocaleString('es-EC')}` : 'Período aún sin calcular' }}
-            </span>
+          <div class="flex flex-wrap items-center gap-3 text-xs text-muted">
+            <DashboardPeriodPicker
+              :year="dashboard.period.year"
+              :month="dashboard.period.month"
+              :loading="store.loading"
+              @change-period="changePeriod"
+            />
             <UBadge
               :color="statusColor"
               variant="subtle"
-              size="xs"
+              size="md"
               class="gap-1.5 font-medium"
             >
               <span class="size-1.5 rounded-full bg-current" />
@@ -195,6 +199,21 @@ onMounted(async () => {
             </UBadge>
           </div>
         </article>
+
+        <p
+          v-if="showLiveData"
+          class="text-xs text-muted"
+        >
+          <template v-if="dashboard?.period.computed_at">
+            Agregados calculados el {{ new Date(dashboard.period.computed_at).toLocaleString('es-EC') }}.
+            Se recalculan automáticamente al cerrar cada sincronización con el SRI y al importar XML.
+          </template>
+          <template v-else>
+            Este período todavía no tiene comprobantes procesados, por eso las cifras están en cero. Los
+            agregados se calculan automáticamente al cerrar una sincronización con el SRI o al importar un
+            XML autorizado.
+          </template>
+        </p>
 
         <DashboardKpiCards
           v-if="dashboard"
@@ -214,12 +233,9 @@ onMounted(async () => {
         <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <DashboardIvaComparison
             v-if="dashboard && showLiveData"
-            :year="dashboard.period.year"
-            :month="dashboard.period.month"
             :sales="dashboard.iva.sales"
             :purchases="dashboard.iva.purchases"
             :net-cents="dashboard.iva.net_cents"
-            @change-period="changePeriod"
           />
 
           <DashboardTopProviders
