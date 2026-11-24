@@ -1,51 +1,80 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import AppShell from '@/layouts/AppShell.vue';
 import AppPage from '@/components/layout/AppPage.vue';
 import CompanyRequiredEmptyState from '@/components/companies/CompanyRequiredEmptyState.vue';
-import FiscalDocumentTable from '@/components/fiscal-documents/FiscalDocumentTable.vue';
+import DashboardKpiCards from '@/components/dashboard/DashboardKpiCards.vue';
+import DashboardIvaComparison from '@/components/dashboard/DashboardIvaComparison.vue';
+import DashboardTopProviders from '@/components/dashboard/DashboardTopProviders.vue';
+import DashboardAlertsPanel from '@/components/dashboard/DashboardAlertsPanel.vue';
+import DashboardSyncModal from '@/components/dashboard/DashboardSyncModal.vue';
 import { useCompanyStore } from '@/stores/company';
-import { previewFiscalDocuments, previewKpis } from '@/pages/dashboardPreview';
+import { useDashboardStore } from '@/stores/dashboard';
+import { formatCents, periodLabel, periodStatusColor, periodStatusLabel } from '@/lib/dashboard';
 
 const route = useRoute();
 const companyStore = useCompanyStore();
-
-const isPreview = computed(() => route.query.preview === '1');
+const store = useDashboardStore();
 
 const syncOpen = ref(false);
-const queryOpen = ref(false);
 
-const periodBadge = computed(() => {
-    const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    return `Período ${month}/${now.getFullYear()}`;
-});
+/**
+ * `?preview=1` se conserva para demos de diseño, pero ya no es el estado por
+ * defecto (F4-08): el panel nace de `period_aggregates` y `fiscal_findings`.
+ */
+const isPreview = computed(() => route.query.preview === '1');
 
-const fiscalDocuments = computed(() => (isPreview.value ? previewFiscalDocuments : []));
+const dashboard = computed(() => store.dashboard);
+const periodTitle = computed(() => periodLabel(store.year, store.month));
+const statusLabel = computed(() => periodStatusLabel(dashboard.value?.period.status ?? null));
+const statusColor = computed(() => periodStatusColor(dashboard.value?.period.status ?? null));
 
-const kpis = computed(() => {
-    if (isPreview.value) {
-        return previewKpis;
-    }
+/** Con datos vivos nunca se enseña un panorama vacío sin contexto. */
+const showLiveData = computed(() => dashboard.value !== null && !isPreview.value);
 
-    return { totalCents: 0, ivaCents: 0, withholdingsCents: 0, withholdingDocs: 0 };
-});
+/**
+ * Primera resolución de empresas terminada: evita parpadear el estado vacío o
+ * los ceros mientras `fetchCompanies` sigue en vuelo.
+ */
+const emptyStateReady = computed(
+    () => companyStore.loaded && !companyStore.loading && !companyStore.hasCompany,
+);
 
 function money(cents: number): string {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    }).format(cents / 100);
+    return formatCents(cents);
 }
 
-onMounted(() => {
-    if (!companyStore.loaded) {
-        void companyStore.fetchCompanies();
+async function refresh(): Promise<void> {
+    const companyId = companyStore.activeCompany?.id;
+
+    if (companyId === undefined || companyId === null) {
+        store.reset();
+
+        return;
     }
+
+    await store.fetchDashboard(companyId);
+}
+
+function changePeriod(payload: { year: number; month: number }): void {
+    store.setPeriod(payload.year, payload.month);
+}
+
+watch(
+    () => [companyStore.activeCompany?.id, store.year, store.month],
+    () => {
+        void refresh();
+    },
+);
+
+onMounted(async () => {
+    if (!companyStore.loaded) {
+        await companyStore.fetchCompanies();
+    }
+
+    await refresh();
 });
 </script>
 
@@ -53,7 +82,7 @@ onMounted(() => {
   <AppShell>
     <AppPage
       title="Panel Tributario"
-      :description="`${periodBadge} · Gestión y sincronización automática de comprobantes recibidos y emitidos ante el SRI.`"
+      :description="`${periodTitle} · IVA de ventas y compras, retenciones, proveedores y alertas del período.`"
     >
       <template #actions>
         <UButton
@@ -61,6 +90,17 @@ onMounted(() => {
           variant="outline"
           size="sm"
           icon="i-lucide-refresh-cw"
+          label="Actualizar"
+          class="h-8"
+          :loading="store.loading"
+          :disabled="!companyStore.hasCompany"
+          @click="refresh"
+        />
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-radar"
           label="Sincronizar SRI"
           class="h-8"
           :disabled="!companyStore.hasCompany"
@@ -70,188 +110,178 @@ onMounted(() => {
           color="primary"
           variant="solid"
           size="sm"
-          icon="i-lucide-plus"
-          label="Nueva consulta"
+          icon="i-lucide-file-search"
+          label="Ver bandeja"
           class="h-8"
           :disabled="!companyStore.hasCompany"
-          @click="queryOpen = true"
+          :to="{ name: 'fiscal_documents' }"
         />
       </template>
 
       <CompanyRequiredEmptyState
-        v-if="!isPreview && !companyStore.hasCompany"
+        v-if="emptyStateReady"
         description="Sin empresas no hay comprobantes que sincronizar ni clasificar."
       />
 
-      <div
-        v-if="isPreview"
-        class="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-300"
-      >
-        <UIcon
-          name="i-lucide-eye"
-          class="size-4 shrink-0"
-        />
-        <span>
-          Vista previa con datos de ejemplo. Los valores son ficticios y no representan información fiscal real.
-        </span>
-        <RouterLink
-          to="/"
-          class="ml-auto font-medium underline-offset-4 hover:underline"
+      <template v-else>
+        <UAlert
+          v-if="store.error && !isPreview"
+          color="error"
+          variant="soft"
+          icon="i-lucide-alert-circle"
+          title="No se pudo cargar el panel"
+          :description="store.error"
         >
-          Salir de la vista previa
-        </RouterLink>
-      </div>
-
-      <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <article class="flex flex-col justify-between rounded-lg border border-default bg-elevated/50 p-5">
-          <div class="flex items-center justify-between border-b border-default pb-4">
-            <div>
-              <h2 class="text-sm font-medium text-highlighted">
-                Comprobantes Electrónicos
-              </h2>
-              <p class="mt-0.5 text-xs text-muted">
-                Sincronización automática con SRI
-              </p>
-            </div>
+          <template #actions>
             <UButton
-              color="primary"
-              variant="soft"
+              color="neutral"
+              variant="outline"
               size="xs"
-              label="Nueva consulta"
-              class="shrink-0"
-              @click="queryOpen = true"
+              label="Reintentar"
+              @click="refresh"
             />
-          </div>
-          <div class="flex items-baseline justify-between pt-4">
-            <span class="text-xs text-muted">Total declarado (Mes)</span>
-            <span class="font-mono text-lg font-semibold tabular-nums text-highlighted">
-              {{ isPreview ? money(kpis.totalCents) : '—' }}
-            </span>
-          </div>
-        </article>
+          </template>
+        </UAlert>
 
-        <article class="flex flex-col justify-between rounded-lg border border-default bg-elevated/50 p-5">
-          <div class="flex items-center justify-between border-b border-default pb-4">
+        <div
+          v-if="isPreview"
+          class="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-300"
+        >
+          <UIcon
+            name="i-lucide-eye"
+            class="size-4 shrink-0"
+          />
+          <span>
+            Vista previa de interfaz. Las cifras se muestran en cero porque la vista previa con datos de ejemplo se retiró en F4-08.
+          </span>
+          <RouterLink
+            to="/"
+            class="ml-auto font-medium underline-offset-4 hover:underline"
+          >
+            Salir de la vista previa
+          </RouterLink>
+        </div>
+
+        <article
+          v-if="showLiveData && dashboard"
+          class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-default bg-elevated/50 px-4 py-3"
+        >
+          <div class="flex items-center gap-3">
+            <UIcon
+              name="i-lucide-building-2"
+              class="size-5 text-muted"
+            />
             <div>
-              <h2 class="text-sm font-medium text-highlighted">
-                IVA Liquidado (15%)
-              </h2>
-              <p class="mt-0.5 text-xs text-muted">
-                Crédito tributario aplicado
+              <p class="text-sm font-medium text-highlighted">
+                {{ dashboard.company.legal_name }}
+              </p>
+              <p class="font-mono text-2xs text-muted">
+                RUC {{ dashboard.company.ruc }}
               </p>
             </div>
+          </div>
+          <div class="flex items-center gap-3 text-xs text-muted">
+            <span>
+              {{ dashboard.period.computed_at ? `Agregados calculados: ${new Date(dashboard.period.computed_at).toLocaleString('es-EC')}` : 'Período aún sin calcular' }}
+            </span>
             <UBadge
-              color="success"
+              :color="statusColor"
               variant="subtle"
               size="xs"
               class="gap-1.5 font-medium"
             >
-              <span class="size-1.5 rounded-full bg-emerald-500" />
-              Al día
+              <span class="size-1.5 rounded-full bg-current" />
+              {{ statusLabel }}
             </UBadge>
           </div>
-          <div class="flex items-baseline justify-between pt-4">
-            <span class="text-xs text-muted">Saldo estimado Formulario 104</span>
-            <span class="font-mono text-lg font-semibold tabular-nums text-highlighted">
-              {{ isPreview ? money(kpis.ivaCents) : '—' }}
-            </span>
-          </div>
         </article>
 
-        <article class="flex flex-col justify-between rounded-lg border border-default bg-elevated/50 p-5">
-          <div class="flex items-center justify-between border-b border-default pb-4">
-            <div>
-              <h2 class="text-sm font-medium text-highlighted">
-                Retenciones Recibidas
-              </h2>
-              <p class="mt-0.5 text-xs text-muted">
-                Renta e IVA del período
-              </p>
+        <DashboardKpiCards
+          v-if="dashboard"
+          :dashboard="dashboard"
+          :loading="store.loading"
+        />
+
+        <UAlert
+          v-if="showLiveData && !store.loading && !store.hasActivity"
+          color="info"
+          variant="soft"
+          icon="i-lucide-info"
+          title="Sin comprobantes en el período"
+          description="Sincroniza con el SRI o carga un XML autorizado; los agregados se calculan al cerrar la sincronización."
+        />
+
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <DashboardIvaComparison
+            v-if="dashboard && showLiveData"
+            :year="dashboard.period.year"
+            :month="dashboard.period.month"
+            :sales="dashboard.iva.sales"
+            :purchases="dashboard.iva.purchases"
+            :net-cents="dashboard.iva.net_cents"
+            @change-period="changePeriod"
+          />
+
+          <DashboardTopProviders
+            v-if="dashboard"
+            :providers="dashboard.top_providers"
+            :loading="store.loading"
+          />
+        </div>
+
+        <DashboardAlertsPanel
+          v-if="dashboard"
+          :findings="dashboard.findings"
+          :caps="dashboard.personal_expense_caps"
+          :year="dashboard.period.year"
+          :loading="store.loading"
+        />
+
+        <section
+          v-if="showLiveData && dashboard"
+          class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+        >
+          <article class="rounded-lg border border-default bg-elevated/50 p-5">
+            <h2 class="text-sm font-medium text-highlighted">
+              Retenciones practicadas
+            </h2>
+            <p class="mt-0.5 text-xs text-muted">
+              Retenciones de renta e IVA emitidas por la empresa en el período.
+            </p>
+            <div class="mt-4 flex items-baseline justify-between">
+              <span class="font-mono text-lg font-semibold tabular-nums text-highlighted">
+                {{ money(dashboard.withholdings.practiced_cents) }}
+              </span>
+              <span class="font-mono text-2xs text-muted">
+                {{ dashboard.withholdings.practiced_documents }} docs
+              </span>
             </div>
-            <span class="whitespace-nowrap rounded-full border border-default bg-elevated px-2.5 py-0.5 font-mono text-2xs text-muted">
-              {{ isPreview ? `${kpis.withholdingDocs} docs` : '0 docs' }}
-            </span>
-          </div>
-          <div class="flex items-baseline justify-between pt-4">
-            <span class="text-xs text-muted">Total retenido a favor</span>
-            <span class="font-mono text-lg font-semibold tabular-nums text-highlighted">
-              {{ isPreview ? money(kpis.withholdingsCents) : '—' }}
-            </span>
-          </div>
-        </article>
-      </section>
+          </article>
+          <article class="rounded-lg border border-default bg-elevated/50 p-5">
+            <h2 class="text-sm font-medium text-highlighted">
+              Retenciones recibidas
+            </h2>
+            <p class="mt-0.5 text-xs text-muted">
+              Retenciones que terceros practicaron a la empresa en el período.
+            </p>
+            <div class="mt-4 flex items-baseline justify-between">
+              <span class="font-mono text-lg font-semibold tabular-nums text-highlighted">
+                {{ money(dashboard.withholdings.received_cents) }}
+              </span>
+              <span class="font-mono text-2xs text-muted">
+                {{ dashboard.withholdings.received_documents }} docs
+              </span>
+            </div>
+          </article>
+        </section>
+      </template>
 
-      <FiscalDocumentTable :fiscal-documents="fiscalDocuments" />
-
-      <UAlert
-        v-if="!isPreview"
-        color="warning"
-        variant="soft"
-        icon="i-lucide-alert-triangle"
-        title="Sin datos todavía"
-        description="Los comprobantes aparecerán aquí cuando sincronices con el SRI o cargues un XML autorizado."
-      />
-
-      <UModal
+      <DashboardSyncModal
         v-model:open="syncOpen"
-        title="Sincronizar con el SRI"
-        description="Descarga los comprobantes del período seleccionado desde el portal del SRI."
-      >
-        <template #body>
-          <p class="text-sm text-muted">
-            Esta acción se habilita cuando exista una empresa activa con credenciales SRI configuradas.
-          </p>
-          <UAlert
-            v-if="companyStore.requiresTwoFactorSetup"
-            color="warning"
-            variant="soft"
-            icon="i-lucide-shield-alert"
-            title="Verificación en dos pasos requerida"
-            description="Activa la verificación en dos pasos para acceder a los endpoints de negocio."
-            class="mt-3"
-          >
-            <template #actions>
-              <UButton
-                color="neutral"
-                variant="outline"
-                size="xs"
-                label="Configurar"
-                :to="{ name: 'two-factor-setup' }"
-              />
-            </template>
-          </UAlert>
-        </template>
-        <template #footer>
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            label="Cerrar"
-            @click="syncOpen = false"
-          />
-        </template>
-      </UModal>
-
-      <UModal
-        v-model:open="queryOpen"
-        title="Nueva consulta de comprobante SRI"
-        description="Ingresa la clave de acceso de 49 dígitos o adjunta un XML autorizado."
-      >
-        <template #body>
-          <p class="text-sm text-muted">
-            La carga manual de comprobantes desde XML se habilita desde la bandeja de comprobantes.
-          </p>
-        </template>
-        <template #footer>
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            label="Cerrar"
-            @click="queryOpen = false"
-          />
-        </template>
-      </UModal>
+        :year="store.year"
+        :month="store.month"
+        :requires-two-factor-setup="companyStore.requiresTwoFactorSetup"
+      />
     </AppPage>
   </AppShell>
 </template>
