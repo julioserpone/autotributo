@@ -51,9 +51,18 @@ final class FiscalFindingResource extends JsonResource
                     'type' => 'fiscal_document',
                     'id' => $source->public_id,
                     'document_type' => $source->document_type->value,
+                    'number' => sprintf(
+                        '%s-%s-%s',
+                        $source->establishment,
+                        $source->emission_point,
+                        $source->sequential,
+                    ),
+                    'access_key' => $source->access_key,
                     'issue_date' => $source->issue_date?->toDateString(),
                     'issuer_name' => $source->issuer_name,
                     'issuer_ruc' => $source->issuer_ruc,
+                    'subtotal_cents' => $source->subtotal_cents,
+                    'tax_cents' => $source->tax_cents,
                     'total_cents' => $source->total_cents,
                 ]
                 : null,

@@ -2309,19 +2309,13 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "total": {
-                                                            "type": "integer"
+                                                            "type": "number"
                                                         },
                                                         "by_status": {
-                                                            "type": "object",
-                                                            "additionalProperties": {
-                                                                "type": "integer"
-                                                            }
+                                                            "type": "string"
                                                         },
                                                         "by_severity": {
-                                                            "type": "object",
-                                                            "additionalProperties": {
-                                                                "type": "integer"
-                                                            }
+                                                            "type": "string"
                                                         }
                                                     },
                                                     "required": [
@@ -2408,6 +2402,9 @@
                             }
                         }
                     },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
                     },
@@ -2416,9 +2413,6 @@
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
                     }
                 }
             }
@@ -4762,6 +4756,12 @@
                                     "07"
                                 ]
                             },
+                            "number": {
+                                "type": "string"
+                            },
+                            "access_key": {
+                                "type": "string"
+                            },
                             "issue_date": {
                                 "type": "string"
                             },
@@ -4771,6 +4771,12 @@
                             "issuer_ruc": {
                                 "type": "string"
                             },
+                            "subtotal_cents": {
+                                "type": "integer"
+                            },
+                            "tax_cents": {
+                                "type": "integer"
+                            },
                             "total_cents": {
                                 "type": "integer"
                             }
@@ -4779,9 +4785,13 @@
                             "type",
                             "id",
                             "document_type",
+                            "number",
+                            "access_key",
                             "issue_date",
                             "issuer_name",
                             "issuer_ruc",
+                            "subtotal_cents",
+                            "tax_cents",
                             "total_cents"
                         ]
                     },

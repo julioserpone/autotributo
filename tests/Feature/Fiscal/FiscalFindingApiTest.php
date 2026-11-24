@@ -99,6 +99,14 @@ it('devuelve 404 al actualizar un hallazgo de otro tenant', function (): void {
         ->assertNotFound();
 });
 
+it('no permite gestionar un hallazgo ya cerrado', function (): void {
+    $this->finding->update(['status' => 'resolved']);
+
+    $this->actingAs($this->owner)
+        ->patchJson('/api/v1/fiscal-findings/'.$this->finding->id, ['status' => 'dismissed'])
+        ->assertStatus(422);
+});
+
 it('devuelve 403 sin permiso de revisión', function (): void {
     $viewer = User::factory()->create();
     $viewerRole = Role::firstOrCreate([

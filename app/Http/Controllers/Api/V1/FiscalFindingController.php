@@ -63,6 +63,13 @@ final class FiscalFindingController extends Controller
 
         Gate::authorize('update', $finding);
 
+        // Un hallazgo resuelto o descartado queda cerrado: solo la detección
+        // automática puede reabrirlo si el riesgo reaparece. No se permite
+        // gestionarlo manualmente para no perder la trazabilidad de auditoría.
+        if (in_array($finding->status, [FiscalRiskStatus::Resolved, FiscalRiskStatus::Dismissed], true)) {
+            abort(422, 'El hallazgo ya está cerrado y no puede gestionarse manualmente.');
+        }
+
         $validated = $request->validated();
 
         $finding->status = FiscalRiskStatus::from((string) $validated['status']);
