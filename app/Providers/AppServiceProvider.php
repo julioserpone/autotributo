@@ -16,6 +16,11 @@ use App\Domain\Companies\Models\Company;
 use App\Domain\Companies\Policies\CompanyPolicy;
 use App\Domain\Companies\Policies\SriCredentialPolicy;
 use App\Domain\Fiscal\Models\FiscalFinding;
+use App\Domain\Fiscal\Models\FormLine;
+use App\Domain\Fiscal\Models\PersonalExpenseCap;
+use App\Domain\Fiscal\Models\RetentionRate;
+use App\Domain\Fiscal\Models\TaxRate;
+use App\Domain\Fiscal\Policies\FiscalCatalogPolicy;
 use App\Domain\Fiscal\Policies\FiscalFindingPolicy;
 use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\FiscalDocuments\Policies\FiscalDocumentPolicy;
@@ -63,6 +68,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(ClassificationRule::class, ClassificationRulePolicy::class);
         Gate::policy(ExpenseCategory::class, ExpenseCategoryPolicy::class);
         Gate::policy(Classification::class, ClassificationPolicy::class);
+        Gate::policy(TaxRate::class, FiscalCatalogPolicy::class);
+        Gate::policy(RetentionRate::class, FiscalCatalogPolicy::class);
+        Gate::policy(FormLine::class, FiscalCatalogPolicy::class);
+        Gate::policy(PersonalExpenseCap::class, FiscalCatalogPolicy::class);
 
         // Las credenciales se autorizan sobre la empresa, porque todavía pueden
         // no existir cuando el contador las crea por primera vez.

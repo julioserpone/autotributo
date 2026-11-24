@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\EconomicActivityCodeController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\ExpenseCategoryController;
+use App\Http\Controllers\Api\V1\FiscalCatalogController;
 use App\Http\Controllers\Api\V1\FiscalDocumentController;
 use App\Http\Controllers\Api\V1\FiscalFindingController;
 use App\Http\Controllers\Api\V1\HealthController;
@@ -163,6 +164,17 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
         // globales, dry-run antes de guardar y catálogo de categorías.
         Route::get('expense-categories', [ExpenseCategoryController::class, 'index'])
             ->name('api.v1.expense-categories.index');
+
+        // Catálogos fiscales versionados (F3-09): solo lectura, con consulta de
+        // la versión vigente en una fecha o del histórico completo.
+        Route::get('catalogs/tax-rates', [FiscalCatalogController::class, 'taxRates'])
+            ->name('api.v1.catalogs.tax-rates');
+        Route::get('catalogs/retention-rates', [FiscalCatalogController::class, 'retentionRates'])
+            ->name('api.v1.catalogs.retention-rates');
+        Route::get('catalogs/form-lines', [FiscalCatalogController::class, 'formLines'])
+            ->name('api.v1.catalogs.form-lines');
+        Route::get('catalogs/personal-expense-caps', [FiscalCatalogController::class, 'personalExpenseCaps'])
+            ->name('api.v1.catalogs.personal-expense-caps');
         Route::post('classification-rules/dry-run', [ClassificationRuleController::class, 'dryRun'])
             ->name('api.v1.classification-rules.dry-run');
         Route::apiResource('classification-rules', ClassificationRuleController::class)
