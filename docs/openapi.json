@@ -2491,6 +2491,274 @@
                 }
             }
         },
+        "/v1/catalogs/tax-rates": {
+            "get": {
+                "operationId": "v1.catalogs.tax-rates",
+                "tags": [
+                    "FiscalCatalog"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `FiscalCatalogEntryResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/FiscalCatalogEntryResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "catalog": {
+                                                    "type": "string",
+                                                    "const": "tax-rates"
+                                                },
+                                                "count": {
+                                                    "type": "integer"
+                                                },
+                                                "valid_on": {
+                                                    "type": [
+                                                        "string",
+                                                        "array",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "historical": {
+                                                    "type": "boolean"
+                                                },
+                                                "as_of": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "catalog",
+                                                "count",
+                                                "valid_on",
+                                                "historical",
+                                                "as_of"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/catalogs/retention-rates": {
+            "get": {
+                "operationId": "v1.catalogs.retention-rates",
+                "tags": [
+                    "FiscalCatalog"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `FiscalCatalogEntryResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/FiscalCatalogEntryResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "catalog": {
+                                                    "type": "string",
+                                                    "const": "retention-rates"
+                                                },
+                                                "count": {
+                                                    "type": "integer"
+                                                },
+                                                "valid_on": {
+                                                    "type": [
+                                                        "string",
+                                                        "array",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "historical": {
+                                                    "type": "boolean"
+                                                },
+                                                "as_of": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "catalog",
+                                                "count",
+                                                "valid_on",
+                                                "historical",
+                                                "as_of"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/catalogs/form-lines": {
+            "get": {
+                "operationId": "v1.catalogs.form-lines",
+                "tags": [
+                    "FiscalCatalog"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `FiscalCatalogEntryResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/FiscalCatalogEntryResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "catalog": {
+                                                    "type": "string",
+                                                    "const": "form-lines"
+                                                },
+                                                "count": {
+                                                    "type": "integer"
+                                                },
+                                                "valid_on": {
+                                                    "type": [
+                                                        "string",
+                                                        "array",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "historical": {
+                                                    "type": "boolean"
+                                                },
+                                                "as_of": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "catalog",
+                                                "count",
+                                                "valid_on",
+                                                "historical",
+                                                "as_of"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/catalogs/personal-expense-caps": {
+            "get": {
+                "operationId": "v1.catalogs.personal-expense-caps",
+                "tags": [
+                    "FiscalCatalog"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `FiscalCatalogEntryResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/FiscalCatalogEntryResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "catalog": {
+                                                    "type": "string",
+                                                    "const": "personal-expense-caps"
+                                                },
+                                                "count": {
+                                                    "type": "integer"
+                                                },
+                                                "valid_on": {
+                                                    "type": [
+                                                        "string",
+                                                        "array",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "historical": {
+                                                    "type": "boolean"
+                                                },
+                                                "as_of": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "catalog",
+                                                "count",
+                                                "valid_on",
+                                                "historical",
+                                                "as_of"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/fiscal_documents": {
             "get": {
                 "operationId": "v1.fiscal_documents.index",
@@ -5005,6 +5273,48 @@
                     "display_order"
                 ],
                 "title": "ExpenseCategoryResource"
+            },
+            "FiscalCatalogEntryResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "valid_from": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "valid_to": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "is_current": {
+                        "type": "boolean"
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "published_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "valid_from",
+                    "valid_to",
+                    "is_current",
+                    "source",
+                    "published_at"
+                ],
+                "additionalProperties": {},
+                "title": "FiscalCatalogEntryResource"
             },
             "FiscalDocumentResource": {
                 "type": "object",
