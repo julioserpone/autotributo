@@ -2,7 +2,7 @@
 import type { FiscalFinding } from '@/stores/fiscalFindings';
 import type { FindingAction } from '@/lib/fiscalFindings';
 
-import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 import { useToast } from '@nuxt/ui/composables/useToast';
 import AppShell from '@/layouts/AppShell.vue';
@@ -15,15 +15,8 @@ import { useAuthStore } from '@/stores/auth';
 import { useCompanyStore } from '@/stores/company';
 import { useFiscalFindingStore } from '@/stores/fiscalFindings';
 
-const FiscalFindingDetailDrawer = defineAsyncComponent(
-    () => import('@/components/fiscal-findings/FiscalFindingDetailDrawer.vue'),
-);
-FiscalFindingDetailDrawer.name = 'FiscalFindingDetailDrawer';
-
-const FiscalFindingActionModal = defineAsyncComponent(
-    () => import('@/components/fiscal-findings/FiscalFindingActionModal.vue'),
-);
-FiscalFindingActionModal.name = 'FiscalFindingActionModal';
+import FiscalFindingActionModal from '@/components/fiscal-findings/FiscalFindingActionModal.vue';
+import FiscalFindingDetailDrawer from '@/components/fiscal-findings/FiscalFindingDetailDrawer.vue';
 
 const authStore = useAuthStore();
 const companyStore = useCompanyStore();
