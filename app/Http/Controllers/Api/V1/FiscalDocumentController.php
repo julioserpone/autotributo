@@ -87,6 +87,11 @@ final class FiscalDocumentController extends Controller
     {
         Gate::authorize('view', $fiscal_document);
 
-        return new FiscalDocumentResource($fiscal_document->load(['items', 'taxes', 'retentions']));
+        return new FiscalDocumentResource($fiscal_document->load([
+            'items.expenseCategory',
+            'items.classification',
+            'taxes',
+            'retentions',
+        ]));
     }
 }

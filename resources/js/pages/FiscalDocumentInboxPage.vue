@@ -7,6 +7,7 @@ import { getLocalTimeZone, parseDate, today } from '@internationalized/date';
 import AppShell from '@/layouts/AppShell.vue';
 import AppPage from '@/components/layout/AppPage.vue';
 import CompanyRequiredEmptyState from '@/components/companies/CompanyRequiredEmptyState.vue';
+import FiscalDocumentItemsClassification from '@/components/fiscal-documents/FiscalDocumentItemsClassification.vue';
 import FiscalDocumentTable from '@/components/fiscal-documents/FiscalDocumentTable.vue';
 import { useCompanyStore } from '@/stores/company';
 import { useFiscalDocumentStore, documentTypeLabels } from '@/stores/fiscalDocuments';
@@ -123,9 +124,26 @@ const companyOptions = computed(() => [
 const money = (cents: number): string =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100);
 
-function openDetail(id: string): void {
+const detailItems = computed(() => fiscal_documentStore.detail?.items ?? []);
+const detailItemsLoading = computed(() => fiscal_documentStore.detailLoading);
+
+/**
+ * Abre el detalle con las líneas del comprobante.
+ *
+ * El listado no incluye ítems (sería pesado con cientos de filas), así que el
+ * drawer pide el detalle completo y muestra la clasificación de cada línea.
+ */
+async function openDetail(id: string): Promise<void> {
     detailFiscalDocument.value = fiscal_documentStore.fiscalDocuments.find((fiscal_document) => fiscal_document.id === id) ?? null;
     detailOpen.value = true;
+    fiscal_documentStore.clearDetail();
+
+    await fiscal_documentStore.fetchDetail(id);
+}
+
+function closeDetail(): void {
+    detailOpen.value = false;
+    fiscal_documentStore.clearDetail();
 }
 
 function applyFilters(): void {
@@ -403,6 +421,7 @@ onMounted(() => {
           side="right"
           :ui="{ content: 'max-w-xl z-30', header: 'border-b-0' }"
           title="Detalle del comprobante"
+          @after:leave="closeDetail"
         >
           <template #body>
             <div
@@ -498,6 +517,20 @@ onMounted(() => {
                   {{ detailFiscalDocument.access_key }}
                 </dd>
               </div>
+
+              <UAlert
+                v-if="fiscal_documentStore.detailError"
+                color="error"
+                variant="soft"
+                icon="i-lucide-alert-circle"
+                title="No se pudieron cargar las líneas"
+                :description="fiscal_documentStore.detailError"
+              />
+
+              <FiscalDocumentItemsClassification
+                :items="detailItems"
+                :loading="detailItemsLoading"
+              />
             </div>
           </template>
         </USlideover>

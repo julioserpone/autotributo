@@ -5316,6 +5316,119 @@
                 "additionalProperties": {},
                 "title": "FiscalCatalogEntryResource"
             },
+            "FiscalDocumentItemResource": {
+                "type": "object",
+                "properties": {
+                    "line_number": {
+                        "type": "integer"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "main_code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "auxiliary_code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "quantity": {
+                        "type": "string"
+                    },
+                    "unit_price": {
+                        "type": "string"
+                    },
+                    "discount": {
+                        "type": "string"
+                    },
+                    "subtotal_cents": {
+                        "type": "integer"
+                    },
+                    "total_cents": {
+                        "type": "integer"
+                    },
+                    "classification": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string"
+                            },
+                            "expense_category_id": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "expense_category": {
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "id": {
+                                        "type": "integer"
+                                    },
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "id",
+                                    "code",
+                                    "name"
+                                ]
+                            },
+                            "method": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "confidence": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "prompt_version": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "status",
+                            "expense_category_id",
+                            "expense_category",
+                            "method",
+                            "confidence",
+                            "prompt_version"
+                        ]
+                    }
+                },
+                "required": [
+                    "line_number",
+                    "description",
+                    "main_code",
+                    "auxiliary_code",
+                    "quantity",
+                    "unit_price",
+                    "discount",
+                    "subtotal_cents",
+                    "total_cents",
+                    "classification"
+                ],
+                "title": "FiscalDocumentItemResource"
+            },
             "FiscalDocumentResource": {
                 "type": "object",
                 "properties": {
@@ -5411,6 +5524,24 @@
                     "totals_mismatch": {
                         "type": "boolean"
                     },
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/FiscalDocumentItemResource"
+                                }
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "minItems": 0,
+                                "maxItems": 0
+                            }
+                        ]
+                    },
                     "created_at": {
                         "type": [
                             "string",
@@ -5449,6 +5580,7 @@
                     "currency",
                     "source",
                     "totals_mismatch",
+                    "items",
                     "created_at",
                     "updated_at"
                 ],

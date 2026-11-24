@@ -33,6 +33,35 @@ export interface FiscalDocumentApi {
     totals_mismatch: boolean;
 }
 
+/** Clasificación de una línea del comprobante (F3-05). */
+export interface FiscalDocumentItemClassification {
+    status: string;
+    expense_category_id: number | null;
+    expense_category: { id: number; code: string; name: string } | null;
+    method: string | null;
+    confidence: number | null;
+    prompt_version: string | null;
+}
+
+/** Línea de detalle del comprobante con su clasificación. */
+export interface FiscalDocumentItemApi {
+    line_number: number;
+    description: string;
+    main_code: string | null;
+    auxiliary_code: string | null;
+    quantity: string;
+    unit_price: string;
+    discount: string;
+    subtotal_cents: number;
+    total_cents: number;
+    classification: FiscalDocumentItemClassification;
+}
+
+/** Comprobante con el detalle completo (solo lo devuelve `GET /{id}`). */
+export interface FiscalDocumentDetailApi extends FiscalDocumentApi {
+    items: FiscalDocumentItemApi[];
+}
+
 export interface FiscalDocumentFilters {
     status: string;
     documentType: string;
@@ -91,6 +120,9 @@ export const useFiscalDocumentStore = defineStore('fiscal_documents', () => {
     });
 
     const rows = computed(() => fiscalDocuments.value.map(toFiscalDocumentRow));
+    const detail = ref<FiscalDocumentDetailApi | null>(null);
+    const detailLoading = ref(false);
+    const detailError = ref<string | null>(null);
 
     function buildQuery(cursor: string | null): string {
         const params = new URLSearchParams();
@@ -137,6 +169,35 @@ export const useFiscalDocumentStore = defineStore('fiscal_documents', () => {
         }
     }
 
+    /**
+     * Detalle de un comprobante con sus líneas y la clasificación de cada una.
+     *
+     * El listado no trae ítems a propósito (sería pesado con cientos de filas),
+     * así que el drawer los pide al abrirse.
+     */
+    async function fetchDetail(id: string): Promise<FiscalDocumentDetailApi | null> {
+        detailLoading.value = true;
+        detailError.value = null;
+
+        try {
+            const response = await getJson<{ data: FiscalDocumentDetailApi }>(`/api/v1/fiscal_documents/${id}`);
+            detail.value = response.data;
+
+            return response.data;
+        } catch (caught: unknown) {
+            detailError.value = caught instanceof Error ? caught.message : 'No se pudo cargar el detalle.';
+
+            return null;
+        } finally {
+            detailLoading.value = false;
+        }
+    }
+
+    function clearDetail(): void {
+        detail.value = null;
+        detailError.value = null;
+    }
+
     function setFilter(patch: Partial<FiscalDocumentFilters>): void {
         filters.value = { ...filters.value, ...patch };
     }
@@ -149,8 +210,13 @@ export const useFiscalDocumentStore = defineStore('fiscal_documents', () => {
         nextCursor,
         filters,
         rows,
+        detail,
+        detailLoading,
+        detailError,
         fetchFirst,
         loadMore,
+        fetchDetail,
+        clearDetail,
         setFilter,
     };
 });

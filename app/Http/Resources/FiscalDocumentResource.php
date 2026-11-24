@@ -50,6 +50,9 @@ final class FiscalDocumentResource extends JsonResource
             'currency' => $fiscal_document->currency,
             'source' => $fiscal_document->source,
             'totals_mismatch' => $fiscal_document->totals_mismatch,
+            'items' => $fiscal_document->relationLoaded('items')
+                ? FiscalDocumentItemResource::collection($fiscal_document->items)
+                : [],
             'created_at' => $fiscal_document->created_at?->toIso8601String(),
             'updated_at' => $fiscal_document->updated_at?->toIso8601String(),
         ];
