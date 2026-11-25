@@ -19,21 +19,21 @@ beforeEach(function (): void {
 it('carga los catálogos fiscales de forma idempotente', function (): void {
     $first = app(SyncFiscalCatalogs::class)->handle();
 
-    expect($first->created())->toBe(50)
+    expect($first->created())->toBe(123)
         ->and($first->updated())->toBe(0)
         ->and(TaxRate::query()->count())->toBe(6)
         ->and(RetentionRate::query()->count())->toBe(22)
-        ->and(FormLine::query()->count())->toBe(15)
+        ->and(FormLine::query()->count())->toBe(88)
         ->and(PersonalExpenseCap::query()->count())->toBe(7);
 
     $second = app(SyncFiscalCatalogs::class)->handle();
 
     expect($second->created())->toBe(0)
         ->and($second->updated())->toBe(0)
-        ->and($second->unchanged())->toBe(50)
+        ->and($second->unchanged())->toBe(123)
         ->and(TaxRate::query()->count())->toBe(6)
         ->and(RetentionRate::query()->count())->toBe(22)
-        ->and(FormLine::query()->count())->toBe(15)
+        ->and(FormLine::query()->count())->toBe(88)
         ->and(PersonalExpenseCap::query()->count())->toBe(7);
 });
 

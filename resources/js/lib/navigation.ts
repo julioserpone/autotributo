@@ -21,7 +21,7 @@ export const primaryNav: AppNavItem[] = [
     { label: 'Contribuyentes', icon: 'i-lucide-building-2', route: 'companies' },
     { label: 'Revisión de clasificación', icon: 'i-lucide-tags', route: 'classifications' },
     { label: 'Sincronización SRI', icon: 'i-lucide-refresh-cw', route: 'sync' },
-    { label: 'Declaraciones', icon: 'i-lucide-chart-column', soon: true },
+    { label: 'Formulario 104', icon: 'i-lucide-chart-column', route: 'form-104' },
 ];
 
 export const systemNav: AppNavItem[] = [
