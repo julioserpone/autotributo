@@ -26,6 +26,13 @@ vi.mock('@/stores/auth', () => ({
     }),
 }));
 
+// Nuxt UI carga sus composables en un chunk aparte; en CI lento la importación
+// puede llegar después del teardown del entorno jsdom y hacer fallar el archivo.
+// Los tests verifican markup accesible, no notificaciones.
+vi.mock('@nuxt/ui/composables/useToast', () => ({
+    useToast: () => ({ add: vi.fn() }),
+}));
+
 describe('CompaniesPage', () => {
     let pinia: ReturnType<typeof createPinia>;
 

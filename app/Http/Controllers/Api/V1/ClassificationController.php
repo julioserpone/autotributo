@@ -10,6 +10,7 @@ use App\Domain\Classification\Data\ClassificationReviewData;
 use App\Domain\Classification\Enums\ClassificationMethod;
 use App\Domain\Classification\Enums\ClassificationStatus;
 use App\Domain\Classification\Models\Classification;
+use App\Domain\Companies\Models\Company;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Classification\BulkReviewClassificationsRequest;
 use App\Http\Requests\Classification\ReviewClassificationRequest;
@@ -62,10 +63,16 @@ final class ClassificationController extends Controller
         $companyId = $filters['company_id'] ?? $request->query('company_id');
 
         if ($companyId !== null && $companyId !== '') {
-            $query->whereHas(
-                'fiscal_documentItem.fiscal_document',
-                fn (Builder $builder) => $builder->where('company_id', (int) $companyId),
-            );
+            $company = is_numeric($companyId)
+                ? Company::query()->find((int) $companyId)
+                : Company::query()->where('public_id', (string) $companyId)->first();
+
+            if ($company !== null) {
+                $query->whereHas(
+                    'fiscal_documentItem.fiscal_document',
+                    fn (Builder $builder) => $builder->where('company_id', $company->id),
+                );
+            }
         }
 
         $reviewed = $filters['reviewed'] ?? $request->query('reviewed');

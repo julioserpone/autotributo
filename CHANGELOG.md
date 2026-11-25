@@ -8,6 +8,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ### Changed
 
+- F3-05 (filtro por empresa en la revisión de clasificación): `GET /api/v1/classifications` acepta `filter[company_id]` con el `public_id` de la empresa (lo que envía la UI) o con su id numérico, y resuelve la empresa como ya hacían la bandeja de comprobantes y los hallazgos. Un identificador desconocido deja de filtrar en vez de castearse a `0`. Nuevo test de feature con `public_id`, id numérico e identificador inexistente.
 - Performance: lazy-load all route components and heavy modals/drawers in the SPA to reduce initial bundle and browser memory (Safari/Chrome). Vite dev server now pre-bundles heavy dependencies, ignores `vendor/storage/node_modules` in the watcher, uses polling with a 2 s interval and a 1.5 GB memory limit. OPcache enabled in development (mounted `php.ini`) with timestamp validation. Docker cleanup removed ~125 GB of unused images/volumes/build cache.
 
 
