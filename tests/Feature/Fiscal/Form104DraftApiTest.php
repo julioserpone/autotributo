@@ -167,9 +167,15 @@ it('calcula ventas, IVA de compras, retenciones y crédito con fuente para drill
         ->and(form104Line($lines, '421')['value_cents'])->toBe(15_000)
         ->and(form104Line($lines, '405')['value_cents'])->toBe(20_000)
         ->and(form104Line($lines, '409')['value_cents'])->toBe(120_000)
-        ->and(form104Line($lines, '520')['value_cents'])->toBe(6_000)
-        ->and(form104Line($lines, '520')['sources'][0]['filter']['direction'])->toBe('compras')
-        ->and(form104Line($lines, '721')['value_cents'])->toBe(1_000)
+        ->and(form104Line($lines, '529')['value_cents'])->toBe(6_000)
+        ->and(form104Line($lines, '529')['sources'][0]['filter']['direction'])->toBe('compras');
+
+    foreach (['500', '501', '502', '509', '510', '511', '517', '519', '520', '521', '522'] as $field) {
+        expect(form104Line($lines, $field)['unavailable'])->toBeTrue()
+            ->and(form104Line($lines, $field)['value_cents'])->toBeNull();
+    }
+
+    expect(form104Line($lines, '721')['value_cents'])->toBe(1_000)
         ->and(form104Line($lines, '799')['value_cents'])->toBe(1_000);
 
     // El factor de proporcionalidad se informa como ratio en el campo 563.
@@ -241,7 +247,9 @@ it('devuelve ceros y proporcionalidad nula cuando el período no tiene comproban
     $lines = $response->json('data.lines');
 
     expect(form104Line($lines, '401')['value_cents'])->toBe(0)
-        ->and(form104Line($lines, '520')['value_cents'])->toBe(0)
+        ->and(form104Line($lines, '529')['value_cents'])->toBe(0)
+        ->and(form104Line($lines, '520')['value_cents'])->toBeNull()
+        ->and(form104Line($lines, '520')['unavailable'])->toBeTrue()
         ->and(form104Line($lines, '564')['value_cents'])->toBe(0);
 });
 

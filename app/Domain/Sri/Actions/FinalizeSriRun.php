@@ -7,6 +7,7 @@ namespace App\Domain\Sri\Actions;
 use App\Domain\Companies\Models\Company;
 use App\Domain\Fiscal\Actions\ComputePeriodAggregates;
 use App\Domain\Fiscal\Actions\DetectFiscalRisks;
+use App\Domain\Fiscal\Jobs\RecomputeSriRunAggregatesJob;
 use App\Domain\Sri\Data\SriChunkImportResult;
 use App\Domain\Sri\Enums\SriDocumentType;
 use App\Domain\Sri\Enums\SriSyncRunFileStatus;
@@ -111,7 +112,10 @@ final readonly class FinalizeSriRun
                 try {
                     $this->recomputeAggregates($run, $company);
                 } catch (Throwable $exception) {
+                    // Los períodos ya guardaron su estado; encolar el recálculo
+                    // permite reintentarlo sin volver a importar el run.
                     report($exception);
+                    $this->queueAggregationRetry($run);
                 }
             }
         }
@@ -122,7 +126,10 @@ final readonly class FinalizeSriRun
     /**
      * Recalcula los agregados de todos los meses cubiertos por el run.
      *
-     * Es best-effort: un fallo de agregación no cambia el veredicto del run.
+     * Ya no es silencioso (F5-07d): cada período guarda su propio
+     * `aggregation_status`/`aggregation_error` y el fallo queda además en el
+     * log. Un error de agregación no cambia el veredicto del run, que solo
+     * describe la importación.
      */
     private function recomputeAggregates(SriSyncRun $run, Company $company): void
     {
@@ -132,8 +139,24 @@ final readonly class FinalizeSriRun
         $end = $run->date_to->copy()->endOfMonth();
 
         while ($cursor->lessThanOrEqualTo($end)) {
-            $compute->handle($company, $cursor->year, $cursor->month);
+            if (! $compute->attempt($company, $cursor->year, $cursor->month)) {
+                $this->queueAggregationRetry($run);
+
+                return;
+            }
+
             $cursor->addMonthNoOverflow();
+        }
+    }
+
+    private function queueAggregationRetry(SriSyncRun $run): void
+    {
+        try {
+            RecomputeSriRunAggregatesJob::forRun($run)->dispatch();
+        } catch (Throwable $exception) {
+            // El período ya tiene `aggregation_status = failed`; la UI y el
+            // comando de barrido permiten reintentar manualmente.
+            report($exception);
         }
     }
 

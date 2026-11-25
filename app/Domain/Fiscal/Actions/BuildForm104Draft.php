@@ -99,6 +99,15 @@ final readonly class BuildForm104Draft
                 'locked_at' => $period?->locked_at?->toIso8601String(),
                 'computed_at' => $period?->aggregates()->max('computed_at'),
                 'has_period' => $period instanceof FiscalPeriod,
+                // F5-07a: un período sin agregados no es lo mismo que un fallo
+                // de agregación; la UI debe poder decirlo.
+                'aggregation_status' => $period instanceof FiscalPeriod
+                    ? (string) $period->aggregation_status
+                    : FiscalPeriod::AGGREGATION_PENDING,
+                'aggregation_error' => $period instanceof FiscalPeriod
+                    ? $period->aggregation_error
+                    : null,
+                'aggregated_at' => $period?->aggregated_at?->toIso8601String(),
             ],
             status: [
                 'draft' => true,
@@ -176,7 +185,6 @@ final readonly class BuildForm104Draft
         // así que todo va a 405 y 406 queda en cero explícito.
         $zeroWithCredit = $sales['zero']['base_cents'];
 
-        $comprasBase = $purchases['general']['base_cents'] + $purchases['five']['base_cents'];
         $comprasIva = $purchases['general']['tax_cents'] + $purchases['five']['tax_cents'];
 
         $salesGeneralBase = $sales['general']['base_cents'] + $sales['five']['base_cents'];
@@ -195,7 +203,6 @@ final readonly class BuildForm104Draft
             'gravadas_base' => $gravadasBase,
             'gravadas_iva' => $gravadasIva,
             'zero_with_credit' => $zeroWithCredit,
-            'compras_base' => $comprasBase,
             'compras_iva' => $comprasIva,
             'credito' => $credito,
             'proportionality' => [
@@ -266,14 +273,15 @@ final readonly class BuildForm104Draft
             '483', '484', '485', '499' => $this->unavailable($base, 'La liquidación del IVA depende de la forma de pago y del arrastre del mes anterior (F5-02).'),
 
             // Adquisiciones.
-            '500', '501', '502' => $this->amount($base, $values['compras_base'], 'compras', $periodFilter, 'Las adquisiciones gravadas al 15 % y al 5 % se registran juntas; el formulario oficial no separa el activo fijo en el borrador.'),
+            '500', '501', '502' => $this->unavailable($base, 'Los agregados no distinguen activos fijos ni el derecho a crédito de cada adquisición; requiere clasificar la naturaleza IVA del ítem (F5-09).'),
             '506', '507', '531', '532' => $this->unavailable($base, 'El comprobante no distingue importaciones, adquisiciones no objeto ni exentas; se ajusta en F5-02.'),
-            '509', '519' => $this->amount($base, $values['compras_base'], 'compras', $periodFilter, 'Total adquisiciones y pagos.'),
-            '510', '511' => $this->amount($base, $values['compras_base'], 'compras', $periodFilter, 'Valor neto de adquisiciones con derecho a crédito.'),
-            '517' => $this->amount($base, $values['purchases']['zero']['base_cents'], 'compras', $periodFilter, 'Adquisiciones 0 %: no generan crédito tributario.'),
-            '520', '521' => $this->amount($base, $values['compras_iva'], 'compras', $periodFilter, 'IVA generado en adquisiciones con derecho a crédito.'),
-            '522' => $this->amount($base, 0, 'compras', $periodFilter, 'Otras adquisiciones sin derecho a crédito: el borrador no las separa.'),
+            '509' => $this->unavailable($base, 'El total depende de adquisiciones que aún no se pueden clasificar por naturaleza IVA ni separar entre locales e importadas.'),
+            '510', '511' => $this->unavailable($base, 'El valor neto requiere clasificar el derecho a crédito y los activos fijos, y ajustar notas de crédito (F5-02/F5-09).'),
+            '517' => $this->unavailable($base, 'El valor neto de adquisiciones al 0 % requiere ajustar notas de crédito (F5-02).'),
+            '520', '521' => $this->unavailable($base, 'Los agregados no distinguen activos fijos ni el derecho a crédito de cada adquisición; requiere clasificar la naturaleza IVA del ítem (F5-09).'),
+            '522' => $this->unavailable($base, 'Los agregados no identifican adquisiciones gravadas sin derecho a crédito; requiere clasificar la naturaleza IVA del ítem (F5-09).'),
             '526' => $this->unavailable($base, 'Diferencia entre adquisiciones y notas de crédito con distinta tarifa: F5-02.'),
+            '519' => $this->unavailable($base, 'El total neto depende de clasificar las adquisiciones y ajustar notas de crédito (F5-02/F5-09).'),
             '529' => $this->amount($base, $values['compras_iva'], 'compras', $periodFilter, 'Total IVA generado en adquisiciones y pagos.'),
             '563' => $this->factor($base, $values),
             '564' => $this->amount($base, $values['credito'] ?? 0, 'compras', $periodFilter, 'Crédito tributario aplicable: IVA de compras por el factor de proporcionalidad. La convención exacta la firma el contador.', requiresSignoff: true),

@@ -341,6 +341,12 @@ Implementados en F3-06: `TOTALS_MISMATCH`, `INVALID_RUC`, `DUPLICATE_SEQUENTIAL`
 
 Unique parcial `(tenant_id, code, source_type, source_id)` para no duplicar hallazgos abiertos.
 
+### `fiscal_signoff_reviews`
+Registro append-only de aprobaciones internas del contador por versión de una etapa fiscal:
+`id`, `tenant_id`, `reviewer_id`, `stage_key`, `stage_version`, `stage_fingerprint` (SHA-256 del título, alcance y referencias), `decision` (`approved`,`changes_requested`), `comments`, `reviewed_at`, `created_at`.
+
+Las etapas y su contenido vigente se definen en `FiscalSignoffStageCatalog`; una nueva huella o versión vuelve a dejar la etapa pendiente y conserva las revisiones anteriores como historial. Solo `owner` y `accountant` pueden decidir; los demás roles con acceso a declaraciones pueden consultar. Este registro acredita una aprobación interna autenticada, no una firma electrónica legal. No debe usarse como sustituto de la declaración presentada al SRI.
+
 ## 9. Auditoría y operación
 
 ### `audit_logs`

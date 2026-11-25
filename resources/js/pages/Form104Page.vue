@@ -33,6 +33,7 @@ const statusLabel = computed(() => periodStatusLabel(draft.value?.period.status 
 const statusColor = computed(() => periodStatusColor(draft.value?.period.status ?? null));
 const kpis = computed(() => (draft.value === null ? null : form104Kpis(draft.value)));
 const groups = computed(() => groupForm104Lines(store.lines, store.sections));
+const aggregationFailed = computed(() => draft.value?.period.aggregation_status === 'failed');
 
 async function refresh(): Promise<void> {
     const companyId = companyStore.activeCompany?.id;
@@ -44,6 +45,26 @@ async function refresh(): Promise<void> {
     }
 
     await store.fetchDraft(companyId);
+}
+
+/**
+ * F5-07d: recalcula los agregados y vuelve a leer el borrador.
+ *
+ * Necesario cuando el período quedó vacío por un fallo de agregación previo
+ * (por ejemplo, tras una sincronización anterior al arreglo de F5-07).
+ */
+async function recompute(): Promise<void> {
+    const companyId = companyStore.activeCompany?.id;
+
+    if (companyId === undefined || companyId === null) {
+        return;
+    }
+
+    const ok = await store.recompute(companyId);
+
+    if (ok) {
+        await store.fetchDraft(companyId);
+    }
 }
 
 function changePeriod(payload: { year: number; month: number }): void {
@@ -80,9 +101,9 @@ onMounted(async () => {
           icon="i-lucide-refresh-cw"
           label="Recalcular"
           class="h-8"
-          :loading="store.loading"
+          :loading="store.loading || store.recomputing"
           :disabled="!companyStore.hasCompany"
-          @click="refresh"
+          @click="recompute"
         />
         <UButton
           color="neutral"
@@ -255,12 +276,32 @@ onMounted(async () => {
         </UAlert>
 
         <UAlert
+          v-if="aggregationFailed && draft"
+          color="error"
+          variant="soft"
+          icon="i-lucide-database-zap"
+          title="Los agregados de este período no se calcularon"
+          :description="`${draft.period.aggregation_error ?? 'La agregación falló.'} Mientras no se recalculen, el formulario no puede mostrar cifras del período.`"
+        >
+          <template #actions>
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="xs"
+              label="Recalcular agregados"
+              :loading="store.recomputing"
+              @click="recompute"
+            />
+          </template>
+        </UAlert>
+
+        <UAlert
           v-if="draft && !draft.period.has_period && !store.loading"
           color="info"
           variant="soft"
           icon="i-lucide-info"
           title="Período sin comprobantes procesados"
-          description="Sincroniza con el SRI o carga un XML autorizado; los agregados se calculan al cerrar la sincronización."
+          description="Sincroniza con el SRI o carga un XML autorizado; los agregados se calculan solos al cerrar la sincronización. Si ya sincronizaste, pulsa «Recalcular»."
         />
 
         <section

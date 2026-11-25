@@ -33,6 +33,7 @@ enum Ability: string
     case DeclarationsView = 'declarations.view';
     case DeclarationsApprove = 'declarations.approve';
     case DeclarationsExport = 'declarations.export';
+    case FiscalSignoffsReview = 'fiscal_signoffs.review';
 
     case MembersView = 'members.view';
     case MembersInvite = 'members.invite';

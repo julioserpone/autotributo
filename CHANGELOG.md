@@ -6,8 +6,19 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ## [Unreleased]
 
+### Docs — Plan del Formulario 104 (2026-11-25)
+
+- `docs/02-implementation-plan.md` §7: nueva **F5-07 · Confiabilidad de los agregados** (fase 0 del 104) con §7.1 y **F5-09 · Alcance completo del Formulario 104** con §7.2; F5-08 pasa a «Exportaciones y validación contable». Prioridad **P1.5** añadida en §17 y desviación registrada en §16.
+- `docs/09-progress.md`: resumen de fase F5 (2/9) y nota de diagnóstico del 104 confirmado en logs.
+- `docs/fiscal-signoff.md`: entradas v3 para la corrección de agrupación por `codigoPorcentaje` (F5-07, sin cambio de cifras fiscales) y para el alcance completo a firmar (F5-09).
+- Análisis del [portal de IVA del SRI](https://www.sri.gob.ec/impuesto-al-valor-agregado-iva) y de la guía oficial facilitada como referencia local (no versionada): tarifas y supuestos especiales, categorías de bienes y servicios al 0 %, plazos por noveno dígito del RUC, estados de la declaración y casilleros que aún no se calculan.
+
 ### Changed
 
+- Validación contable: nueva página `/fiscal-signoffs` con nueve etapas versionadas, aprobación o solicitud de cambios por `owner`/`accountant`, observaciones e historial inmutable asociado a la huella SHA-256 de cada etapa. El registro es aprobación interna auditable, no firma electrónica legal.
+- Validación contable: guía general y guía por etapa en lenguaje no técnico, con pasos, listas de comprobación, funcionamiento actual y datos que aún faltan. Se ocultaron las rutas a archivos de código y se amplió el campo de observaciones para poder redimensionarlo horizontal y verticalmente.
+- Formulario 104: los casilleros de adquisiciones que los agregados actuales no pueden clasificar (activo fijo, derecho a crédito o valor neto) quedan pendientes en vez de repetir el mismo importe; el IVA total de compras (529) sigue mostrando el agregado disponible.
+- Agregados fiscales: se resuelve la tarifa de cabecera por código SRI y catálogo vigente, se registra el estado de cada recálculo, y se habilita el reintento automático y manual. La validación integral de sincronización multi-mes sigue pendiente.
 - F3-05 (filtro por empresa en la revisión de clasificación): `GET /api/v1/classifications` acepta `filter[company_id]` con el `public_id` de la empresa (lo que envía la UI) o con su id numérico, y resuelve la empresa como ya hacían la bandeja de comprobantes y los hallazgos. Un identificador desconocido deja de filtrar en vez de castearse a `0`. Nuevo test de feature con `public_id`, id numérico e identificador inexistente.
 - Performance: lazy-load all route components and heavy modals/drawers in the SPA to reduce initial bundle and browser memory (Safari/Chrome). Vite dev server now pre-bundles heavy dependencies, ignores `vendor/storage/node_modules` in the watcher, uses polling with a 2 s interval and a 1.5 GB memory limit. OPcache enabled in development (mounted `php.ini`) with timestamp validation. Docker cleanup removed ~125 GB of unused images/volumes/build cache.
 

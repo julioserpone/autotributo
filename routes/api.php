@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\ExpenseCategoryController;
 use App\Http\Controllers\Api\V1\FiscalCatalogController;
 use App\Http\Controllers\Api\V1\FiscalDocumentController;
 use App\Http\Controllers\Api\V1\FiscalFindingController;
+use App\Http\Controllers\Api\V1\FiscalSignoffController;
 use App\Http\Controllers\Api\V1\Form104Controller;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationController;
@@ -122,6 +123,12 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
         Route::get('companies/{company}/period-aggregates', [PeriodAggregateController::class, 'index'])
             ->name('api.v1.companies.period_aggregates.index');
 
+        // Recálculo de agregados bajo demanda (F5-07d). Es la vía que usa el
+        // botón «Recalcular» del 104 cuando la sincronización dejó el período
+        // sin agregados o cuando se corrigieron datos a mano.
+        Route::post('companies/{company}/period-aggregates/recompute', [PeriodAggregateController::class, 'recompute'])
+            ->name('api.v1.companies.period_aggregates.recompute');
+
         // Panel tributario (F5-01b): IVA ventas/compras, retenciones, top
         // proveedores y hallazgos del período. F4-08 lo consume.
         Route::get('dashboard', [DashboardController::class, 'index'])
@@ -208,6 +215,12 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
             ->name('api.v1.fiscal-findings.update');
         Route::post('companies/{company}/fiscal-findings/detect', [FiscalFindingController::class, 'detect'])
             ->name('api.v1.companies.fiscal-findings.detect');
+
+        // Aprobaciones contables versionadas; cada decisión queda en historial.
+        Route::get('fiscal-signoffs', [FiscalSignoffController::class, 'index'])
+            ->name('api.v1.fiscal-signoffs.index');
+        Route::post('fiscal-signoffs/{stage}/reviews', [FiscalSignoffController::class, 'store'])
+            ->name('api.v1.fiscal-signoffs.reviews.store');
 
         // Historial de auditoría (F1-07), solo lectura y filtrado por tenant.
         Route::get('audit-logs', [AuditLogController::class, 'index'])

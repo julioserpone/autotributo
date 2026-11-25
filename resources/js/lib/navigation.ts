@@ -18,6 +18,7 @@ export const primaryNav: AppNavItem[] = [
     { label: 'Panel', icon: 'i-lucide-layout-dashboard', route: 'dashboard' },
     { label: 'Comprobantes', icon: 'i-lucide-file-text', route: 'fiscal_documents' },
     { label: 'Hallazgos', icon: 'i-lucide-shield-alert', route: 'fiscal-findings' },
+    { label: 'Validación contable', icon: 'i-lucide-clipboard-check', route: 'fiscal-signoffs' },
     { label: 'Contribuyentes', icon: 'i-lucide-building-2', route: 'companies' },
     { label: 'Revisión de clasificación', icon: 'i-lucide-tags', route: 'classifications' },
     { label: 'Sincronización SRI', icon: 'i-lucide-refresh-cw', route: 'sync' },

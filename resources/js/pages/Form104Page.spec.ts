@@ -88,6 +88,9 @@ function draft(overrides: Record<string, unknown> = {}) {
       locked_at: null,
       computed_at: null as string | null,
       has_period: true,
+      aggregation_status: "completed" as string,
+      aggregation_error: null as string | null,
+      aggregated_at: null as string | null,
     },
     status: {
       draft: true,
