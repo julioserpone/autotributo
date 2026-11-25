@@ -3231,6 +3231,543 @@
                 }
             }
         },
+        "/v1/form-104": {
+            "get": {
+                "operationId": "v1.form-104.index",
+                "tags": [
+                    "Form104"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "company": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "public_id": {
+                                                            "type": "string"
+                                                        },
+                                                        "legal_name": {
+                                                            "type": "string"
+                                                        },
+                                                        "ruc": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "public_id",
+                                                        "legal_name",
+                                                        "ruc"
+                                                    ]
+                                                },
+                                                "period": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "form_code": {
+                                                            "type": "string",
+                                                            "const": "104"
+                                                        },
+                                                        "resolution": {
+                                                            "type": "string",
+                                                            "const": "NAC-DGERCGC16-00000210"
+                                                        },
+                                                        "year": {
+                                                            "type": "integer"
+                                                        },
+                                                        "month": {
+                                                            "type": "integer"
+                                                        },
+                                                        "from": {
+                                                            "type": "string"
+                                                        },
+                                                        "to": {
+                                                            "type": "string"
+                                                        },
+                                                        "status": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "locked_at": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "computed_at": {},
+                                                        "has_period": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "form_code",
+                                                        "resolution",
+                                                        "year",
+                                                        "month",
+                                                        "from",
+                                                        "to",
+                                                        "status",
+                                                        "locked_at",
+                                                        "computed_at",
+                                                        "has_period"
+                                                    ]
+                                                },
+                                                "status": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "draft": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "editable": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "source": {
+                                                            "type": "string",
+                                                            "const": "period_aggregates"
+                                                        },
+                                                        "requires_signoff": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "notice": {
+                                                            "type": "string",
+                                                            "const": "Borrador derivado de los comprobantes importados. No es una declaraci\u00f3n: el cierre, el arrastre de cr\u00e9dito y la presentaci\u00f3n llegan en F5-02/F5-05 y requieren la firma del contador."
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "draft",
+                                                        "editable",
+                                                        "source",
+                                                        "requires_signoff",
+                                                        "notice"
+                                                    ]
+                                                },
+                                                "lines": {
+                                                    "type": "array",
+                                                    "items": {}
+                                                },
+                                                "proportionality": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "sales_zero": {
+                                                            "type": "integer",
+                                                            "const": 0
+                                                        },
+                                                        "sales_general": {
+                                                            "type": "integer",
+                                                            "const": 0
+                                                        },
+                                                        "proportionality_factor": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "proportionality_complement": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "purchases_common_tax_to_credit": {
+                                                            "type": [
+                                                                "integer",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "sales_zero",
+                                                        "sales_general",
+                                                        "proportionality_factor",
+                                                        "proportionality_complement",
+                                                        "purchases_common_tax_to_credit"
+                                                    ]
+                                                },
+                                                "previous_periods": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "year": {
+                                                                "type": "integer"
+                                                            },
+                                                            "month": {
+                                                                "type": "integer"
+                                                            },
+                                                            "status": {
+                                                                "type": "string"
+                                                            },
+                                                            "complete": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "year",
+                                                            "month",
+                                                            "status",
+                                                            "complete"
+                                                        ]
+                                                    }
+                                                },
+                                                "findings": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "code": {
+                                                                "type": "string"
+                                                            },
+                                                            "label": {
+                                                                "type": "string"
+                                                            },
+                                                            "severity": {
+                                                                "type": "string"
+                                                            },
+                                                            "total": {
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "code",
+                                                            "label",
+                                                            "severity",
+                                                            "total"
+                                                        ]
+                                                    }
+                                                },
+                                                "official_form": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "form_code": {
+                                                            "type": "string",
+                                                            "const": "104"
+                                                        },
+                                                        "resolution": {
+                                                            "type": "string",
+                                                            "const": "NAC-DGERCGC16-00000210"
+                                                        },
+                                                        "sections": {
+                                                            "type": "array",
+                                                            "items": {}
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "form_code",
+                                                        "resolution",
+                                                        "sections"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "company",
+                                                "period",
+                                                "status",
+                                                "lines",
+                                                "proportionality",
+                                                "previous_periods",
+                                                "findings",
+                                                "official_form"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/companies/{company}/form-104": {
+            "get": {
+                "operationId": "v1.companies.form-104.show",
+                "tags": [
+                    "Form104"
+                ],
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "description": "The company public id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "company": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "public_id": {
+                                                            "type": "string"
+                                                        },
+                                                        "legal_name": {
+                                                            "type": "string"
+                                                        },
+                                                        "ruc": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "public_id",
+                                                        "legal_name",
+                                                        "ruc"
+                                                    ]
+                                                },
+                                                "period": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "form_code": {
+                                                            "type": "string",
+                                                            "const": "104"
+                                                        },
+                                                        "resolution": {
+                                                            "type": "string",
+                                                            "const": "NAC-DGERCGC16-00000210"
+                                                        },
+                                                        "year": {
+                                                            "type": "integer"
+                                                        },
+                                                        "month": {
+                                                            "type": "integer"
+                                                        },
+                                                        "from": {
+                                                            "type": "string"
+                                                        },
+                                                        "to": {
+                                                            "type": "string"
+                                                        },
+                                                        "status": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "locked_at": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "computed_at": {},
+                                                        "has_period": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "form_code",
+                                                        "resolution",
+                                                        "year",
+                                                        "month",
+                                                        "from",
+                                                        "to",
+                                                        "status",
+                                                        "locked_at",
+                                                        "computed_at",
+                                                        "has_period"
+                                                    ]
+                                                },
+                                                "status": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "draft": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "editable": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "source": {
+                                                            "type": "string",
+                                                            "const": "period_aggregates"
+                                                        },
+                                                        "requires_signoff": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "notice": {
+                                                            "type": "string",
+                                                            "const": "Borrador derivado de los comprobantes importados. No es una declaraci\u00f3n: el cierre, el arrastre de cr\u00e9dito y la presentaci\u00f3n llegan en F5-02/F5-05 y requieren la firma del contador."
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "draft",
+                                                        "editable",
+                                                        "source",
+                                                        "requires_signoff",
+                                                        "notice"
+                                                    ]
+                                                },
+                                                "lines": {
+                                                    "type": "array",
+                                                    "items": {}
+                                                },
+                                                "proportionality": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "sales_zero": {
+                                                            "type": "integer",
+                                                            "const": 0
+                                                        },
+                                                        "sales_general": {
+                                                            "type": "integer",
+                                                            "const": 0
+                                                        },
+                                                        "proportionality_factor": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "proportionality_complement": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "purchases_common_tax_to_credit": {
+                                                            "type": [
+                                                                "integer",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "sales_zero",
+                                                        "sales_general",
+                                                        "proportionality_factor",
+                                                        "proportionality_complement",
+                                                        "purchases_common_tax_to_credit"
+                                                    ]
+                                                },
+                                                "previous_periods": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "year": {
+                                                                "type": "integer"
+                                                            },
+                                                            "month": {
+                                                                "type": "integer"
+                                                            },
+                                                            "status": {
+                                                                "type": "string"
+                                                            },
+                                                            "complete": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "year",
+                                                            "month",
+                                                            "status",
+                                                            "complete"
+                                                        ]
+                                                    }
+                                                },
+                                                "findings": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "code": {
+                                                                "type": "string"
+                                                            },
+                                                            "label": {
+                                                                "type": "string"
+                                                            },
+                                                            "severity": {
+                                                                "type": "string"
+                                                            },
+                                                            "total": {
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "code",
+                                                            "label",
+                                                            "severity",
+                                                            "total"
+                                                        ]
+                                                    }
+                                                },
+                                                "official_form": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "form_code": {
+                                                            "type": "string",
+                                                            "const": "104"
+                                                        },
+                                                        "resolution": {
+                                                            "type": "string",
+                                                            "const": "NAC-DGERCGC16-00000210"
+                                                        },
+                                                        "sections": {
+                                                            "type": "array",
+                                                            "items": {}
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "form_code",
+                                                        "resolution",
+                                                        "sections"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "company",
+                                                "period",
+                                                "status",
+                                                "lines",
+                                                "proportionality",
+                                                "previous_periods",
+                                                "findings",
+                                                "official_form"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/health": {
             "get": {
                 "operationId": "v1.health",

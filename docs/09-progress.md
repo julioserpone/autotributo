@@ -12,15 +12,15 @@
 | F1 · Núcleo tenant-ready | Completado | 11/11 | F1-11 · Staging efímero en AWS (EC2, Neon, DuckDNS, TLS, deploy, smoke tests) |
 | F2 · Ingesta SRI | Completado | 12/12 + F2-13 | F2-13 · Carga manual de XML (`US-14`) |
 | F3 · Motor fiscal + IA | En curso | 7/9 | F3-06 · Riesgos fiscales y hallazgos (#97) |
-| F4 · Frontend | En curso | 7/11 + F4-08b/F4-13 | F4-08 · Panel tributario con datos reales |
+| F4 · Frontend | En curso | 8/11 + F4-08b/F4-13 | F4-09 · Vista del Formulario 104 (estructura) |
 | F5 · Declaraciones | En curso | 1/8 + F5-01b | F5-01b · dirección por RUC, ventas, retenciones y dashboard |
 | F6 · Hardening y beta | Pendiente | 0/8 | — |
 
 > El recuento usa las tareas de `docs/02-implementation-plan.md`. Las slices de F1-03 y F4-03 y las tareas nuevas (F1-03e/f/g, F2-13/14/15, F4-03a/b/c, F4-08b, F4-12, F4-13) se detallan abajo y no alteran el denominador de la fase.
 >
-> **Siguiente etapa (Etapa G2, revisión 2026-11-24).** Ambos documentos maestros deben coincidir: `docs/02` §6 (tareas) y §9/§17 (orden y prioridad) y esta tabla. **G1 está cerrada:** F4-03a/b/c, F4-13 y F5-01 están en `main` (#100–#106). **F4-08b, F5-01b y F4-08 también están completadas**, con **F3-09 completada** el orden pendiente de G2 es la **UI de clasificación** (exponer categoría y estado en la bandeja) y la fumigación de documentos, con la firma del contador solicitada en paralelo. F3-08 queda bloqueada por el dataset dorado; F5-02 espera la firma de la convención del 104. Justificación, diseño y pruebas obligatorias viven en `docs/02` §6, §9 y §17, no en un documento aparte.
+> **Siguiente etapa (Etapa G2, revisión 2026-11-25).** Ambos documentos maestros deben coincidir: `docs/02` §6 (tareas) y §9/§17 (orden y prioridad) y esta tabla. **G1 está cerrada:** F4-03a/b/c, F4-13 y F5-01 están en `main` (#100–#106). **F4-08b, F5-01b, F4-08 y F4-09 también están completadas**, con **F3-09 completada**; el orden pendiente de G2 es el resto de F4 (F4-10/F4-11/F4-12) y, tras la firma, F5-02. F3-08 queda bloqueada por el dataset dorado; F5-02 espera la firma de la convención del 104. Justificación, diseño y pruebas obligatorias viven en `docs/02` §6, §9 y §17, no en un documento aparte.
 >
-> **Estado de cierre de fase:** F1 y F2 están cerradas. F3 está funcionalmente completa pero **no puede declararse cerrada** sin `F3-08` ni la firma del contador (`docs/fiscal-signoff.md` sigue sin firmas). F4 ya tiene UI para empresas, credenciales SRI, invitaciones, hallazgos y panel tributario con datos reales; le faltan la vista 104 (F4-09) y calidad/pruebas (F4-10/F4-11) para M4.
+> **Estado de cierre de fase:** F1 y F2 están cerradas. F3 está funcionalmente completa pero **no puede declararse cerrada** sin `F3-08` ni la firma del contador (`docs/fiscal-signoff.md` sigue sin firmas). F4 ya tiene UI para empresas, credenciales SRI, invitaciones, hallazgos, panel tributario con datos reales y la vista estructural del 104; le faltan calidad/pruebas (F4-10/F4-11) y el indicador de Reverb (F4-12) para M4.
 
 ## Fase 1 · Núcleo tenant-ready, identidad y empresas
 
@@ -85,9 +85,9 @@
 | F4-07 | Revisión de clasificación | Completado | **P1** | `ClassificationReviewPage` con cola que prioriza `needs_review`, filtros, confianza y método visuales, atajos `j`/`k`/`Enter`/`a`/`r`/`espacio`, aceptación y rechazo en bloque con resultado parcial y creación de regla desde un ítem; store `classifications` y componentes en `components/classifications/`. Ruta `/classifications` y entrada en la navegación. (#98) |
 | F4-08 | Dashboards | Completado | **P1** | `DashboardPage` deja de ser una maqueta: consume `GET /api/v1/companies/{company}/dashboard?year=&month=` (F5-01b) mediante el store `dashboard` (`fetchDashboard`, `setPeriod`, `reset`, `hasActivity`, `netIvaCents`, `openFindings`) y las etiquetas de `lib/dashboard.ts`. Componentes nuevos: `DashboardKpiCards` (IVA ventas, IVA compras, IVA neto y retenciones recibidas), `DashboardIvaComparison` (barras ventas vs. compras con navegación de período), `DashboardTopProviders` (top 5 con barras), `DashboardAlertsPanel` (hallazgos abiertos por severidad con enlace a `/fiscal-findings` y topes de gastos personales) y `DashboardSyncModal`. La página muestra empresa activa, estado del período, fecha de cálculo, estados vacíos (sin empresa, sin comprobantes, error con reintento) y `?preview=1` como aviso de interfaz sin datos de ejemplo. Acciones «Actualizar», «Sincronizar SRI» y «Ver bandeja». 4 tests del store y 5 de la página (Vitest) |
 | F4-08b | Bandeja de hallazgos | Completado | **P1** | `FiscalFindingsPage` (`/fiscal-findings`) con tarjetas de resumen, filtros (empresa, estado, severidad, código y texto), tabla, drawer de detalle con enlace al comprobante en la bandeja y modal para reconocer/resolver/descartar (motivo obligatorio al descartar) y lanzar la detección manual. Store `fiscalFindings` y etiquetas en `lib/fiscalFindings.ts`. Backend: `company`/`source` con `public_id`, `meta.counts` por estado y severidad, `filter[search]` y `filter[company_id]` por `public_id`. 11 tests de feature y 9 tests frontend. Sin PR asignado todavía (rama `feat/F4-08b-fiscal-findings-ui`) |
-| F4-09 | Vista 104 (estructura) | Pendiente | P2 | Casilleros, totales, drill-down y estados de borrador; los datos reales llegan en F5-02/F5-06 |
+| F4-09 | Vista 104 (estructura) | Completado | P2 | `GET /api/v1/companies/{company}/form-104` devuelve el formulario oficial completo (**88 casilleros del XLS del SRI**, Resolución NAC-DGERCGC16-00000210) en su orden, derivado de `period_aggregates`: valor por campo, estado (`Calculado`/`Requiere firma`/`Entrada manual`/`Pendiente`), nota explicativa y fuentes para drill-down. `BuildForm104Draft`, `Form104OfficialForm` y `Form104Draft`; ventas gravadas y 0 %, IVA generado, IVA de compras, retenciones por tarifa (721-731), crédito con el factor de proporcionalidad (campo 563) y hallazgos bloqueantes del período. **Corregido el catálogo `form_lines`**: de 15 casilleros con semántica errónea a los 88 reales vigentes desde 2016-01-01. UI `/declarations/104` con KPIs, proporcionalidad, aviso de borrador y navegación por casillero; 10 tests de feature + 17 frontend · verificado en navegador. Los datos reales y el cierre llegan en F5-02/F5-06 |
 | F4-10 | Calidad de UI | En curso | P2 | Mejoras parciales: estados de carga con `role="status"`/`aria-live` y de error con `role="alert"` en revisión de clasificación y hallazgos; foco visible y `prefers-reduced-motion` ya estaban en `app.css`. Pendiente: auditoría responsive/contraste completa |
-| F4-11 | Pruebas frontend | En curso | P2 | Tests nuevos de estados de carga/error en `FiscalFindingsPage`; Vitest completo en verde (128 tests). Pendiente: MSW, `axe` y flujos Playwright |
+| F4-11 | Pruebas frontend | En curso | P2 | Tests nuevos de estados de carga/error en `FiscalFindingsPage` y de `Form104Page`; Vitest completo en verde (146 tests). Pendiente: MSW, `axe` y flujos Playwright |
 | F4-12 | Indicador de Reverb | Pendiente | P2 | Nueva tarea derivada de F1-08/F2-09b: estado de conexión y reconexión del WebSocket en el monitor (hoy el polling cubre el caso) |
 | F4-13 | Credenciales SRI en la UI | Completado | **P0** | Store `sriCredential` (fetch/store/rotate/delete, 404 → sin credencial), componentes `SriCredentialFormModal`, `SriCredentialRotateModal` y `SriCredentialManageModal`, botón por fila en `CompanyTable` y gestión desde `CompaniesPage`. Tests: 6 (store) + 1 (api putJson). (#104) |
 
@@ -96,7 +96,7 @@
 | Fase | Tareas | Estado | Prioridad actual |
 |---|---|---|---|
 | F3 · Motor fiscal + IA | F3-01…F3-09 | En curso (8/9) | P2 (F3-08 evaluación, bloqueada por dataset) · pendiente firma del contador |
-| F4 · Frontend | F4-01…F4-11 (+ F4-08b, F4-12, F4-13) | En curso (7/11 + F4-08b/F4-13) | P2 (F4-09/10/11/12) |
+| F4 · Frontend | F4-01…F4-11 (+ F4-08b, F4-12, F4-13) | En curso (8/11 + F4-08b/F4-13) | P2 (F4-10/11/12) |
 | F5 · Declaraciones | F5-01…F5-08 | En curso (1/8 + F5-01b) | P2 (resto, tras firma del 104) |
 | F6 · Hardening y beta | F6-01…F6-08 | Pendiente | P3 (lanzamiento) |
 
@@ -171,7 +171,7 @@
 | F1-03g validaciones de invitación | 409 por email activo y revocación de sesiones al retirar acceso | PR pequeño, P2 |
 | F2-14 cancelación de run | Archivar empresa no detiene un run en curso (`ArchiveCompany` lo delega) | PR pequeño, P2 |
 | F2-15 runbook de runs huérfanos | Procedimiento operativo de `sri:recover-run` | Documento + prueba de restauración |
-| F4-01 TanStack Query / i18n | `lib/api.ts` ya expone `errors` y soporta `204` (F4-03a); faltan TanStack Query e i18n | El panel de F4-08 resuelve la carga con un store Pinia; decidir si TanStack entra antes de F4-09 |
+| F4-01 TanStack Query / i18n | `lib/api.ts` ya expone `errors` y soporta `204` (F4-03a); faltan TanStack Query e i18n | F4-08 y F4-09 resuelven la carga con stores Pinia; TanStack entra, si aplica, antes de F5
 | ~~F5-01 solo agrega compras~~ | Resuelto por **F5-01b**: `fiscal_documents.direction` se deriva por RUC, `ComputePeriodAggregates` agrega ventas/compras y retenciones, el recálculo corre al cerrar el run y el barrido nocturno; `GET /api/v1/dashboard` queda listo para F4-08 | F4-08 consume el endpoint; F5-02 puede usar los agregados tras la firma del contador |
 | Filtro por empresa en la revisión de clasificación | `ClassificationFilters` envía el `public_id` y el backend castea a `(int)`, por lo que el filtro no devuelve resultados | Aceptar `public_id` o numérico como en `fiscal-findings`/`fiscal_documents` |
 

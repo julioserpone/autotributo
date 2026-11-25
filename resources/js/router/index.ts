@@ -13,6 +13,7 @@ const AcceptInvitationPage = () => import('@/pages/AcceptInvitationPage.vue');
 const ClassificationReviewPage = () => import('@/pages/ClassificationReviewPage.vue');
 const FiscalDocumentInboxPage = () => import('@/pages/FiscalDocumentInboxPage.vue');
 const FiscalFindingsPage = () => import('@/pages/FiscalFindingsPage.vue');
+const Form104Page = () => import('@/pages/Form104Page.vue');
 const LoginPage = () => import('@/pages/LoginPage.vue');
 const NotFoundPage = () => import('@/pages/NotFoundPage.vue');
 const ResetPasswordPage = () => import('@/pages/ResetPasswordPage.vue');
@@ -94,6 +95,12 @@ const router = createRouter({
             name: 'classifications',
             component: ClassificationReviewPage,
             meta: { title: 'Revisión de clasificación', requiresCompany: true },
+        },
+        {
+            path: '/declarations/104',
+            name: 'form-104',
+            component: Form104Page,
+            meta: { title: 'Formulario 104', requiresCompany: true },
         },
         {
             path: '/sync',

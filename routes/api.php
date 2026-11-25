@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\ExpenseCategoryController;
 use App\Http\Controllers\Api\V1\FiscalCatalogController;
 use App\Http\Controllers\Api\V1\FiscalDocumentController;
 use App\Http\Controllers\Api\V1\FiscalFindingController;
+use App\Http\Controllers\Api\V1\Form104Controller;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationController;
 use App\Http\Controllers\Api\V1\ManualFiscalDocumentController;
@@ -127,6 +128,14 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
             ->name('api.v1.dashboard.index');
         Route::get('companies/{company}/dashboard', [DashboardController::class, 'show'])
             ->name('api.v1.companies.dashboard.show');
+
+        // Borrador del Formulario 104 (F4-09): casilleros derivados de los
+        // agregados del período, con drill-down a la bandeja. Solo lectura:
+        // la declaración real y su ciclo de vida son de F5-02/F5-05.
+        Route::get('form-104', [Form104Controller::class, 'index'])
+            ->name('api.v1.form-104.index');
+        Route::get('companies/{company}/form-104', [Form104Controller::class, 'show'])
+            ->name('api.v1.companies.form-104.show');
 
         // Credenciales del portal SRI (F1-06). El secreto nunca se devuelve y
         // cada lectura o cambio queda auditado en `sri_credential_accesses`.
