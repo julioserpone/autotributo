@@ -1,6 +1,6 @@
 # Fiscal sign-off
 
-Registro de validación de cálculos, catálogos y formularios por parte del contador asesor. **Ninguna fase fiscal se cierra sin firma aquí.**
+Registro de validación de cálculos, catálogos y formularios por parte del contador asesor. **Ninguna fase fiscal se cierra sin aprobación registrada.**
 
 ## Reglas
 
@@ -8,6 +8,8 @@ Registro de validación de cálculos, catálogos y formularios por parte del con
 - La validación se hace contra la ficha técnica vigente del SRI y una hoja de cálculo independiente.
 - Se registra el escenario, el resultado del sistema, el resultado manual y la diferencia (debe ser 0,00).
 - Un período ya declarado no se altera; cualquier corrección genera una nueva versión de la declaración.
+- El flujo `/fiscal-signoffs` guarda aprobaciones internas autenticadas por etapa y versión, con huella SHA-256, usuario, fecha y observaciones. Una modificación de la etapa requiere una nueva revisión; el historial no se sobrescribe.
+- La aprobación de la aplicación es evidencia interna y **no es una firma electrónica con validez legal**. El registro detallado de cada decisión vive en `fiscal_signoff_reviews`; esta tabla conserva el inventario de escenarios y su estado de validación.
 
 ## Registro
 

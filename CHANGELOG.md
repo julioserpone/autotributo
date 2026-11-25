@@ -15,6 +15,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ### Changed
 
+- Validación contable: nueva página `/fiscal-signoffs` con nueve etapas versionadas, aprobación o solicitud de cambios por `owner`/`accountant`, observaciones e historial inmutable asociado a la huella SHA-256 de cada etapa. El registro es aprobación interna auditable, no firma electrónica legal.
 - Formulario 104: los casilleros de adquisiciones que los agregados actuales no pueden clasificar (activo fijo, derecho a crédito o valor neto) quedan pendientes en vez de repetir el mismo importe; el IVA total de compras (529) sigue mostrando el agregado disponible.
 - Agregados fiscales: se resuelve la tarifa de cabecera por código SRI y catálogo vigente, se registra el estado de cada recálculo, y se habilita el reintento automático y manual. La validación integral de sincronización multi-mes sigue pendiente.
 - F3-05 (filtro por empresa en la revisión de clasificación): `GET /api/v1/classifications` acepta `filter[company_id]` con el `public_id` de la empresa (lo que envía la UI) o con su id numérico, y resuelve la empresa como ya hacían la bandeja de comprobantes y los hallazgos. Un identificador desconocido deja de filtrar en vez de castearse a `0`. Nuevo test de feature con `public_id`, id numérico e identificador inexistente.
