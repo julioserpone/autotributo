@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Domain\Classification\Actions\SyncExpenseCategories;
+use App\Domain\Classification\Catalogs\ClassificationRuleData;
+use App\Domain\Classification\Catalogs\ExpenseCategoryData;
 use App\Domain\Classification\Enums\MatchType;
 use App\Domain\Classification\Models\Classification;
 use App\Domain\Classification\Models\ClassificationRule;
@@ -395,7 +397,7 @@ it('expone el catálogo de categorías de gasto', function (): void {
     $this->actingAs($this->viewer)
         ->getJson('/api/v1/expense-categories')
         ->assertOk()
-        ->assertJsonCount(9, 'data')
+        ->assertJsonCount(count((new ExpenseCategoryData)->categories()) + count((new ClassificationRuleData)->categories()), 'data')
         ->assertJsonPath('data.0.code', 'alimentacion')
         ->assertJsonPath('data.0.is_personal_deductible', true)
         ->assertJsonPath('data.0.is_business_deductible', false);

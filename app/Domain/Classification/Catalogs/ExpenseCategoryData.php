@@ -102,6 +102,45 @@ final class ExpenseCategoryData
                 'icon' => 'ban',
                 'display_order' => 90,
             ],
+            // Subcategorías: dan granularidad al clasificador y a los reportes
+            // por rubro sin cambiar las reglas fiscales de los padres.
+            $this->child('alimentacion_supermercado', 'Supermercado y comisariato', 'alimentacion', 11),
+            $this->child('alimentacion_restaurante', 'Restaurantes', 'alimentacion', 12),
+            $this->child('vivienda_alquiler', 'Arriendo', 'vivienda', 21),
+            $this->child('vivienda_servicios', 'Servicios básicos del hogar', 'vivienda', 22),
+            $this->child('vivienda_mantenimiento', 'Mantenimiento y reparaciones', 'vivienda', 23),
+            $this->child('salud_medicina', 'Medicinas', 'salud', 31),
+            $this->child('salud_consultas', 'Consultas y tratamientos', 'salud', 32),
+            $this->child('salud_seguros', 'Seguros de salud', 'salud', 33),
+            $this->child('educacion_matriculas', 'Matrículas y pensiones', 'educacion', 41),
+            $this->child('educacion_utiles', 'Útiles y textos', 'educacion', 42),
+            $this->child('vestimenta_ropa', 'Ropa y calzado', 'vestimenta', 51),
+            $this->child('turismo_hospedaje', 'Hospedaje y transporte', 'turismo', 61),
+            $this->child('operativo_comunicaciones', 'Telecomunicaciones e internet', 'operativo', 71),
+            $this->child('operativo_combustible', 'Combustible', 'operativo', 72),
+            $this->child('operativo_servicios', 'Servicios profesionales y técnicos', 'operativo', 73),
+            $this->child('operativo_insumos', 'Insumos y materiales', 'operativo', 74),
+            $this->child('operativo_arriendos', 'Arriendos del negocio', 'operativo', 75),
+            $this->child('activo_equipos', 'Equipos y tecnología', 'activo_fijo', 81),
+            $this->child('activo_vehiculos', 'Vehículos', 'activo_fijo', 82),
+        ];
+    }
+
+    /**
+     * Fila de subcategoría con herencia de deducibilidad del padre.
+     *
+     * @return array<string, mixed>
+     */
+    private function child(string $code, string $name, string $parentCode, int $displayOrder): array
+    {
+        return [
+            'code' => $code,
+            'name' => $name,
+            'parent_code' => $parentCode,
+            'is_personal_deductible' => false,
+            'is_business_deductible' => false,
+            'icon' => null,
+            'display_order' => $displayOrder,
         ];
     }
 }
