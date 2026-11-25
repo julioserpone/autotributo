@@ -2,7 +2,7 @@
 
 > Tabla viva del proyecto. Se actualiza al cerrar cada tarea (una tarea = un commit/PR). La fuente de verdad del alcance sigue siendo `docs/02-implementation-plan.md`.
 
-**Última actualización:** 2026-11-24
+**Última actualización:** 2026-11-25
 
 ## Resumen por fase
 
@@ -173,7 +173,7 @@
 | F2-15 runbook de runs huérfanos | Procedimiento operativo de `sri:recover-run` | Documento + prueba de restauración |
 | F4-01 TanStack Query / i18n | `lib/api.ts` ya expone `errors` y soporta `204` (F4-03a); faltan TanStack Query e i18n | El panel de F4-08 resuelve la carga con un store Pinia; decidir si TanStack entra antes de F4-09 |
 | ~~F5-01 solo agrega compras~~ | Resuelto por **F5-01b**: `fiscal_documents.direction` se deriva por RUC, `ComputePeriodAggregates` agrega ventas/compras y retenciones, el recálculo corre al cerrar el run y el barrido nocturno; `GET /api/v1/dashboard` queda listo para F4-08 | F4-08 consume el endpoint; F5-02 puede usar los agregados tras la firma del contador |
-| Filtro por empresa en la revisión de clasificación | `ClassificationFilters` envía el `public_id` y el backend castea a `(int)`, por lo que el filtro no devuelve resultados | Aceptar `public_id` o numérico como en `fiscal-findings`/`fiscal_documents` |
+| ~~Filtro por empresa en la revisión de clasificación~~ | Resuelto 2026-11-25: `GET /api/v1/classifications` resuelve `company_id` por `public_id` o id numérico, como `fiscal-findings` y `fiscal_documents`; test con los tres casos | — |
 
 ## Cómo actualizar
 

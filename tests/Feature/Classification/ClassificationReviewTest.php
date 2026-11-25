@@ -136,6 +136,55 @@ it('lista la cola con needs_review primero y filtra por estado y método', funct
         ->assertJsonPath('data.0.item.line_number', 1);
 });
 
+it('filtra la cola por empresa usando el public_id o el id numérico', function (): void {
+    ($this->makeClassification)(ClassificationStatus::NeedsReview, $this->foodCategoryId, line: 1);
+
+    $otherCompany = Company::factory()->create([
+        'tenant_id' => $this->tenant->id,
+    ]);
+
+    $otherFiscalDocument = FiscalDocument::factory()->create([
+        'tenant_id' => $this->tenant->id,
+        'company_id' => $otherCompany->id,
+        'issuer_name' => 'OTRA EMPRESA S.A.',
+    ]);
+
+    $otherItem = reviewedItem($otherFiscalDocument, 1, 'ÍTEM DE OTRA EMPRESA');
+
+    Classification::query()->create([
+        'tenant_id' => $this->tenant->id,
+        'fiscal_document_item_id' => $otherItem->id,
+        'expense_category_id' => $this->foodCategoryId,
+        'method' => ClassificationMethod::Llm,
+        'confidence' => 0.72,
+        'status' => ClassificationStatus::NeedsReview,
+    ]);
+
+    $this->actingAs($this->owner)
+        ->getJson('/api/v1/classifications?'.http_build_query([
+            'filter' => ['company_id' => $otherCompany->public_id],
+        ]))
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.fiscal_document.issuer_name', 'OTRA EMPRESA S.A.');
+
+    $this->actingAs($this->owner)
+        ->getJson('/api/v1/classifications?'.http_build_query([
+            'filter' => ['company_id' => (string) $otherCompany->id],
+        ]))
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.fiscal_document.issuer_name', 'OTRA EMPRESA S.A.');
+
+    // Un identificador desconocido no filtra, igual que en documentos y hallazgos.
+    $this->actingAs($this->owner)
+        ->getJson('/api/v1/classifications?'.http_build_query([
+            'filter' => ['company_id' => 'empresa-inexistente'],
+        ]))
+        ->assertOk()
+        ->assertJsonCount(2, 'data');
+});
+
 it('acepta la categoría sugerida, firma la revisión y deja el ítem manual', function (): void {
     $classification = ($this->makeClassification)(ClassificationStatus::NeedsReview, $this->foodCategoryId);
     $itemId = $classification->fiscal_document_item_id;
