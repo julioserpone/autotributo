@@ -3305,6 +3305,22 @@
                                                         "computed_at": {},
                                                         "has_period": {
                                                             "type": "string"
+                                                        },
+                                                        "aggregation_status": {
+                                                            "type": "string",
+                                                            "description": "F5-07a: un per\u00edodo sin agregados no es lo mismo que un fallo\nde agregaci\u00f3n; la UI debe poder decirlo."
+                                                        },
+                                                        "aggregation_error": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "aggregated_at": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
                                                         }
                                                     },
                                                     "required": [
@@ -3317,7 +3333,10 @@
                                                         "status",
                                                         "locked_at",
                                                         "computed_at",
-                                                        "has_period"
+                                                        "has_period",
+                                                        "aggregation_status",
+                                                        "aggregation_error",
+                                                        "aggregated_at"
                                                     ]
                                                 },
                                                 "status": {
@@ -3579,6 +3598,22 @@
                                                         "computed_at": {},
                                                         "has_period": {
                                                             "type": "string"
+                                                        },
+                                                        "aggregation_status": {
+                                                            "type": "string",
+                                                            "description": "F5-07a: un per\u00edodo sin agregados no es lo mismo que un fallo\nde agregaci\u00f3n; la UI debe poder decirlo."
+                                                        },
+                                                        "aggregation_error": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "aggregated_at": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
                                                         }
                                                     },
                                                     "required": [
@@ -3591,7 +3626,10 @@
                                                         "status",
                                                         "locked_at",
                                                         "computed_at",
-                                                        "has_period"
+                                                        "has_period",
+                                                        "aggregation_status",
+                                                        "aggregation_error",
+                                                        "aggregated_at"
                                                     ]
                                                 },
                                                 "status": {
@@ -4215,12 +4253,34 @@
                                                                 "status": {
                                                                     "type": "string"
                                                                 },
+                                                                "aggregation_status": {
+                                                                    "type": "string"
+                                                                },
+                                                                "aggregation_error": {
+                                                                    "type": [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "aggregation_attempts": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "aggregated_at": {
+                                                                    "type": [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
                                                                 "computed_at": {}
                                                             },
                                                             "required": [
                                                                 "year",
                                                                 "month",
                                                                 "status",
+                                                                "aggregation_status",
+                                                                "aggregation_error",
+                                                                "aggregation_attempts",
+                                                                "aggregated_at",
                                                                 "computed_at"
                                                             ]
                                                         }
@@ -4263,6 +4323,162 @@
                                                 "meta"
                                             ]
                                         }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/companies/{company}/period-aggregates/recompute": {
+            "post": {
+                "operationId": "v1.companies.period_aggregates.recompute",
+                "description": "La directiva del sistema es que el rec\u00e1lculo no dependa de un comando\nmanual: corre al cerrar cada sincronizaci\u00f3n del SRI y en el barrido\nnocturno. Este endpoint cubre el caso de un per\u00edodo que qued\u00f3 sin\nagregados (por un fallo previo) o con datos corregidos fuera de un run.",
+                "summary": "Recalcula los agregados del per\u00edodo (F5-07d)",
+                "tags": [
+                    "PeriodAggregate"
+                ],
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "description": "The company public id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PeriodAggregate"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "period": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "year": {
+                                                            "type": "integer"
+                                                        },
+                                                        "month": {
+                                                            "type": "integer"
+                                                        },
+                                                        "status": {
+                                                            "type": "string"
+                                                        },
+                                                        "aggregation_status": {
+                                                            "type": "string"
+                                                        },
+                                                        "aggregation_error": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "aggregation_attempts": {
+                                                            "type": "integer"
+                                                        },
+                                                        "aggregated_at": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "computed_at": {}
+                                                    },
+                                                    "required": [
+                                                        "year",
+                                                        "month",
+                                                        "status",
+                                                        "aggregation_status",
+                                                        "aggregation_error",
+                                                        "aggregation_attempts",
+                                                        "aggregated_at",
+                                                        "computed_at"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "period"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "null"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "period": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "year": {
+                                                            "type": "integer"
+                                                        },
+                                                        "month": {
+                                                            "type": "integer"
+                                                        },
+                                                        "aggregation_status": {
+                                                            "type": "string",
+                                                            "const": "failed"
+                                                        },
+                                                        "aggregation_error": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "year",
+                                                        "month",
+                                                        "aggregation_status",
+                                                        "aggregation_error"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "period"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
                                     ]
                                 }
                             }
