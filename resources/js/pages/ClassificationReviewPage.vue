@@ -213,12 +213,15 @@ watch(() => store.items, (items) => {
         <div
           v-if="store.loading"
           class="flex items-center justify-center py-12 text-muted"
+          role="status"
+          aria-live="polite"
         >
           Cargando cola…
         </div>
         <div
           v-else-if="store.error"
           class="flex flex-col items-center gap-3 py-12"
+          role="alert"
         >
           <p class="text-sm text-error">
             {{ store.error }}
