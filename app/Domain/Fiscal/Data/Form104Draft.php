@@ -40,6 +40,9 @@ final readonly class Form104Draft
      *     locked_at: string|null,
      *     computed_at: string|null,
      *     has_period: bool,
+     *     aggregation_status: string,
+     *     aggregation_error: string|null,
+     *     aggregated_at: string|null,
      * }  $period
      * @param  array{
      *     draft: bool,
