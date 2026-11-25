@@ -1,12 +1,13 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getJson } from '@/lib/api';
+import { getJson, postJson } from '@/lib/api';
 import { useForm104Store } from '@/stores/form104';
 
-vi.mock('@/lib/api', () => ({ getJson: vi.fn() }));
+vi.mock('@/lib/api', () => ({ getJson: vi.fn(), postJson: vi.fn() }));
 
 const mockedGetJson = vi.mocked(getJson);
+const mockedPostJson = vi.mocked(postJson);
 
 const line = (overrides: Partial<Record<string, unknown>> = {}) => ({
     field: '401',
@@ -42,6 +43,9 @@ const payload = {
             locked_at: null,
             computed_at: '2026-09-30T10:00:00Z',
             has_period: true,
+            aggregation_status: 'completed',
+            aggregation_error: null,
+            aggregated_at: '2026-09-30T10:00:00Z',
         },
         status: {
             draft: true,
@@ -80,6 +84,7 @@ describe('useForm104Store', () => {
     beforeEach(() => {
         setActivePinia(createPinia());
         mockedGetJson.mockReset();
+        mockedPostJson.mockReset();
     });
 
     it('carga el borrador del período activo con sus secciones y campos', async () => {
@@ -128,5 +133,33 @@ describe('useForm104Store', () => {
         expect(store.draft).toBeNull();
         expect(store.error).toBeNull();
         expect(store.loading).toBe(false);
+        expect(store.recomputing).toBe(false);
+    });
+
+    it('recalcula los agregados del período activo (F5-07d)', async () => {
+        mockedPostJson.mockResolvedValueOnce({ data: [] });
+
+        const store = useForm104Store();
+        store.setPeriod(2026, 9);
+
+        await expect(store.recompute('company-1')).resolves.toBe(true);
+
+        expect(mockedPostJson).toHaveBeenCalledWith(
+            '/api/v1/companies/company-1/period-aggregates/recompute',
+            { year: 2026, month: 9 },
+        );
+        expect(store.recomputing).toBe(false);
+        expect(store.error).toBeNull();
+    });
+
+    it('expone el error cuando el recálculo falla', async () => {
+        mockedPostJson.mockRejectedValueOnce(new Error('La agregación falló'));
+
+        const store = useForm104Store();
+
+        await expect(store.recompute('company-1')).resolves.toBe(false);
+
+        expect(store.error).toBe('La agregación falló');
+        expect(store.recomputing).toBe(false);
     });
 });

@@ -2,7 +2,7 @@ import { computed, ref } from 'vue';
 
 import { defineStore } from 'pinia';
 
-import { getJson } from '@/lib/api';
+import { getJson, postJson } from '@/lib/api';
 
 /**
  * Borrador del Formulario 104 (F4-09).
@@ -59,6 +59,10 @@ export interface Form104Draft {
         locked_at: string | null;
         computed_at: string | null;
         has_period: boolean;
+        /** F5-07a: el último intento de agregación del período. */
+        aggregation_status: 'pending' | 'completed' | 'failed';
+        aggregation_error: string | null;
+        aggregated_at: string | null;
     };
     status: {
         draft: boolean;
@@ -87,6 +91,7 @@ export interface Form104Draft {
 export const useForm104Store = defineStore('form_104', () => {
     const draft = ref<Form104Draft | null>(null);
     const loading = ref(false);
+    const recomputing = ref(false);
     const error = ref<string | null>(null);
     const year = ref(new Date().getFullYear());
     const month = ref(new Date().getMonth() + 1);
@@ -125,6 +130,33 @@ export const useForm104Store = defineStore('form_104', () => {
         }
     }
 
+    /**
+     * F5-07d: recalcula los agregados del período desde la UI.
+     *
+     * El recálculo ya corre solo al cerrar cada sincronización del SRI; este
+     * botón existe para un período que quedó vacío por un fallo anterior o con
+     * datos corregidos a mano. Tras recalcular, vuelve a leer el borrador.
+     */
+    async function recompute(companyId: string): Promise<boolean> {
+        recomputing.value = true;
+        error.value = null;
+
+        try {
+            await postJson<unknown>(`/api/v1/companies/${companyId}/period-aggregates/recompute`, {
+                year: year.value,
+                month: month.value,
+            });
+
+            return true;
+        } catch (caught: unknown) {
+            error.value = caught instanceof Error ? caught.message : 'No se pudieron recalcular los agregados.';
+
+            return false;
+        } finally {
+            recomputing.value = false;
+        }
+    }
+
     function setPeriod(nextYear: number, nextMonth: number): void {
         year.value = nextYear;
         month.value = nextMonth;
@@ -134,11 +166,13 @@ export const useForm104Store = defineStore('form_104', () => {
         draft.value = null;
         error.value = null;
         loading.value = false;
+        recomputing.value = false;
     }
 
     return {
         draft,
         loading,
+        recomputing,
         error,
         year,
         month,
@@ -149,6 +183,7 @@ export const useForm104Store = defineStore('form_104', () => {
         computedFields,
         pendingFields,
         fetchDraft,
+        recompute,
         setPeriod,
         reset,
     };
