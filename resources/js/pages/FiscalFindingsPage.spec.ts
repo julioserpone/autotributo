@@ -51,7 +51,7 @@ const fiscalFindingStore = {
     loading: false,
     saving: false,
     detecting: false,
-    error: null,
+    error: null as string | null,
     meta: { current_page: 1, last_page: 1, per_page: 25, total: 1 },
     counts: { total: 1, by_status: { open: 1 }, by_severity: { critical: 1 } },
     filters: { companyId: 'all', status: 'open', severity: 'all', code: 'all', search: '' },
@@ -129,5 +129,25 @@ describe('FiscalFindingsPage', () => {
         const wrapper = await mountPage();
 
         expect(wrapper.text()).toContain('No hay hallazgos abiertos para este contribuyente.');
+    });
+
+    it('muestra el estado de carga', async () => {
+        fiscalFindingStore.loading = true;
+        fiscalFindingStore.items = [];
+
+        const wrapper = await mountPage();
+
+        expect(wrapper.text()).toContain('Cargando hallazgos…');
+    });
+
+    it('muestra el error y el botón de reintento', async () => {
+        fiscalFindingStore.loading = false;
+        fiscalFindingStore.error = 'No se pudieron cargar los hallazgos.';
+        fiscalFindingStore.items = [];
+
+        const wrapper = await mountPage();
+
+        expect(wrapper.text()).toContain('No se pudieron cargar los hallazgos.');
+        expect(wrapper.text()).toContain('Reintentar');
     });
 });
