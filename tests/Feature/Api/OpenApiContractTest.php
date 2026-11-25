@@ -46,5 +46,7 @@ it('documenta los endpoints de la etapa', function (): void {
             '/v1/classifications',
             '/v1/classifications/bulk-review',
             '/v1/classifications/{classification}',
+            '/v1/fiscal-signoffs',
+            '/v1/fiscal-signoffs/{stage}/reviews',
         ]);
 });

@@ -43,6 +43,7 @@ final class RolePermissions
                 Ability::DeclarationsView,
                 Ability::DeclarationsApprove,
                 Ability::DeclarationsExport,
+                Ability::FiscalSignoffsReview,
                 Ability::MembersView,
                 Ability::MembersInvite,
                 Ability::AuditView,

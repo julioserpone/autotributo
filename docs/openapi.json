@@ -3231,6 +3231,191 @@
                 }
             }
         },
+        "/v1/fiscal-signoffs": {
+            "get": {
+                "operationId": "v1.fiscal-signoffs.index",
+                "tags": [
+                    "FiscalSignoff"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/fiscal-signoffs/{stage}/reviews": {
+            "post": {
+                "operationId": "v1.fiscal-signoffs.reviews.store",
+                "tags": [
+                    "FiscalSignoff"
+                ],
+                "parameters": [
+                    {
+                        "name": "stage",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreFiscalSignoffReviewRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "stage_key": {
+                                                    "type": "string"
+                                                },
+                                                "stage_version": {
+                                                    "type": "integer"
+                                                },
+                                                "stage_fingerprint": {
+                                                    "type": "string"
+                                                },
+                                                "decision": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "approved",
+                                                        "changes_requested"
+                                                    ]
+                                                },
+                                                "comments": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "reviewed_by": {
+                                                    "type": [
+                                                        "object",
+                                                        "null"
+                                                    ],
+                                                    "properties": {
+                                                        "name": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "name"
+                                                    ]
+                                                },
+                                                "reviewed_at": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "stage_key",
+                                                "stage_version",
+                                                "stage_fingerprint",
+                                                "decision",
+                                                "comments",
+                                                "reviewed_by",
+                                                "reviewed_at"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "type": "string",
+                                            "const": "https://autotributo.com/problems/fiscal-signoff-stage-changed"
+                                        },
+                                        "title": {
+                                            "type": "string",
+                                            "const": "Conflicto con el estado actual"
+                                        },
+                                        "status": {
+                                            "type": "integer",
+                                            "const": 409
+                                        },
+                                        "detail": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "minItems": 0,
+                                            "maxItems": 0
+                                        }
+                                    },
+                                    "required": [
+                                        "type",
+                                        "title",
+                                        "status",
+                                        "detail",
+                                        "errors"
+                                    ],
+                                    "additionalProperties": {}
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
         "/v1/form-104": {
             "get": {
                 "operationId": "v1.form-104.index",
@@ -7279,6 +7464,41 @@
                     "legal_name"
                 ],
                 "title": "StoreCompanyRequest"
+            },
+            "StoreFiscalSignoffReviewRequest": {
+                "type": "object",
+                "properties": {
+                    "decision": {
+                        "type": "string",
+                        "enum": [
+                            "approved",
+                            "changes_requested"
+                        ]
+                    },
+                    "stage_version": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "stage_fingerprint": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}$",
+                        "minLength": 64,
+                        "maxLength": 64
+                    },
+                    "comments": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 5000
+                    }
+                },
+                "required": [
+                    "decision",
+                    "stage_version",
+                    "stage_fingerprint"
+                ],
+                "title": "StoreFiscalSignoffReviewRequest"
             },
             "StoreManualFiscalDocumentRequest": {
                 "type": "object",
