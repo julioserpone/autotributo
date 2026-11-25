@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
         $this->call(DefaultTenantSeeder::class);
         $this->call(FiscalCatalogSeeder::class);
         $this->call(ExpenseCategorySeeder::class);
+        $this->call(ClassificationRuleSeeder::class);
         $this->call(EconomicActivityCodeSeeder::class);
 
         if (app()->environment(['local', 'testing']) || (bool) config('demo.seed')) {

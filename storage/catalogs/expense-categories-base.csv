@@ -1,0 +1,37 @@
+code,name,parent_code,is_personal_deductible,is_business_deductible,icon,display_order
+alimentacion,Alimentación,,1,0,utensils,10
+vivienda,Vivienda,,1,0,home,20
+salud,Salud,,1,0,heart-pulse,30
+educacion,Educación,,1,0,graduation-cap,40
+vestimenta,Vestimenta,,1,0,shirt,50
+turismo,Turismo,,1,0,plane,60
+operativo,Gastos operativos,,0,1,briefcase,70
+activo_fijo,Activos fijos,,0,1,building,80
+no_deducible,No deducible,,0,0,ban,90
+alimentacion_supermercado,Supermercado y comisariato,alimentacion,0,0,,11
+alimentacion_restaurante,Restaurantes,alimentacion,0,0,,12
+vivienda_alquiler,Arriendo,vivienda,0,0,,21
+vivienda_servicios,Servicios básicos del hogar,vivienda,0,0,,22
+vivienda_mantenimiento,Mantenimiento y reparaciones,vivienda,0,0,,23
+salud_medicina,Medicinas,salud,0,0,,31
+salud_consultas,Consultas y tratamientos,salud,0,0,,32
+salud_seguros,Seguros de salud,salud,0,0,,33
+educacion_matriculas,Matrículas y pensiones,educacion,0,0,,41
+educacion_utiles,Útiles y textos,educacion,0,0,,42
+vestimenta_ropa,Ropa y calzado,vestimenta,0,0,,51
+turismo_hospedaje,Hospedaje y transporte,turismo,0,0,,61
+operativo_comunicaciones,Telecomunicaciones e internet,operativo,0,0,,71
+operativo_combustible,Combustible,operativo,0,0,,72
+operativo_servicios,Servicios profesionales y técnicos,operativo,0,0,,73
+operativo_insumos,Insumos y materiales,operativo,0,0,,74
+operativo_arriendos,Arriendos del negocio,operativo,0,0,,75
+activo_equipos,Equipos y tecnología,activo_fijo,0,0,,81
+activo_vehiculos,Vehículos,activo_fijo,0,0,,82
+comestibles,Comestibles y víveres,,1,1,shopping-basket,110
+salud_farmacia,Farmacia,,1,0,pill,34
+servicios_telecom,Telecomunicaciones e internet,,0,1,wifi,76
+servicios_basicos,Servicios básicos,,1,1,plug,24
+transporte_peaje,Peajes y transporte,,0,1,car,77
+seguros,Seguros,,1,1,shield,35
+vestimenta_hogar,Vestimenta y hogar,,1,0,shirt,52
+ferreteria_hogar,Ferretería y hogar,,0,1,wrench,25

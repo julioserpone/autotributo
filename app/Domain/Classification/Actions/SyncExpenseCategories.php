@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Classification\Actions;
 
+use App\Domain\Classification\Catalogs\ClassificationRuleData;
 use App\Domain\Classification\Catalogs\ExpenseCategoryData;
 use App\Domain\Classification\Models\ExpenseCategory;
 use App\Domain\Fiscal\Data\CatalogSyncResult;
@@ -17,7 +18,10 @@ use Illuminate\Support\Facades\DB;
  */
 final readonly class SyncExpenseCategories
 {
-    public function __construct(private ExpenseCategoryData $data) {}
+    public function __construct(
+        private ExpenseCategoryData $data,
+        private ClassificationRuleData $rules,
+    ) {}
 
     public function handle(): CatalogSyncResult
     {
@@ -27,7 +31,10 @@ final readonly class SyncExpenseCategories
             /** @var array<string, int> $ids */
             $ids = [];
 
-            foreach ($this->data->categories() as $row) {
+            // El catálogo de reglas base aporta sus propias categorías
+            // operativas (un proveedor frecuente por rubro); se cargan junto
+            // al árbol fiscal para que la regla siempre encuentre su categoría.
+            foreach ([...$this->data->categories(), ...$this->rules->categories()] as $row) {
                 $parentCode = $row['parent_code'];
                 $attributes = [
                     'name' => $row['name'],

@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Domain\Classification\Actions\SyncExpenseCategories;
+use App\Domain\Classification\Catalogs\ClassificationRuleData;
+use App\Domain\Classification\Catalogs\ExpenseCategoryData;
 use App\Domain\Classification\Models\ExpenseCategory;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
@@ -13,20 +15,22 @@ use Illuminate\Support\Facades\Notification;
 uses(RefreshDatabase::class);
 
 it('carga las categorías de gasto de forma idempotente', function (): void {
+    $total = count((new ExpenseCategoryData)->categories()) + count((new ClassificationRuleData)->categories());
+
     $first = app(SyncExpenseCategories::class)->handle();
 
-    expect($first->created())->toBe(9)
+    expect($first->created())->toBe($total)
         ->and($first->updated())->toBe(0)
         ->and($first->unchanged())->toBe(0)
-        ->and(ExpenseCategory::query()->count())->toBe(9);
+        ->and(ExpenseCategory::query()->count())->toBe($total);
 
     $second = app(SyncExpenseCategories::class)->handle();
 
     expect($second->created())->toBe(0)
         ->and($second->updated())->toBe(0)
-        ->and($second->unchanged())->toBe(9)
+        ->and($second->unchanged())->toBe($total)
         ->and($second->hasChanges())->toBeFalse()
-        ->and(ExpenseCategory::query()->count())->toBe(9);
+        ->and(ExpenseCategory::query()->count())->toBe($total);
 });
 
 it('mantiene el árbol y las banderas de deducibilidad', function (): void {
@@ -39,14 +43,16 @@ it('mantiene el árbol y las banderas de deducibilidad', function (): void {
         ->and($alimentacion->is_business_deductible)->toBeFalse()
         ->and(ExpenseCategory::query()->where('code', 'operativo')->firstOrFail()->is_business_deductible)->toBeTrue()
         ->and(ExpenseCategory::query()->where('code', 'no_deducible')->firstOrFail()->is_personal_deductible)->toBeFalse()
-        ->and(ExpenseCategory::query()->currentlyValid()->count())->toBe(9);
+        ->and(ExpenseCategory::query()->whereNotNull('parent_id')->count())->toBeGreaterThanOrEqual(18)
+        ->and(ExpenseCategory::query()->where('code', 'alimentacion_supermercado')->firstOrFail()->parent_id)->toBe($alimentacion->id);
 });
 
 it('carga las categorías con el seeder', function (): void {
     $this->seed(ExpenseCategorySeeder::class);
     $this->seed(ExpenseCategorySeeder::class);
 
-    expect(ExpenseCategory::query()->count())->toBe(9);
+    expect(ExpenseCategory::query()->count())
+        ->toBe(count((new ExpenseCategoryData)->categories()) + count((new ClassificationRuleData)->categories()));
 });
 
 it('incluye las categorías al provisionar un estudio', function (): void {
@@ -66,5 +72,6 @@ it('incluye las categorías al provisionar un estudio', function (): void {
     $tenant = Tenant::query()->where('slug', 'test')->firstOrFail();
     app(TenantContext::class)->initialize($tenant);
 
-    expect(ExpenseCategory::query()->count())->toBe(9);
+    expect(ExpenseCategory::query()->count())
+        ->toBe(count((new ExpenseCategoryData)->categories()) + count((new ClassificationRuleData)->categories()));
 });

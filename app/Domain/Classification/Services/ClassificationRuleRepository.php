@@ -33,8 +33,12 @@ final class ClassificationRuleRepository
      */
     public function forTenant(int $tenantId): array
     {
-        /** @var list<ClassificationRule> $rules */
-        $rules = Cache::remember(
+        // Se guardan solo los identificadores: serializar modelos Eloquent deja
+        // `__PHP_Incomplete_Class` al releerlos (el modelo está declarado en el
+        // `composer.json` del paquete y no siempre ya cargado) y el matcher
+        // recibía un objeto del tipo equivocado.
+        /** @var list<int> $ids */
+        $ids = Cache::remember(
             $this->key($tenantId),
             now()->addMinutes(self::TTL_MINUTES),
             fn (): array => array_values(ClassificationRule::query()
@@ -42,9 +46,21 @@ final class ClassificationRuleRepository
                 ->orderBy('priority')
                 ->orderByRaw('tenant_id is null')
                 ->orderBy('id')
-                ->get()
+                ->pluck('id')
                 ->all()),
         );
+
+        if ($ids === []) {
+            return [];
+        }
+
+        /** @var list<ClassificationRule> $rules */
+        $rules = ClassificationRule::query()
+            ->whereIn('id', $ids)
+            ->get()
+            ->sortBy(static fn (ClassificationRule $rule): int => (int) array_search($rule->getKey(), $ids, true))
+            ->values()
+            ->all();
 
         return $rules;
     }
