@@ -171,7 +171,7 @@
 | F1-03g validaciones de invitación | 409 por email activo y revocación de sesiones al retirar acceso | PR pequeño, P2 |
 | F2-14 cancelación de run | Archivar empresa no detiene un run en curso (`ArchiveCompany` lo delega) | PR pequeño, P2 |
 | F2-15 runbook de runs huérfanos | Procedimiento operativo de `sri:recover-run` | Documento + prueba de restauración |
-| F4-01 TanStack Query / i18n | `lib/api.ts` ya expone `errors` y soporta `204` (F4-03a); faltan TanStack Query e i18n | F4-08 y F4-09 resuelven la carga con stores Pinia; TanStack entra, si aplica, antes de F5
+| F4-01 TanStack Query / i18n | `lib/api.ts` ya expone `errors` y soporta `204` (F4-03a); faltan TanStack Query e i18n | F4-08 y F4-09 resuelven la carga con stores Pinia; TanStack entra, si aplica, antes de F5 |
 | ~~F5-01 solo agrega compras~~ | Resuelto por **F5-01b**: `fiscal_documents.direction` se deriva por RUC, `ComputePeriodAggregates` agrega ventas/compras y retenciones, el recálculo corre al cerrar el run y el barrido nocturno; `GET /api/v1/dashboard` queda listo para F4-08 | F4-08 consume el endpoint; F5-02 puede usar los agregados tras la firma del contador |
 | ~~Filtro por empresa en la revisión de clasificación~~ | Resuelto 2026-11-25: `GET /api/v1/classifications` resuelve `company_id` por `public_id` o id numérico, como `fiscal-findings` y `fiscal_documents`; test con los tres casos | — |
 
