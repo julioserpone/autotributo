@@ -169,7 +169,7 @@
 |---|---|---|---|---|
 | F5-01 | Agregados por período | Completado | **P0** | `fiscal_periods`, `period_aggregates`, `ComputePeriodAggregates`, comando y endpoint. (#106) |
 | F5-01b | Dirección por RUC y datos de panel | Completado | **P1** | `fiscal_documents.direction`, retenciones, recálculo al cerrar el run, `GET /api/v1/dashboard` |
-| F5-02a | Validación contable en la aplicación | Completado (flujo de aprobación) | P1 | `/fiscal-signoffs`, catálogo de etapas/versiones con huella SHA-256, decisiones append-only, comentarios e historial; `owner` y `accountant` pueden aprobar o solicitar cambios. No es firma electrónica legal ni habilita cálculos sin validar |
+| F5-02a | Validación contable en la aplicación | Completado (flujo y guía inicial) | P1 | `/fiscal-signoffs`, catálogo de etapas/versiones con huella SHA-256, decisiones append-only, comentarios e historial; guía general y guía por etapa para la contadora. Las guías identifican evidencia faltante; aún no adjuntan las tablas ni cálculos comparativos necesarios para validar varias etapas. No es firma electrónica legal ni habilita cálculos sin validar |
 | F5-07 | Confiabilidad de los agregados (fase 0 del 104) | En curso (implementación lista; validación integral pendiente) | **P1.5** | Implementados estado/error/contador de intentos, alineación de índice y resolución por catálogo, reintento encolado ante fallos, endpoint y botón de recálculo, y código de salida no cero del comando. Pasan las pruebas backend focalizadas. Falta validar en integración la sincronización multi-mes con mezcla de tarifas, retenciones y notas de crédito, además del reintento en cola |
 | F5-08 | Exportaciones y validación contable | Pendiente | P2 | PDF/Excel/CSV ATS + 12 escenarios dorados firmados |
 | F5-09 | Formulario 104 completo | Pendiente | P2 (tras firma) | Plan en `docs/02` §7.2: estructura completa del formulario (≈30 casilleros hoy ausentes), cuestionario del paso 2, naturaleza IVA del ítem, ajustes por NC/ND, forma de pago y activo fijo, arrastre, validaciones del SRI, plazos y estados |
@@ -179,7 +179,7 @@
 
 | Pendiente | Impacto | Siguiente paso |
 |---|---|---|
-| Aprobaciones contables pendientes | Bloquean el cierre formal de F3 y el arranque de los cálculos de F5-02/F5-09 | La contadora puede ingresar con rol `accountant`, revisar `/fiscal-signoffs` y aprobar o dejar observaciones; el flujo registra decisiones internas auditables, no firmas electrónicas legales |
+| Aprobaciones contables pendientes | Bloquean el cierre formal de F3 y el arranque de los cálculos de F5-02/F5-09 | La contadora puede ingresar con rol `accountant`, revisar `/fiscal-signoffs`, abrir la guía de cada etapa y aprobar o dejar observaciones. Antes de solicitar su OK deben mostrarse las tablas, comprobantes y comparaciones que cada guía marca como evidencia pendiente. El flujo registra decisiones internas auditables, no firmas electrónicas legales |
 | Agregados perdidos en silencio (F5-07) | Un fallo en la agregación puede dejar el período sin cifras, aunque el run de importación termine | Validar el flujo de reintento y el recálculo de varios meses con datos mixtos; comprobar `aggregation_status` y la salida de `docker compose exec -T app php artisan fiscal:compute-aggregates <public_id> --period=YYYY-MM` |
 | Dataset dorado de F3-08 | M3 no es demostrable (accuracy/coste) | Extraer ~300 descripciones reales anonimizadas y congelar la categoría correcta |
 | Informe de F0-05 en `docs/reports/` | F0 figura 9/9 sin su entregable | Versionar el informe base de evaluación IA |

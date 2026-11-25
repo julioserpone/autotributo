@@ -78,6 +78,10 @@ function mountPage() {
                         props: ['title', 'description'],
                         template: '<main><h1>{{ title }}</h1><p>{{ description }}</p><slot /></main>',
                     },
+                    FiscalSignoffGuideModal: {
+                        props: ['open', 'stage'],
+                        template: '<div v-if="open" role="dialog">{{ stage?.title ?? "Guía general" }}</div>',
+                    },
                 },
             },
         }),
@@ -102,8 +106,18 @@ describe('FiscalSignoffsPage', () => {
         expect(wrapper.text()).toContain('Aprobado');
         expect(wrapper.text()).toContain('Revisado.');
         expect(wrapper.text()).toContain('no constituye una firma electrónica');
+        expect(wrapper.text()).toContain('Abrir guía paso a paso');
+        expect(wrapper.text()).toContain('Qué debo revisar');
+        expect(wrapper.text()).toContain('Puedes arrastrar la esquina inferior derecha');
         expect(wrapper.text()).toContain('Dar OK');
         expect(wrapper.text()).toContain('Solicitar cambios');
+        expect(wrapper.text()).not.toContain('FiscalCatalogData.php');
+        expect(wrapper.find('textarea').classes()).toContain('resize');
+
+        const stageGuideButton = wrapper.findAll('button').find((button) => button.text() === 'Qué debo revisar');
+        expect(stageGuideButton).toBeDefined();
+        await stageGuideButton?.trigger('click');
+        expect(wrapper.text()).toContain('Catálogos de tarifas y retenciones');
     });
 
     it('oculta las acciones para roles que solo pueden consultar', async () => {

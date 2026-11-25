@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 
 import { useToast } from '@nuxt/ui/composables/useToast';
 import AppPage from '@/components/layout/AppPage.vue';
+import FiscalSignoffGuideModal from '@/components/fiscal/FiscalSignoffGuideModal.vue';
 import AppShell from '@/layouts/AppShell.vue';
 import type { FiscalSignoffDecision, FiscalSignoffStage } from '@/stores/fiscalSignoffs';
 import { useAuthStore } from '@/stores/auth';
@@ -12,6 +13,8 @@ const authStore = useAuthStore();
 const store = useFiscalSignoffStore();
 const toast = useToast();
 const comments = reactive<Record<string, string>>({});
+const guideOpen = ref(false);
+const guideStage = ref<FiscalSignoffStage | null>(null);
 
 const canReview = computed(() => {
     const role = authStore.user?.memberships?.[0]?.role;
@@ -33,6 +36,11 @@ function statusLabel(status: FiscalSignoffStage['status']): string {
 
 function updateComment(stageKey: string, value: string | string[]): void {
     comments[stageKey] = Array.isArray(value) ? value.join('\n') : value;
+}
+
+function openGuide(stage: FiscalSignoffStage | null = null): void {
+    guideStage.value = stage;
+    guideOpen.value = true;
 }
 
 async function submitReview(stage: FiscalSignoffStage, decision: FiscalSignoffDecision): Promise<void> {
@@ -61,20 +69,53 @@ onMounted(() => {
   <AppShell>
     <AppPage
       title="Validación contable"
-      description="Revisa cada etapa fiscal, deja observaciones o registra tu aprobación. Las decisiones quedan asociadas a la versión revisada y al usuario autenticado."
+      description="Revisa las etapas fiscales con una guía en lenguaje sencillo. Las decisiones quedan registradas con tu usuario y la fecha."
     >
+      <UCard class="mb-4">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 class="font-semibold">
+              ¿Primera vez en esta pantalla?
+            </h2>
+            <p class="mt-1 text-sm text-muted">
+              La guía explica el recorrido, cómo dejar una observación y qué información falta revisar en cada etapa.
+            </p>
+          </div>
+          <UButton
+            color="primary"
+            variant="soft"
+            icon="i-lucide-book-open-check"
+            label="Abrir guía paso a paso"
+            class="self-start sm:self-auto"
+            @click="openGuide()"
+          />
+        </div>
+      </UCard>
+
       <div class="grid gap-3 sm:grid-cols-3">
         <UCard>
-          <p class="text-sm text-muted">Pendientes</p>
-          <p class="mt-1 text-2xl font-semibold">{{ pendingCount }}</p>
+          <p class="text-sm text-muted">
+            Pendientes
+          </p>
+          <p class="mt-1 text-2xl font-semibold">
+            {{ pendingCount }}
+          </p>
         </UCard>
         <UCard>
-          <p class="text-sm text-muted">Aprobadas</p>
-          <p class="mt-1 text-2xl font-semibold">{{ approvedCount }}</p>
+          <p class="text-sm text-muted">
+            Aprobadas
+          </p>
+          <p class="mt-1 text-2xl font-semibold">
+            {{ approvedCount }}
+          </p>
         </UCard>
         <UCard>
-          <p class="text-sm text-muted">Requieren cambios</p>
-          <p class="mt-1 text-2xl font-semibold">{{ changesCount }}</p>
+          <p class="text-sm text-muted">
+            Requieren cambios
+          </p>
+          <p class="mt-1 text-2xl font-semibold">
+            {{ changesCount }}
+          </p>
         </UCard>
       </div>
 
@@ -92,7 +133,9 @@ onMounted(() => {
         class="flex flex-col items-center gap-3 py-12"
         role="alert"
       >
-        <p class="text-sm text-error">{{ store.error }}</p>
+        <p class="text-sm text-error">
+          {{ store.error }}
+        </p>
         <UButton
           color="neutral"
           variant="outline"
@@ -118,8 +161,12 @@ onMounted(() => {
         >
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 class="font-semibold">{{ stage.title }}</h2>
-              <p class="mt-1 text-sm text-muted">{{ stage.summary }}</p>
+              <h2 class="font-semibold">
+                {{ stage.title }}
+              </h2>
+              <p class="mt-1 text-sm text-muted">
+                {{ stage.summary }}
+              </p>
             </div>
             <UBadge
               :color="stage.status === 'approved' ? 'success' : stage.status === 'changes_requested' ? 'warning' : 'neutral'"
@@ -129,17 +176,15 @@ onMounted(() => {
             </UBadge>
           </div>
 
-          <div class="mt-4">
-            <p class="text-xs font-medium uppercase tracking-wide text-dimmed">Referencias</p>
-            <ul class="mt-1 list-inside list-disc space-y-1 text-sm text-muted">
-              <li
-                v-for="reference in stage.references"
-                :key="reference"
-              >
-                {{ reference }}
-              </li>
-            </ul>
-          </div>
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            icon="i-lucide-circle-help"
+            label="Qué debo revisar"
+            class="mt-3"
+            @click="openGuide(stage)"
+          />
 
           <div
             v-if="stage.latest_review"
@@ -162,7 +207,9 @@ onMounted(() => {
             v-if="stage.history.length > 1"
             class="mt-3 text-sm"
           >
-            <summary class="cursor-pointer text-muted">Ver historial ({{ stage.history.length }})</summary>
+            <summary class="cursor-pointer text-muted">
+              Ver historial ({{ stage.history.length }})
+            </summary>
             <ol class="mt-2 space-y-2 border-l border-default pl-4">
               <li
                 v-for="(review, index) in stage.history"
@@ -172,9 +219,17 @@ onMounted(() => {
                   v{{ review.stage_version }} · {{ statusLabel(review.decision) }}
                   por {{ review.reviewed_by?.name ?? 'usuario' }}
                   · {{ new Date(review.reviewed_at).toLocaleString('es-EC') }}
-                  <span v-if="!review.current_version" class="text-dimmed">(versión anterior)</span>
+                  <span
+                    v-if="!review.current_version"
+                    class="text-dimmed"
+                  >(versión anterior)</span>
                 </p>
-                <p v-if="review.comments" class="whitespace-pre-wrap text-muted">{{ review.comments }}</p>
+                <p
+                  v-if="review.comments"
+                  class="whitespace-pre-wrap text-muted"
+                >
+                  {{ review.comments }}
+                </p>
               </li>
             </ol>
           </details>
@@ -183,13 +238,20 @@ onMounted(() => {
             v-if="canReview"
             class="mt-4 space-y-3 border-t border-default pt-4"
           >
-            <UTextarea
-              :model-value="comments[stage.key] ?? ''"
-              :label="stage.status === 'approved' ? 'Comentario opcional' : 'Observaciones (obligatorias para solicitar cambios)'"
-              :rows="2"
-              :maxlength="5000"
-              @update:model-value="updateComment(stage.key, $event)"
-            />
+            <div class="w-full min-w-0 overflow-x-auto">
+              <UTextarea
+                :model-value="comments[stage.key] ?? ''"
+                :label="stage.status === 'approved' ? 'Comentario opcional' : 'Observaciones (obligatorias para solicitar cambios)'"
+                :rows="4"
+                :maxlength="5000"
+                class="w-full"
+                :ui="{ base: 'w-full min-w-full resize' }"
+                @update:model-value="updateComment(stage.key, $event)"
+              />
+            </div>
+            <p class="text-xs text-muted">
+              Puedes arrastrar la esquina inferior derecha para ampliar el campo hacia abajo o hacia la derecha.
+            </p>
             <div class="flex flex-wrap gap-2">
               <UButton
                 color="success"
@@ -221,6 +283,11 @@ onMounted(() => {
       <p class="text-xs text-dimmed">
         Esta aprobación es un registro interno auditable; no constituye una firma electrónica con validez legal ni reemplaza la declaración presentada al SRI.
       </p>
+
+      <FiscalSignoffGuideModal
+        v-model:open="guideOpen"
+        :stage="guideStage"
+      />
     </AppPage>
   </AppShell>
 </template>
