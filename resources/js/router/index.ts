@@ -13,6 +13,7 @@ const AcceptInvitationPage = () => import('@/pages/AcceptInvitationPage.vue');
 const ClassificationReviewPage = () => import('@/pages/ClassificationReviewPage.vue');
 const FiscalDocumentInboxPage = () => import('@/pages/FiscalDocumentInboxPage.vue');
 const FiscalFindingsPage = () => import('@/pages/FiscalFindingsPage.vue');
+const FiscalSignoffsPage = () => import('@/pages/FiscalSignoffsPage.vue');
 const Form104Page = () => import('@/pages/Form104Page.vue');
 const LoginPage = () => import('@/pages/LoginPage.vue');
 const NotFoundPage = () => import('@/pages/NotFoundPage.vue');
@@ -89,6 +90,12 @@ const router = createRouter({
             name: 'fiscal-findings',
             component: FiscalFindingsPage,
             meta: { title: 'Hallazgos fiscales', requiresCompany: true },
+        },
+        {
+            path: '/fiscal-signoffs',
+            name: 'fiscal-signoffs',
+            component: FiscalSignoffsPage,
+            meta: { title: 'Validación contable' },
         },
         {
             path: '/classifications',
