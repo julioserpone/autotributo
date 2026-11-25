@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Domain\Fiscal\Catalogs\FiscalSignoffStageCatalog;
+use App\Domain\Fiscal\Enums\FiscalSignoffDecision;
+use App\Domain\Fiscal\Models\FiscalSignoffReview;
 use App\Domain\Tenancy\Enums\MembershipRole;
 use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Tenancy\TenantContext;
@@ -34,6 +36,45 @@ it('lists versioned stages and lets the viewer inspect pending approvals', funct
         ->assertJsonPath('data.0.status', 'pending')
         ->assertJsonPath('data.0.version', 1)
         ->assertJsonPath('data.0.latest_review', null);
+});
+
+it('isolates approval history by tenant and records decisions in the active tenant', function (): void {
+    $stage = FiscalSignoffStageCatalog::find('ats-iva-nature-mapping');
+    $otherTenant = Tenant::factory()->create(['slug' => 'other-fiscal-signoffs']);
+    $otherReviewer = User::factory()->create();
+
+    app(TenantContext::class)->run($otherTenant, function () use ($otherTenant, $otherReviewer, $stage): void {
+        FiscalSignoffReview::query()->create([
+            'tenant_id' => $otherTenant->id,
+            'reviewer_id' => $otherReviewer->id,
+            'stage_key' => 'ats-iva-nature-mapping',
+            'stage_version' => 1,
+            'stage_fingerprint' => (string) $stage['fingerprint'],
+            'decision' => FiscalSignoffDecision::Approved,
+            'comments' => 'Revisión de otro tenant.',
+            'reviewed_at' => now(),
+        ]);
+    });
+
+    $this->actingAs($this->viewer)
+        ->getJson('/api/v1/fiscal-signoffs')
+        ->assertOk()
+        ->assertJsonPath('data.7.status', 'pending')
+        ->assertJsonCount(0, 'data.7.history');
+
+    $this->actingAs($this->accountant)
+        ->postJson('/api/v1/fiscal-signoffs/ats-iva-nature-mapping/reviews', [
+            'decision' => 'approved',
+            'stage_version' => 1,
+            'stage_fingerprint' => $stage['fingerprint'],
+        ])
+        ->assertCreated();
+
+    $this->assertDatabaseHas('fiscal_signoff_reviews', [
+        'tenant_id' => $this->tenant->id,
+        'reviewer_id' => $this->accountant->id,
+        'stage_key' => 'ats-iva-nature-mapping',
+    ]);
 });
 
 it('allows an accountant to approve a stage and records the authenticated reviewer', function (): void {
