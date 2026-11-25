@@ -6,18 +6,27 @@ namespace App\Console\Commands;
 
 use App\Domain\Companies\Models\Company;
 use App\Domain\Fiscal\Actions\ComputePeriodAggregates;
+use App\Domain\Fiscal\Models\FiscalPeriod;
 use App\Domain\FiscalDocuments\Models\FiscalDocument;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Console\Command;
+use Throwable;
 
 /**
  * Recalcula los agregados materializados de un período fiscal.
  *
- * Uso: `php artisan fiscal:compute-aggregates {company?} {--period=YYYY-MM}`
+ * Uso: `php artisan fiscal:compute-aggregates {company?} {--company=} {--period=YYYY-MM}`
+ *
+ * F5-07d: devuelve código distinto de cero si algún período falla, para que el
+ * scheduler y el operador detecten el fallo sin revisar logs. El estado de cada
+ * período queda además en `fiscal_periods.aggregation_*`.
  */
 final class ComputePeriodAggregatesCommand extends Command
 {
-    protected $signature = 'fiscal:compute-aggregates {company? : public_id de la empresa} {--period= : Período YYYY-MM (por defecto, todos los meses con comprobantes)}';
+    protected $signature = 'fiscal:compute-aggregates
+        {company? : public_id de la empresa}
+        {--company= : public_id de la empresa (alternativa al argumento)}
+        {--period= : Período YYYY-MM (por defecto, todos los meses con comprobantes)}';
 
     protected $description = 'Recalcula los agregados materializados por período fiscal';
 
@@ -27,9 +36,9 @@ final class ComputePeriodAggregatesCommand extends Command
             $context->initializeDefault();
         }
 
-        $companyPublicId = $this->argument('company');
+        $companyPublicId = $this->argument('company') ?? $this->option('company');
 
-        $companies = $companyPublicId !== null
+        $companies = is_string($companyPublicId) && $companyPublicId !== ''
             ? Company::query()->where('public_id', $companyPublicId)->get()
             : Company::query()->get();
 
@@ -40,20 +49,13 @@ final class ComputePeriodAggregatesCommand extends Command
         }
 
         $period = $this->option('period');
+        $failures = 0;
 
         foreach ($companies as $company) {
-            if ($period !== null && $period !== '') {
-                [$year, $month] = array_map('intval', explode('-', $period));
-
-                $periodModel = $compute->handle($company, $year, $month);
-
-                $this->info(sprintf(
-                    '%s: período %04d-%02d recalculado (%d agregados).',
-                    $company->legal_name,
-                    $year,
-                    $month,
-                    $periodModel->aggregates()->count(),
-                ));
+            if (is_string($period) && $period !== '') {
+                if (! $this->recompute($compute, $company, $period)) {
+                    $failures++;
+                }
 
                 continue;
             }
@@ -73,21 +75,58 @@ final class ComputePeriodAggregatesCommand extends Command
 
             foreach ($months as $row) {
                 /** @var object{y: int|string, m: int|string} $row */
-                $year = (int) $row->y;
-                $month = (int) $row->m;
+                $month = sprintf('%04d-%02d', (int) $row->y, (int) $row->m);
 
-                $periodModel = $compute->handle($company, $year, $month);
-
-                $this->info(sprintf(
-                    '%s: período %04d-%02d recalculado (%d agregados).',
-                    $company->legal_name,
-                    $year,
-                    $month,
-                    $periodModel->aggregates()->count(),
-                ));
+                if (! $this->recompute($compute, $company, $month)) {
+                    $failures++;
+                }
             }
         }
 
+        if ($failures > 0) {
+            $this->error(sprintf('%d período(s) no se pudieron agregar.', $failures));
+
+            return self::FAILURE;
+        }
+
         return self::SUCCESS;
+    }
+
+    private function recompute(ComputePeriodAggregates $compute, Company $company, string $period): bool
+    {
+        $parts = explode('-', $period);
+
+        if (count($parts) !== 2) {
+            $this->error(sprintf('%s: período inválido «%s». Use YYYY-MM.', $company->legal_name, $period));
+
+            return false;
+        }
+
+        [$year, $month] = array_map('intval', $parts);
+
+        try {
+            $periodModel = $compute->handle($company, $year, $month);
+        } catch (Throwable $exception) {
+            $this->error(sprintf(
+                '%s: período %04d-%02d falló (%s).',
+                $company->legal_name,
+                $year,
+                $month,
+                $exception->getMessage(),
+            ));
+
+            return false;
+        }
+
+        $this->info(sprintf(
+            '%s: período %04d-%02d recalculado (%d agregados, estado %s).',
+            $company->legal_name,
+            $year,
+            $month,
+            $periodModel->aggregates()->count(),
+            $periodModel->aggregation_status ?? FiscalPeriod::AGGREGATION_PENDING,
+        ));
+
+        return true;
     }
 }

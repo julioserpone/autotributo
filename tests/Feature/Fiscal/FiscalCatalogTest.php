@@ -19,9 +19,9 @@ beforeEach(function (): void {
 it('carga los catálogos fiscales de forma idempotente', function (): void {
     $first = app(SyncFiscalCatalogs::class)->handle();
 
-    expect($first->created())->toBe(123)
+    expect($first->created())->toBe(127)
         ->and($first->updated())->toBe(0)
-        ->and(TaxRate::query()->count())->toBe(6)
+        ->and(TaxRate::query()->count())->toBe(10)
         ->and(RetentionRate::query()->count())->toBe(22)
         ->and(FormLine::query()->count())->toBe(88)
         ->and(PersonalExpenseCap::query()->count())->toBe(7);
@@ -30,8 +30,8 @@ it('carga los catálogos fiscales de forma idempotente', function (): void {
 
     expect($second->created())->toBe(0)
         ->and($second->updated())->toBe(0)
-        ->and($second->unchanged())->toBe(123)
-        ->and(TaxRate::query()->count())->toBe(6)
+        ->and($second->unchanged())->toBe(127)
+        ->and(TaxRate::query()->count())->toBe(10)
         ->and(RetentionRate::query()->count())->toBe(22)
         ->and(FormLine::query()->count())->toBe(88)
         ->and(PersonalExpenseCap::query()->count())->toBe(7);
@@ -46,11 +46,11 @@ it('resuelve la tarifa de IVA según la fecha de emisión', function (): void {
         ->firstOrFail()
         ->rate;
 
-    expect($rate('2016-08-15', '14'))->toBe('14.000000')
-        ->and($rate('2024-03-15', '12'))->toBe('12.000000')
-        ->and($rate('2024-04-15', '15'))->toBe('15.000000')
+    expect($rate('2016-08-15', '3'))->toBe('14.000000')
+        ->and($rate('2024-03-15', '2'))->toBe('12.000000')
+        ->and($rate('2024-04-15', '4'))->toBe('15.000000')
         ->and($rate('2024-04-15', '5'))->toBe('5.000000')
-        ->and($rate('2026-06-01', '15'))->toBe('15.000000');
+        ->and($rate('2026-06-01', '4'))->toBe('15.000000');
 });
 
 it('calcula el tope de gastos personales por cargas', function (): void {
@@ -85,7 +85,7 @@ it('detecta solapamientos de vigencia', function (): void {
 
     TaxRate::query()->create([
         'code' => 'IVA',
-        'sri_percentage_code' => '15',
+        'sri_percentage_code' => '4',
         'rate' => '16.000000',
         'label' => 'Tarifa inválida de prueba',
         'valid_from' => '2024-01-01',
