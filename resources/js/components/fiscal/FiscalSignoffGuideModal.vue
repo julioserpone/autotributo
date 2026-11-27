@@ -11,6 +11,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     'update:open': [value: boolean];
+    'open-source': [stage: FiscalSignoffStage];
 }>();
 
 const openModel = computed({
@@ -21,6 +22,8 @@ const openModel = computed({
 const stageGuidance = computed(() => (
     props.stage === null ? null : fiscalSignoffGuidance[props.stage.key] ?? null
 ));
+
+const hasSourceFiles = computed(() => (props.stage?.source_files?.length ?? 0) > 0);
 </script>
 
 <template>
@@ -91,6 +94,27 @@ const stageGuidance = computed(() => (
               </li>
             </ul>
           </section>
+
+          <section
+            v-if="hasSourceFiles"
+            class="rounded-lg border border-default bg-elevated/50 p-4"
+          >
+            <h3 class="font-semibold text-highlighted">
+              Código fuente disponible
+            </h3>
+            <p class="mt-1 text-muted">
+              Puedes abrir los archivos permitidos para esta etapa desde el visor controlado.
+            </p>
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-code-2"
+              label="Ver código fuente"
+              class="mt-3"
+              @click="emit('open-source', stage!)"
+            />
+          </section>
         </template>
 
         <template v-else-if="!stage">
@@ -121,7 +145,7 @@ const stageGuidance = computed(() => (
               Importante antes de aprobar
             </h3>
             <p class="mt-1 text-muted">
-              Esta pantalla explica qué validar, pero todavía no adjunta todas las tablas, comprobantes ni cálculos comparativos necesarios. Las tarjetas muestran resúmenes; la guía de cada etapa indica lo que aún falta. No necesitas abrir archivos de programación: las referencias a archivos .php o .md son solo para el equipo técnico.
+              Esta pantalla explica qué validar. Los archivos de código relevantes se pueden abrir desde el visor controlado; no necesitas rutas locales del repositorio. La guía de cada etapa indica lo que aún falta. Dar OK es una aprobación interna y no es una firma electrónica legal.
             </p>
           </section>
 
