@@ -9,7 +9,7 @@ Registro de validación de cálculos, catálogos y formularios por parte del con
 - Se registra el escenario, el resultado del sistema, el resultado manual y la diferencia (debe ser 0,00).
 - Un período ya declarado no se altera; cualquier corrección genera una nueva versión de la declaración.
 - El flujo `/fiscal-signoffs` guarda aprobaciones internas autenticadas por etapa y versión, con huella SHA-256, usuario, fecha y observaciones. Una modificación de la etapa requiere una nueva revisión; el historial no se sobrescribe.
-- La interfaz ofrece una guía general y una lista de comprobación por etapa en lenguaje contable. Las rutas `.php`/`.md` son referencias internas y no se presentan como material que deba abrir la contadora. La guía advierte cuando el resumen no incluye evidencia suficiente.
+- La interfaz ofrece una guía general, una lista de comprobación por etapa en lenguaje contable y un visor controlado de archivos fuente para las etapas que lo requieren. Solo `owner` y `accountant` pueden abrir archivos incluidos en el allowlist backend; no se exponen rutas del sistema, archivos arbitrarios ni credenciales. La guía advierte cuando el resumen no incluye evidencia suficiente.
 - La guía no sustituye la evidencia: actualmente no adjunta todas las tablas ATS, cálculos independientes ni impuestos por línea de comprobante. No se debe registrar un OK basándose únicamente en el resumen de una tarjeta.
 - La aprobación de la aplicación es evidencia interna y **no es una firma electrónica con validez legal**. El registro detallado de cada decisión vive en `fiscal_signoff_reviews`; esta tabla conserva el inventario de escenarios y su estado de validación.
 
