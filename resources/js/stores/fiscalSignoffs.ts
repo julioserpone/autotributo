@@ -18,12 +18,27 @@ export interface FiscalSignoffReview {
     current_version?: boolean;
 }
 
+export interface FiscalSignoffSourceFile {
+    id: string;
+    label: string;
+    language: string;
+    description: string;
+    line_count: number;
+    size_bytes: number;
+}
+
+export interface FiscalSignoffSourceFileContent extends FiscalSignoffSourceFile {
+    content: string;
+    sha256: string;
+}
+
 export interface FiscalSignoffStage {
     key: string;
     version: number;
     title: string;
     summary: string;
     references: string[];
+    source_files?: FiscalSignoffSourceFile[];
     fingerprint: string;
     status: FiscalSignoffStatus;
     latest_review: FiscalSignoffReview | null;
@@ -73,6 +88,22 @@ export const useFiscalSignoffStore = defineStore('fiscal_signoffs', () => {
         }
     }
 
+    async function fetchSourceFiles(stageKey: string): Promise<FiscalSignoffSourceFile[]> {
+        const response = await getJson<{ data: FiscalSignoffSourceFile[] }>(
+            `/api/v1/fiscal-signoffs/${stageKey}/source-files`,
+        );
+
+        return response.data ?? [];
+    }
+
+    async function fetchSourceFile(stageKey: string, fileId: string): Promise<FiscalSignoffSourceFileContent> {
+        const response = await getJson<{ data: FiscalSignoffSourceFileContent }>(
+            `/api/v1/fiscal-signoffs/${stageKey}/source-files/${fileId}`,
+        );
+
+        return response.data;
+    }
+
     return {
         stages,
         loading,
@@ -80,5 +111,7 @@ export const useFiscalSignoffStore = defineStore('fiscal_signoffs', () => {
         error,
         fetchStages,
         review,
+        fetchSourceFiles,
+        fetchSourceFile,
     };
 });

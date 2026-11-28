@@ -21,6 +21,11 @@ final class FiscalSignoffPolicy
         return RolePermissions::allows($user, Ability::FiscalSignoffsReview);
     }
 
+    public function viewSource(User $user): bool
+    {
+        return RolePermissions::allows($user, Ability::FiscalSignoffsReview);
+    }
+
     public function view(User $user, FiscalSignoffReview $review): bool
     {
         return $this->viewAny($user) && RolePermissions::sameTenant($review);

@@ -50,7 +50,7 @@ describe('FiscalSignoffGuideModal', () => {
 
         expect(wrapper.text()).toContain('Guía para la revisión contable');
         expect(wrapper.text()).toContain('abre Validación contable');
-        expect(wrapper.text()).toContain('No necesitas abrir archivos de programación');
+        expect(wrapper.text()).toContain('Los archivos de código relevantes se pueden abrir desde el visor controlado');
         expect(wrapper.text()).toContain('Formulario 104');
         expect(wrapper.text()).not.toContain('FiscalCatalogData.php');
     });

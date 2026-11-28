@@ -13,11 +13,12 @@ namespace App\Domain\Fiscal\Catalogs;
 final class FiscalSignoffStageCatalog
 {
     /**
-     * @return list<array{key: string, version: int, title: string, summary: string, references: list<string>}>
+     * @return list<array{key: string, version: int, title: string, summary: string, references: list<string>, source_files: list<array{id: string, label: string, language: string, description: string}>}>
      */
     public static function all(): array
     {
-        return [
+        /** @var list<array{key: string, version: int, title: string, summary: string, references: list<string>, source_files: list<array{id: string, label: string, language: string, description: string}>}> $stages */
+        $stages = [
             [
                 'key' => 'iva-and-retention-catalogs',
                 'version' => 1,
@@ -82,10 +83,17 @@ final class FiscalSignoffStageCatalog
                 'references' => ['Ficha Técnica ATS, tabla 11', 'app/Domain/Fiscal/Catalogs/FiscalCatalogData.php'],
             ],
         ];
+
+        foreach ($stages as &$stage) {
+            $stage['source_files'] = FiscalSignoffSourceCatalog::metadataForStage($stage['key']);
+        }
+        unset($stage);
+
+        return $stages;
     }
 
     /**
-     * @return array{key: string, version: int, title: string, summary: string, references: list<string>, fingerprint: string}|null
+     * @return array{key: string, version: int, title: string, summary: string, references: list<string>, source_files: list<array{id: string, label: string, language: string, description: string}>, fingerprint: string}|null
      */
     public static function find(string $key): ?array
     {
@@ -103,6 +111,14 @@ final class FiscalSignoffStageCatalog
      */
     public static function fingerprint(array $stage): string
     {
-        return hash('sha256', json_encode($stage, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        $fingerprintData = [
+            'key' => $stage['key'],
+            'version' => $stage['version'],
+            'title' => $stage['title'],
+            'summary' => $stage['summary'],
+            'references' => $stage['references'],
+        ];
+
+        return hash('sha256', json_encode($fingerprintData, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
     }
 }

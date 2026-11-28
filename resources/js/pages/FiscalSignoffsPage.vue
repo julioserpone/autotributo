@@ -4,6 +4,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useToast } from '@nuxt/ui/composables/useToast';
 import AppPage from '@/components/layout/AppPage.vue';
 import FiscalSignoffGuideModal from '@/components/fiscal/FiscalSignoffGuideModal.vue';
+import FiscalSignoffSourceViewer from '@/components/fiscal/FiscalSignoffSourceViewer.vue';
 import AppShell from '@/layouts/AppShell.vue';
 import type { FiscalSignoffDecision, FiscalSignoffStage } from '@/stores/fiscalSignoffs';
 import { useAuthStore } from '@/stores/auth';
@@ -15,6 +16,8 @@ const toast = useToast();
 const comments = reactive<Record<string, string>>({});
 const guideOpen = ref(false);
 const guideStage = ref<FiscalSignoffStage | null>(null);
+const sourceViewerOpen = ref(false);
+const sourceStage = ref<FiscalSignoffStage | null>(null);
 
 const canReview = computed(() => {
     const role = authStore.user?.memberships?.[0]?.role;
@@ -41,6 +44,12 @@ function updateComment(stageKey: string, value: string | string[]): void {
 function openGuide(stage: FiscalSignoffStage | null = null): void {
     guideStage.value = stage;
     guideOpen.value = true;
+}
+
+function openSource(stage: FiscalSignoffStage | null = null): void {
+    sourceStage.value = stage;
+    sourceViewerOpen.value = true;
+    guideOpen.value = false;
 }
 
 async function submitReview(stage: FiscalSignoffStage, decision: FiscalSignoffDecision): Promise<void> {
@@ -269,6 +278,15 @@ onMounted(() => {
                 :loading="store.savingStage === stage.key"
                 @click="submitReview(stage, 'changes_requested')"
               />
+              <UButton
+                v-if="canReview"
+                color="neutral"
+                variant="outline"
+                size="sm"
+                icon="i-lucide-code-2"
+                label="Ver código fuente"
+                @click="openSource(stage)"
+              />
             </div>
           </div>
           <p
@@ -287,6 +305,12 @@ onMounted(() => {
       <FiscalSignoffGuideModal
         v-model:open="guideOpen"
         :stage="guideStage"
+        @open-source="openSource"
+      />
+
+      <FiscalSignoffSourceViewer
+        v-model:open="sourceViewerOpen"
+        :stage="sourceStage"
       />
     </AppPage>
   </AppShell>

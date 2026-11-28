@@ -3266,6 +3266,372 @@
                 }
             }
         },
+        "/v1/fiscal-signoffs/{stage}/source-files": {
+            "get": {
+                "operationId": "v1.fiscal-signoffs.source-files.index",
+                "tags": [
+                    "FiscalSignoff"
+                ],
+                "parameters": [
+                    {
+                        "name": "stage",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "type": "string",
+                                            "const": "https://autotributo.com/problems/not-found"
+                                        },
+                                        "title": {
+                                            "type": "string",
+                                            "const": "Recurso no encontrado"
+                                        },
+                                        "status": {
+                                            "type": "integer",
+                                            "const": 404
+                                        },
+                                        "detail": {
+                                            "type": "string",
+                                            "const": "La etapa de validaci\u00f3n no existe."
+                                        },
+                                        "errors": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "type",
+                                        "title",
+                                        "status",
+                                        "detail",
+                                        "errors"
+                                    ],
+                                    "additionalProperties": {}
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/fiscal-signoffs/{stage}/source-files/{sourceFile}": {
+            "get": {
+                "operationId": "v1.fiscal-signoffs.source-files.show",
+                "tags": [
+                    "FiscalSignoff"
+                ],
+                "parameters": [
+                    {
+                        "name": "stage",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sourceFile",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string"
+                                                },
+                                                "label": {
+                                                    "type": "string"
+                                                },
+                                                "language": {
+                                                    "type": "string"
+                                                },
+                                                "description": {
+                                                    "type": "string"
+                                                },
+                                                "content": {
+                                                    "type": [
+                                                        "string",
+                                                        "object"
+                                                    ]
+                                                },
+                                                "line_count": {
+                                                    "type": "integer"
+                                                },
+                                                "size_bytes": {
+                                                    "type": [
+                                                        "object",
+                                                        "integer"
+                                                    ]
+                                                },
+                                                "sha256": {
+                                                    "type": [
+                                                        "object",
+                                                        "string"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "label",
+                                                "language",
+                                                "description",
+                                                "content",
+                                                "line_count",
+                                                "size_bytes",
+                                                "sha256"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "type": "string",
+                                            "const": "https://autotributo.com/problems/server-error"
+                                        },
+                                        "title": {
+                                            "type": "string",
+                                            "const": "Error interno"
+                                        },
+                                        "status": {
+                                            "type": "integer",
+                                            "const": 500
+                                        },
+                                        "detail": {
+                                            "type": "string",
+                                            "const": "No se pudo leer el archivo fuente."
+                                        },
+                                        "errors": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "type",
+                                        "title",
+                                        "status",
+                                        "detail",
+                                        "errors"
+                                    ],
+                                    "additionalProperties": {}
+                                }
+                            }
+                        }
+                    },
+                    "413": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "type": "string",
+                                            "const": "https://autotributo.com/problems/source-file-too-large"
+                                        },
+                                        "title": {
+                                            "type": "string",
+                                            "const": "Archivo demasiado grande"
+                                        },
+                                        "status": {
+                                            "type": "integer",
+                                            "const": 413
+                                        },
+                                        "detail": {
+                                            "type": "string",
+                                            "const": "El archivo fuente supera el tama\u00f1o m\u00e1ximo permitido para su visualizaci\u00f3n."
+                                        },
+                                        "errors": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "type",
+                                        "title",
+                                        "status",
+                                        "detail",
+                                        "errors"
+                                    ],
+                                    "additionalProperties": {}
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "type": {
+                                                    "type": "string",
+                                                    "const": "https://autotributo.com/problems/not-found"
+                                                },
+                                                "title": {
+                                                    "type": "string",
+                                                    "const": "Recurso no encontrado"
+                                                },
+                                                "status": {
+                                                    "type": "integer",
+                                                    "const": 404
+                                                },
+                                                "detail": {
+                                                    "type": "string",
+                                                    "const": "El archivo fuente solicitado no existe."
+                                                },
+                                                "errors": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "type",
+                                                "title",
+                                                "status",
+                                                "detail",
+                                                "errors"
+                                            ],
+                                            "additionalProperties": {}
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "type": {
+                                                    "type": "string",
+                                                    "const": "https://autotributo.com/problems/not-found"
+                                                },
+                                                "title": {
+                                                    "type": "string",
+                                                    "const": "Recurso no encontrado"
+                                                },
+                                                "status": {
+                                                    "type": "integer",
+                                                    "const": 404
+                                                },
+                                                "detail": {
+                                                    "type": "string",
+                                                    "const": "El archivo fuente solicitado no existe para esta etapa."
+                                                },
+                                                "errors": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "type",
+                                                "title",
+                                                "status",
+                                                "detail",
+                                                "errors"
+                                            ],
+                                            "additionalProperties": {}
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "type": {
+                                                    "type": "string",
+                                                    "const": "https://autotributo.com/problems/not-found"
+                                                },
+                                                "title": {
+                                                    "type": "string",
+                                                    "const": "Recurso no encontrado"
+                                                },
+                                                "status": {
+                                                    "type": "integer",
+                                                    "const": 404
+                                                },
+                                                "detail": {
+                                                    "type": "string",
+                                                    "const": "La etapa de validaci\u00f3n no existe."
+                                                },
+                                                "errors": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "type",
+                                                "title",
+                                                "status",
+                                                "detail",
+                                                "errors"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/fiscal-signoffs/{stage}/reviews": {
             "post": {
                 "operationId": "v1.fiscal-signoffs.reviews.store",

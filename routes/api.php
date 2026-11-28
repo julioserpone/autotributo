@@ -219,6 +219,10 @@ Route::middleware(['web', 'tenant.context', 'tenant.active', 'auth', '2fa.setup'
         // Aprobaciones contables versionadas; cada decisión queda en historial.
         Route::get('fiscal-signoffs', [FiscalSignoffController::class, 'index'])
             ->name('api.v1.fiscal-signoffs.index');
+        Route::get('fiscal-signoffs/{stage}/source-files', [FiscalSignoffController::class, 'sourceFiles'])
+            ->name('api.v1.fiscal-signoffs.source-files.index');
+        Route::get('fiscal-signoffs/{stage}/source-files/{sourceFile}', [FiscalSignoffController::class, 'sourceFile'])
+            ->name('api.v1.fiscal-signoffs.source-files.show');
         Route::post('fiscal-signoffs/{stage}/reviews', [FiscalSignoffController::class, 'store'])
             ->name('api.v1.fiscal-signoffs.reviews.store');
 

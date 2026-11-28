@@ -48,5 +48,7 @@ it('documenta los endpoints de la etapa', function (): void {
             '/v1/classifications/{classification}',
             '/v1/fiscal-signoffs',
             '/v1/fiscal-signoffs/{stage}/reviews',
+            '/v1/fiscal-signoffs/{stage}/source-files',
+            '/v1/fiscal-signoffs/{stage}/source-files/{sourceFile}',
         ]);
 });
